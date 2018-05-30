@@ -6,11 +6,13 @@ use warnings;
 use ViralSeq;
 
 my $seq = ViralSeq->new(
-    name        => "test",
-    aliSt       => "5",
-    aliEn       => "3",
-    fullSeq     => "1",
-    negStrand   => 0,
+    name            => "test",
+    aliSt           => 5,
+    aliEn           => 3,
+    completeSeqPath => "../../../sequence_files/prophage/Pf_prophage_423117-5435766_strain_M1608.fasta",
+    genomePath      => "test.fna",
+    negStrand       => 1,
+    isNeg           => 1,
 );
 
-print "Length: " .$seq->printStats(). "\n";
+print $seq->printStats(). "\n";
