@@ -8,35 +8,44 @@ use diagnostics;
 
 use Moose;
 
+my $isFullCutoff = 50;
+
 has name => (
     is          => 'ro',
     isa         => 'Str',
     required    => 1,
 );
 
-#First index of alignment
-has aliSt => (
+#Start index in genome
+has gnSt => (
     is          => 'ro',
     isa         => 'Num',
     required    => 1,
 );
 
-#Last index of alignment
-has aliEn => (
+#End index in genome
+has gnEn => (
+    is          => 'ro',
+    isa         => 'Num',
+    required    => 1,
+);
+
+#Start index of hit in reference sequence
+has refSt => (
+    is          => 'ro',
+    isa         => 'Num',
+    required    => 1,
+);
+
+#End index of hit in reference sequence
+has refEn => (
     is          => 'ro',
     isa         => 'Num',
     required    => 1,
 );
 
 #path to file containing complete viral sequence
-has completeSeqPath => (
-    is          => 'ro',
-    isa         => 'Str',
-    required    => 1,
-);
-
-#path to bacterial genome sequence was found in
-has genomePath => (
+has referenceSeqPath => (
     is          => 'ro',
     isa         => 'Str',
     required    => 1,
@@ -55,10 +64,10 @@ has seqLength => (
     builder => '_buildLength',
 );
 
-has completeSeqLength => (
+has referenceSeqLength => (
     is      => 'ro',
     lazy    => 1,
-    builder => '_buildCompLength',
+    builder => '_buildRefLength',
 );
 
 has percentComplete => (
@@ -67,32 +76,58 @@ has percentComplete => (
     builder => '_buildPercent',
 );
 
-sub printStats {
+has isFullLength => (
+    is      => 'ro',
+    lazy    => 1,
+    buidler => '_buildIsFull',
+)
+
+sub printTableLine {
     my $self = shift;
     my $returnString = '';
 
-    return  "Length: " . $self->seqLength() . "\nComplete sequence length: "
-            . $self->completeSeqLength() . "\nSize relative to complete sequence: "
+    return  "Length: " . $self->seqLength() . "\nReference sequence length: "
+            . $self->referenceSeqLength() . "\nSize relative to reference sequence: "
             . $self->percentComplete();
+}
+
+sub _buildIsFull {
+    my $self = shift;
+    my $beginMatches = 0;
+    my $endMatches = 0;
+
+    if ($self->refSt() < $isFullCutoff) {
+        $beginMatches = 1;
+    }
+    if (($self->referenceSeqLength() - $self->refEn()) < $isFullCutoff) {
+        $endMatches = 1;
+    }
+
+    if ($beginMatches && $endMatches) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
 }
 
 sub _buildPercent {
     my $self = shift;
-    return $self->seqLength() / $self->completeSeqLength();
+    return $self->seqLength() / $self->referenceSeqLength();
 }
 
 sub _buildLength {
     my $self = shift;
-    my $aliSt = $self->aliSt();
-    my $aliEn = $self->aliEn();
+    my $gnSt = $self->gnSt();
+    my $gnEn = $self->gnEn();
 
-    return abs($aliEn - $aliSt) + 1;
+    return abs($gnEn - $gnSt) + 1;
 }
 
 #Returns length of complete version of sequence
-sub _buildCompLength {
+sub _buildRefLength {
     my $self = shift;
-    open(my $fileHandle, "<", $self->completeSeqPath()) or die "Can't open .fna file " .$self->completeSeqPath() . ": $!";
+    open(my $fileHandle, "<", $self->referenceSeqPath()) or die "Can't open .fna file " .$self->referenceSeqPath() . ": $!";
     readline($fileHandle); #skip header line
 
     my $fastaBody = "";
