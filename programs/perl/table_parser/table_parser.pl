@@ -18,6 +18,7 @@ my %chartHash;
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
 open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
+open(my $arraysOutput, ">", $ARGV[3]) or die "Can't open $ARGV[3]: $!";
 
 my $count = 0;
 
@@ -37,7 +38,7 @@ while (my $line = <$tableFile>) {
     elsif ($line =~ /(.+?)\s+.+?\s+.+?\s+.+?\s+.+?\s+.+?\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s/){
         my $name = $1;
         my $strand = $4;
-        my $isPos = 0;
+        my $isPos = 1;
 
         if ($strand eq "+"){
             $isPos = 1;
@@ -71,14 +72,28 @@ while (my $line = <$tableFile>) {
             $arrayRef->[$i] += 1;
         }
 
-        print $seq->referenceSeqLength;
-
         if ($count == 0) {
             #Print header line
             print $outputTSF $seq->tableHeader . "\n";
-            $count++;
         }
 
         print $outputTSF $seq->tableLine . "\n";
+        $count++;
     }
+}
+
+my @hashKeys = keys %chartHash;
+print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
+        "reference sequences, " . scalar @hashKeys . " had hits in $ARGV[1]\n";
+
+#Print out index-based 'charts' in tab-delimited format
+foreach my $hashKey (@hashKeys) {
+    my @chartArray = @{$chartHash{$hashKey}};
+    my $chartLine = $hashKey . "\t" . shift @chartArray;
+
+    foreach my $index (@chartArray) {
+        $chartLine .= "\t$index";
+    }
+
+    print $arraysOutput "$chartLine\n";
 }
