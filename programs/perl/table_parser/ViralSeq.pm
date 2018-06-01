@@ -4,7 +4,6 @@ package ViralSeq;
 {
 use strict;
 use warnings;
-use diagnostics;
 
 use Moose;
 
@@ -30,6 +29,12 @@ has gnEn => (
     required    => 1,
 );
 
+#Path to genome sequence was extracted from
+has genomePath => (
+    is  => 'ro',
+    isa => 'Str',
+);
+
 #Start index of hit in reference sequence
 has refSt => (
     is          => 'ro',
@@ -51,8 +56,8 @@ has referenceSeqPath => (
     required    => 1,
 );
 
-#Is sequence on negative strand?
-has negStrand => (
+#Is sequence on positive strand?
+has isPos => (
     is          => 'ro',
     isa         => 'Bool',
     required    => 1,
@@ -79,16 +84,26 @@ has percentComplete => (
 has isFullLength => (
     is      => 'ro',
     lazy    => 1,
-    buidler => '_buildIsFull',
-)
+    builder => '_buildIsFull',
+);
 
-sub printTableLine {
+sub tableLine {
     my $self = shift;
-    my $returnString = '';
 
-    return  "Length: " . $self->seqLength() . "\nReference sequence length: "
-            . $self->referenceSeqLength() . "\nSize relative to reference sequence: "
-            . $self->percentComplete();
+    my $returnString =  $self->name . "\t" . $self->gnSt . "\t" . $self->gnEn
+                        . "\t" . $self->isFullLength . "\t" . $self->refSt
+                        . "\t" . $self->refEn . "\t" . $self->isPos
+                        . "\t" . $self->referenceSeqPath;
+
+    if ($self->genomePath) {
+        $returnString .= "\t" . $self->genomePath;
+    }
+
+    return  $returnString;
+}
+
+sub tableHeader {
+    return "Name\tGnSt\tGnEn\tIsFullLength\tRefSt\tRefEn\tIsPos\tRefFile";
 }
 
 sub _buildIsFull {
@@ -96,10 +111,10 @@ sub _buildIsFull {
     my $beginMatches = 0;
     my $endMatches = 0;
 
-    if ($self->refSt() < $isFullCutoff) {
+    if ($self->refSt <= $isFullCutoff) {
         $beginMatches = 1;
     }
-    if (($self->referenceSeqLength() - $self->refEn()) < $isFullCutoff) {
+    if (($self->referenceSeqLength - $self->refEn) <= $isFullCutoff) {
         $endMatches = 1;
     }
 
@@ -113,13 +128,13 @@ sub _buildIsFull {
 
 sub _buildPercent {
     my $self = shift;
-    return $self->seqLength() / $self->referenceSeqLength();
+    return $self->seqLength / $self->referenceSeqLength;
 }
 
 sub _buildLength {
     my $self = shift;
-    my $gnSt = $self->gnSt();
-    my $gnEn = $self->gnEn();
+    my $gnSt = $self->gnSt;
+    my $gnEn = $self->gnEn;
 
     return abs($gnEn - $gnSt) + 1;
 }
@@ -127,7 +142,7 @@ sub _buildLength {
 #Returns length of complete version of sequence
 sub _buildRefLength {
     my $self = shift;
-    open(my $fileHandle, "<", $self->referenceSeqPath()) or die "Can't open .fna file " .$self->referenceSeqPath() . ": $!";
+    open(my $fileHandle, "<", $self->referenceSeqPath) or die "Can't open .fna file " .$self->referenceSeqPath . ": $!";
     readline($fileHandle); #skip header line
 
     my $fastaBody = "";

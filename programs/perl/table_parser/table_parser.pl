@@ -1,7 +1,14 @@
 #!/usr/bin/env perl
+#Arguments:
+    #0: path to folder containing reference prophage sequences
+    #1: path to DFAM table
+    #2: path to output 'bed-like' file
+    #3: Path to bar chart output?
 
 use strict;
 use warnings;
+use FindBin;
+use lib $FindBin::Bin;
 # import classes
 use ViralSeq;
 
@@ -10,6 +17,9 @@ my $prophagePath = $ARGV[0];
 my %chartHash;
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
+open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
+
+my $count = 0;
 
 while (my $line = <$tableFile>) {
 
@@ -27,10 +37,10 @@ while (my $line = <$tableFile>) {
     elsif ($line =~ /(.+?)\s+.+?\s+.+?\s+.+?\s+.+?\s+.+?\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s/){
         my $name = $1;
         my $strand = $4;
-        my $negStrand = 0;
+        my $isPos = 0;
 
-        if ($strand eq '-'){
-            my $negStrand = 1;
+        if ($strand eq "+"){
+            $isPos = 1;
         }
 
         my $seq = ViralSeq->new(
@@ -38,13 +48,14 @@ while (my $line = <$tableFile>) {
             refSt               => $2,
             refEn               => $3,
             referenceSeqPath    => "$prophagePath$name.fasta",
-            negStrand           => $negStrand,
+            isPos               => $isPos,
             gnSt                => $5,
             gnEn                => $6,
         );
 
         unless (exists $chartHash{$name}) {
-            my @array = 0x($seq->referenceSeqLength());
+
+            my @array = (0)x$seq->referenceSeqLength;
             my $arrayRef = \@array;
 
             $chartHash{$name} = $arrayRef;
@@ -54,10 +65,20 @@ while (my $line = <$tableFile>) {
         #Iterate over nucleotides present in genomic strain, incrementing
         #for each present in genome. To match array 0-indexing, nucleotide
         #indexes are offset by 1.
-        for (my $i = $self->refSt() - 1; $i < $seq->refEn(); $i++) {
+        for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
             my $arrayRef = $chartHash{$name};
 
             $arrayRef->[$i] += 1;
         }
+
+        print $seq->referenceSeqLength;
+
+        if ($count == 0) {
+            #Print header line
+            print $outputTSF $seq->tableHeader . "\n";
+            $count++;
+        }
+
+        print $outputTSF $seq->tableLine . "\n";
     }
 }
