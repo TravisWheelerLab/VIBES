@@ -3,7 +3,7 @@
     #0: path to folder containing reference prophage sequences
     #1: path to DFAM table
     #2: path to output 'bed-like' file
-    #3: Path to bar chart output?
+    #3: Path to chart directory
 
 use strict;
 use warnings;
@@ -18,7 +18,7 @@ my %chartHash;
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
 open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
-open(my $arraysOutput, ">", $ARGV[3]) or die "Can't open $ARGV[3]: $!";
+my $chartPath;
 
 my $count = 0;
 
@@ -38,7 +38,7 @@ while (my $line = <$tableFile>) {
     elsif ($line =~ /(.+?)\s+.+?\s+.+?\s+.+?\s+.+?\s+.+?\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s/){
         my $name = $1;
         my $strand = $4;
-        my $isPos = 1;
+        my $isPos = 0;
 
         if ($strand eq "+"){
             $isPos = 1;
@@ -54,11 +54,26 @@ while (my $line = <$tableFile>) {
             gnEn                => $6,
         );
 
-        unless (exists $chartHash{$name}) {
+        $chartPath = "$ARGV[3]$name.txt";
 
+        unless (exists $chartHash{$name}) {
             my @array = (0)x$seq->referenceSeqLength;
             my $arrayRef = \@array;
 
+            #if file already exists, read in its contents and populate array
+            if (open(my $chartFile, "<", $chartPath)) {
+                # skip header
+                readline $chartFile;
+
+                my $index = 0;
+                while (my $line = <$chartFile>) {
+                    chomp $line;
+                    $arrayRef->[$index] = $line;
+                    $index += 1;
+                }
+
+                close $chartFile;
+            }
             $chartHash{$name} = $arrayRef;
         }
 
@@ -68,7 +83,6 @@ while (my $line = <$tableFile>) {
         #indexes are offset by 1.
         for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
             my $arrayRef = $chartHash{$name};
-
             $arrayRef->[$i] += 1;
         }
 
@@ -88,12 +102,16 @@ print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
 
 #Print out index-based 'charts' in tab-delimited format
 foreach my $hashKey (@hashKeys) {
-    my @chartArray = @{$chartHash{$hashKey}};
-    my $chartLine = $hashKey . "\t" . shift @chartArray;
+    $chartPath = "$ARGV[3]$hashKey.txt";
+    open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
-    foreach my $index (@chartArray) {
-        $chartLine .= "\t$index";
+    my @chartArray = @{$chartHash{$hashKey}};
+    my $chartLine = "$hashKey\n";
+
+    foreach my $entry (@chartArray) {
+        $chartLine .= "$entry\n";
     }
 
-    print $arraysOutput "$chartLine\n";
+    print $chartOutput "$chartLine";
+    close $chartOutput
 }
