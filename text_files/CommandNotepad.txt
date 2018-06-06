@@ -1,0 +1,24 @@
+=====
+perl hmmbuild_mult_seq.pl ../../sequence_files/prophage/all_prophage_seq.fasta
+hmmpress all_prophage_seqs.hmm
+nhmmscan --dfamtblout tables/test_run_table.dfam --cpu 3 prophage_seq/all_prophage_seqs.hmm genomes/Pseudomonas_aeruginosa_12-4-4_59__3618.fna
+perl dfamscan.pl --dfam_infile  ../../tables/dfam/test_run_table.dfam --dfam_outfile ../../tables/dfam/test_run_filtered.dfam
+
+perl hmmbuild_mult_seq.pl ../../sequence_files/att/att_seq.fasta
+cat *.hmm > all_att_seq.hmm
+hmmpress all_att_seq.hmm
+nhmmscan --dfamtblout tables/att_test.dfam att_seq/all_att_seq.hmm genomes/Pseudomonas_aeruginosa_12-4-4_59__3618.fna
+perl dfamscan.pl --dfam_infile  ../../tables/dfam/att_test.dfam --dfam_outfile ../../tables/dfam/att_test_scanned.dfam
+
+=====
+perl hmmbuild_mult_seq.pl ../../sequence_files/prophage/prophage_seq.fasta
+cat *.hmm > all_prophage_seq.hmm
+hmmpress all_prophage_seq.hmm
+nhmmscan --dfamtblout tables/test_strain_names_viral.dfam --cpu 3 prophage_seq/all_prophage_seq.hmm genomes/Pseudomonas_aeruginosa_12-4-4_59__3618.fna
+perl dfamscan.pl --dfam_infile  ../../tables/dfam/test_strain_names_viral.dfam --dfam_outfile ../../tables/dfam/names_viral_scanned.dfam
+
+perl hmmbuild_mult_seq.pl ../../sequence_files/att/att_seq.fasta
+cat *.hmm > all_att_seq.hmm
+hmmpress all_att_seq.hmm
+nhmmscan --dfamtblout tables/att_test.dfam att_seq/all_att_seq.hmm genomes/Pseudomonas_aeruginosa_12-4-4_59__3618.fna
+perl dfamscan.pl --dfam_infile  ../../tables/dfam/att_names_test.dfam --dfam_outfile ../../tables/dfam/att_names_test_scanned.dfam
