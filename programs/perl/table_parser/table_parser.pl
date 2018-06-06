@@ -102,7 +102,7 @@ print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
 
 #Print out index-based 'charts' in tab-delimited format
 foreach my $hashKey (@hashKeys) {
-    $chartPath = "$ARGV[3]$hashKey.txt";
+    $chartPath = "$ARGV[3]$hashKey" . "Chart.txt";
     open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
     my @chartArray = @{$chartHash{$hashKey}};
