@@ -22,3 +22,7 @@ cat *.hmm > all_att_seq.hmm
 hmmpress all_att_seq.hmm
 nhmmscan --dfamtblout tables/att_test.dfam att_seq/all_att_seq.hmm genomes/Pseudomonas_aeruginosa_12-4-4_59__3618.fna
 perl dfamscan.pl --dfam_infile  ../../tables/dfam/att_names_test.dfam --dfam_outfile ../../tables/dfam/att_names_test_scanned.dfam
+
+=====
+perl tableizer.pl ../genomes/ ../prophage_seq/all_prophage_seq.hmm ../tables
+perl tableizer.pl ../genomes/ ../att_seq/all_att_seq.hmm ../tables

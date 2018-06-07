@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #Takes in a path to a genome directoy, a path to a file containing reference
-#.hmm, and a path to an output directory. Returns a .dfam table for each
-#genome in the directory.
+#.hmm, a path to an output directory, and a suffix to append to the file name.
+#Returns a .dfam table for each genome in the directory.
 
 use strict;
 use warnings;
@@ -9,6 +9,13 @@ use warnings;
 my $genomeDir = $ARGV[0];
 my $referencePath = $ARGV[1];
 my $tableDir = $ARGV[2];
+my $suffix = $ARGV[3];
+
+unless ($suffix) {
+    die "Please enter a valid suffix argument to help distinguish which reference"
+        . " strains are being used. Order of arguments is: Path to genome dir,"
+        . " path to reference strain file, path to output dir, suffix argument\n";
+}
 
 #we assume every entry in the directory is a genome we're interested in
 my @genomes = glob "$genomeDir/*";
@@ -22,9 +29,11 @@ foreach my $genome (@genomes) {
         $fileName = $1;
     }
 
-    my $tablePath = "$tableDir/$fileName" . "_viral.dfam";
-    my $scannedPath = "$tableDir/$fileName" . "_viral_scanned.dfam";
-
-    print "nhmmscan --dfamtblout $tablePath $referencePath $genome\n";
-    print "perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath";
+    my $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
+    my $scannedPath = "$tableDir/$fileName" . "_$suffix" . "_scanned.dfam";
+#REMOVE CPU REMOVE CPU REMOVE CPU REMOVE CPU REMOVE CPU REMOVE CPU
+    print "Beginning nhmmscan on $genome\n";
+    `nhmmscan --dfamtblout $tablePath --cpu 3 $referencePath $genome`;
+    print "Beginnning dfamscan.pl on $tablePath\n";
+    `perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath`;
 }
