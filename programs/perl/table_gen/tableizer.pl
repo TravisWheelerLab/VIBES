@@ -31,9 +31,9 @@ foreach my $genome (@genomes) {
 
     my $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
     my $scannedPath = "$tableDir/$fileName" . "_$suffix" . "_scanned.dfam";
-#REMOVE CPU REMOVE CPU REMOVE CPU REMOVE CPU REMOVE CPU REMOVE CPU
-    print "Beginning nhmmscan on $genome\n";
-    `nhmmscan --dfamtblout $tablePath --cpu 3 $referencePath $genome`;
-    print "Beginnning dfamscan.pl on $tablePath\n";
+
+    print "\nBeginning nhmmscan on $genome\n";
+    `nhmmscan --dfamtblout $tablePath $referencePath $genome`;
+    print "\nBeginnning dfamscan.pl on $tablePath\n";
     `perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath`;
 }
