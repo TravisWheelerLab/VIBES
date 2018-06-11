@@ -8,9 +8,10 @@
 
 use strict;
 use warnings;
+use Time::HiRes;
 
-#Genome number is
-my $genomeNumber = $ARGV[0];
+#Genome number from server starts at one, so decrement to match array indexing
+my $genomeNumber = $ARGV[0] - 1;
 my $genomeDir = $ARGV[1];
 my $referencePath = $ARGV[2];
 my $tableDir = $ARGV[3];
@@ -29,24 +30,23 @@ if ($splitLine[-1] =~ /(.+?)\./) {
     $fileName = $1;
 }
 else {
+    be_verbose();
     die "Unable to extract file name from path: $genome\n";
 }
 
 my $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
 my $scannedPath = "$tableDir/$fileName" . "_$suffix" . "_scanned.dfam";
 
+my $stTime = Time::HiRes::gettimeofday();
 do_cmd("nhmmscan --dfamtblout $tablePath $referencePath $genome");
+my $elapsed = Time::HiRes::tv_interval($stTime);
 do_cmd("perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath");
 
+if ($verbose > 0) {
+    be_verbose();
+}
+
 sub be_verbose {
-    our $genomeNumber;
-    our $genomeDir;
-    our $referencePath;
-    our $tableDir;
-    our $suffix;
-    our $genome;
-    our $tablePath;
-    our $scannedPath;
     my $path = `pwd`;
 
     print "Number: $genomeNumber\n";
@@ -55,14 +55,15 @@ sub be_verbose {
     print "Ref: $referencePath\n";
     print "Table dir: $tableDir\n";
     print "Suffix: $suffix\n";
+    print "Verbose: $verbose\n";
     print "Genome: $genome\n";
     print "Table Path: $tablePath\n";
     print "Scanned table path: $scannedPath\n";
+    print "Time to complete nhmmscan: $elapsed milliseconds\n";
     print "Current directory: $path";
 }
 
 sub do_cmd {
-    our $verbose;
     my $cmd = $_[0];
 
     if ($verbose > 0) {
