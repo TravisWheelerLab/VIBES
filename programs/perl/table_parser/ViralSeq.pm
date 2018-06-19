@@ -87,6 +87,12 @@ has isFullLength => (
     builder => '_buildIsFull',
 );
 
+sub findFlankingAtts {
+    my $self = shift;
+    my $name = $self->name;
+
+}
+
 sub tableLine {
     my $self = shift;
 
@@ -137,7 +143,6 @@ sub _buildLength {
     my $gnEn = $self->gnEn;
 
     return abs($gnEn - $gnSt) + 1;
-}
 
 #Returns length of complete version of sequence
 sub _buildRefLength {

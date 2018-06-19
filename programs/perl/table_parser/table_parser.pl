@@ -20,7 +20,7 @@ open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
 open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
 my $chartPath;
 
-my $count = 0;
+my $count = 1;
 
 while (my $line = <$tableFile>) {
 
@@ -45,7 +45,7 @@ while (my $line = <$tableFile>) {
         }
 
         my $seq = ViralSeq->new(
-            name                => $name,
+            name                => $name . "_$count",
             refSt               => $2,
             refEn               => $3,
             referenceSeqPath    => "$prophagePath$name.fasta",
@@ -95,6 +95,10 @@ while (my $line = <$tableFile>) {
         $count++;
     }
 }
+
+#since count is set to 1 initially for naming purposes, decrement by 1 for
+#reporting accuracy
+$count = $count - 1;
 
 my @hashKeys = keys %chartHash;
 print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
