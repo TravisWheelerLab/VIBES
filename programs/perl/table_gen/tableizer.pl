@@ -37,8 +37,8 @@ else {
 my $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
 my $scannedPath = "$tableDir/$fileName" . "_$suffix" . "_scanned.dfam";
 
-my $stTime = Time::HiRes::gettimeofday();
-do_cmd("nhmmscan --dfamtblout $tablePath $referencePath $genome");
+my $stTime = [Time::HiRes::gettimeofday()];
+do_cmd("nhmmscan --cpu 1 --dfamtblout $tablePath $referencePath $genome");
 my $elapsed = Time::HiRes::tv_interval($stTime);
 do_cmd("perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath");
 
@@ -59,7 +59,7 @@ sub be_verbose {
     print "Genome: $genome\n";
     print "Table Path: $tablePath\n";
     print "Scanned table path: $scannedPath\n";
-    print "Time to complete nhmmscan: $elapsed milliseconds\n";
+    print "Time to complete nhmmscan: $elapsed seconds\n";
     print "Current directory: $path";
 }
 
