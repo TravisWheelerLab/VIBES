@@ -90,6 +90,37 @@ has isFullLength => (
 sub findFlankingAtts {
     my $self = shift;
     my $name = $self->name;
+    my $genomePath = $self->genomePath;
+
+    open(my $FivePrime, ">", "./fivePrime.fasta") or die "Can't open fivePrime.fasta: $!";
+    open(my $ThreePrime, ">", "./threePrime.fasta") or die "Can't open threePrime.fasta: $!";
+    open(my $genome, "<", $genomePath) or die "Can't open $genomePath: $!";
+
+    my $fastaHeader = readline($genome);
+
+    my $identifier;
+
+    if ($fastaHeader =~ />(.+?) /) {
+        $identifier = $1;
+    }
+    else {
+        die "\nUnable to parse .fna header line with regex!\n";
+    }
+
+    my $fiveBegin;
+    my $fiveEnd;
+    my $threeBegin;
+    my $threeEnd;
+
+    if ($self->isPos) {
+
+    }
+    else {
+
+    }
+
+    print $fivePrime `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier`;
+    print $threePrime `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier`;
 
 }
 
