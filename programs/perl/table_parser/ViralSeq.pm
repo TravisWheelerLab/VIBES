@@ -91,9 +91,10 @@ sub findFlankingAtts {
     my $self = shift;
     my $name = $self->name;
     my $genomePath = $self->genomePath;
+    my $startIndex = $self->gnSt;
+    my $endIndex = $self->gnEn;
+    my $flankSize = 2000;
 
-    open(my $FivePrime, ">", "./fivePrime.fasta") or die "Can't open fivePrime.fasta: $!";
-    open(my $ThreePrime, ">", "./threePrime.fasta") or die "Can't open threePrime.fasta: $!";
     open(my $genome, "<", $genomePath) or die "Can't open $genomePath: $!";
 
     my $fastaHeader = readline($genome);
@@ -107,20 +108,31 @@ sub findFlankingAtts {
         die "\nUnable to parse .fna header line with regex!\n";
     }
 
+#Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
     my $fiveBegin;
     my $fiveEnd;
     my $threeBegin;
     my $threeEnd;
 
     if ($self->isPos) {
-
+        $fiveBegin = $startIndex - $flankSize;
+        $fiveEnd = $startIndex - 1;
+        $threeBegin = $endIndex + 1;
+        $threeEnd = $endIndex + $flankSize;
     }
     else {
-
+        $fiveBegin = $startIndex + $flankSize;
+        $fiveEnd = $startIndex + 1;
+        $threeBegin = $endIndex - 1;
+        $threeEnd = $endIndex - $flankSize;
     }
 
-    print $fivePrime `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier`;
-    print $threePrime `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier`;
+    `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
+    `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
+
+    `nhmmer -f $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta`;
+
+    `rm fivePrimeFlank.fasta threePrimeFlank.fasta`
 
 }
 
