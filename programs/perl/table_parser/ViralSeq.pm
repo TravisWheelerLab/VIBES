@@ -93,7 +93,7 @@ sub findFlankingAtts {
     my $genomePath = $self->genomePath;
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
-    my $flankSize = 2000;
+    my $flankSize = 500;
 
     open(my $genome, "<", $genomePath) or die "Can't open $genomePath: $!";
 
@@ -115,20 +115,56 @@ sub findFlankingAtts {
     my $threeEnd;
 
     if ($self->isPos) {
-        $fiveBegin = $startIndex - $flankSize;
-        $fiveEnd = $startIndex - 1;
+        #Since nucleotide indexing begins at 1, we want these at least == 1
+        unless (($startIndex - $flankSize) < 1) {
+            $fiveBegin = $startIndex - $flankSize;
+        }
+        else {
+            $fiveBegin = 1;
+        }
+
+        unless (($startIndex - 1) < 1) {
+            $fiveEnd = $startIndex - 1;
+        }
+        else {
+            $fiveEnd = 1;
+        }
+
+        #These occuring beyond end of genome are handled later
         $threeBegin = $endIndex + 1;
         $threeEnd = $endIndex + $flankSize;
     }
-    else {
+    else { #is on negative strand
+        #These occuring beyond end of genome are handled later
         $fiveBegin = $startIndex + $flankSize;
         $fiveEnd = $startIndex + 1;
-        $threeBegin = $endIndex - 1;
-        $threeEnd = $endIndex - $flankSize;
+
+        #Since nucleotide indexing begins at 1, we want these at least == 1
+        unless (($endIndex - 1) < 1) {
+            $threeBegin = $endIndex - 1;
+        }
+        else {
+            $threeBegin = 1;
+        }
+
+        unless (($endIndex - $flankSize) < 1) {
+            $threeEnd = $endIndex - $flankSize;
+        }
+        else {
+            $threeEnd = 1;
+        }
     }
 
-    `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
-    `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
+#HEY ME: Split into 2 statements, check > 0
+    do {
+
+        my $fiveOutput = `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
+
+    }while ();
+
+    do {
+        my $threeOutput = `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
+    }while ();
 
     `nhmmer -f $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta`;
 
