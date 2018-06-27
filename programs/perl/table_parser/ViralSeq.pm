@@ -7,7 +7,7 @@ use warnings;
 
 use Moose;
 
-my $isFullCutoff = 50;
+my $isFullCutoff = 500;
 
 has name => (
     is          => 'ro',
@@ -94,6 +94,13 @@ sub findFlankingAtts {
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
     my $flankSize = 500;
+    #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
+    my $fiveBegin;
+    my $fiveEnd;
+    my $threeBegin;
+    my $threeEnd;
+    my $fiveOutput = " ";
+    my $threeOutput = " ";
 
     open(my $genome, "<", $genomePath) or die "Can't open $genomePath: $!";
 
@@ -107,12 +114,6 @@ sub findFlankingAtts {
     else {
         die "\nUnable to parse .fna header line with regex!\n";
     }
-
-#Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
-    my $fiveBegin;
-    my $fiveEnd;
-    my $threeBegin;
-    my $threeEnd;
 
     if ($self->isPos) {
         #Since nucleotide indexing begins at 1, we want these at least == 1
@@ -158,12 +159,12 @@ sub findFlankingAtts {
 #HEY ME: Split into 2 statements, check > 0
     do {
 
-        my $fiveOutput = `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
+        $fiveOutput = `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
 
-    }while ();
+    }while ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
     do {
-        my $threeOutput = `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
+        $threeOutput = `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
     }while ();
 
     `nhmmer -f $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta`;
