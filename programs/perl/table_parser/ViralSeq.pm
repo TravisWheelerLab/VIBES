@@ -63,6 +63,12 @@ has isPos => (
     required    => 1,
 );
 
+has outputPath => (
+    is      => 'ro',
+    isa     => 'Str',
+    lazy    => 1,
+);
+
 has seqLength => (
     is      => 'ro',
     lazy    => 1,
@@ -93,6 +99,7 @@ sub findFlankingAtts {
     my $genomePath = $self->genomePath;
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
+    my $outputPath = $self->outputPath;
     my $flankSize = 500;
     #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
     my $fiveBegin;
@@ -124,29 +131,18 @@ sub findFlankingAtts {
             $fiveBegin = 1;
         }
 
-        unless (($startIndex - 1) < 1) {
-            $fiveEnd = $startIndex - 1;
-        }
-        else {
-            $fiveEnd = 1;
-        }
+        $fiveEnd = $startIndex;
 
         #These occuring beyond end of genome are handled later
-        $threeBegin = $endIndex + 1;
+        $threeBegin = $endIndex;
         $threeEnd = $endIndex + $flankSize;
     }
     else { #is on negative strand
         #These occuring beyond end of genome are handled later
         $fiveBegin = $startIndex + $flankSize;
-        $fiveEnd = $startIndex + 1;
+        $fiveEnd = $startIndex;
 
-        #Since nucleotide indexing begins at 1, we want these at least == 1
-        unless (($endIndex - 1) < 1) {
-            $threeBegin = $endIndex - 1;
-        }
-        else {
-            $threeBegin = 1;
-        }
+        $threeBegin = $endIndex;
 
         unless (($endIndex - $flankSize) < 1) {
             $threeEnd = $endIndex - $flankSize;
@@ -156,21 +152,31 @@ sub findFlankingAtts {
         }
     }
 
-#HEY ME: Split into 2 statements, check > 0
+    #index genome so it's usable by esl-sfetch
+    `esl-sfetch --index $genomePath`;
+
+    #Check that indexes do not exceed genome size using esl-sfetch
     do {
+        if ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/){
+            $fiveBegin = $1;
+        }
 
-        $fiveOutput = `esl-sfetch -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
-
+        $fiveOutput = `esl-sfetch -n $name -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
     }while ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
     do {
-        $threeOutput = `esl-sfetch -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
-    }while ();
+        if ($threeOutput =~ /Subsequence end \d+ is greater than length (\d+)/){
+            $threeEnd = $1;
+        }
+
+        $threeOutput = `esl-sfetch -n $name -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
+    }while ($threeOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
     `nhmmer -f $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta`;
 
-    `rm fivePrimeFlank.fasta threePrimeFlank.fasta`
-
+    #clean up files we don't need
+    `rm $genomePath.ssi`;
+    `rm fivePrimeFlank.fasta threePrimeFlank.fasta`;
 }
 
 sub tableLine {

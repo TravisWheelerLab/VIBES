@@ -4,6 +4,7 @@
     #1: path to DFAM table
     #2: path to output 'bed-like' file
     #3: Path to chart directory
+    #4: Path to parsed table output director
 
 use strict;
 use warnings;
@@ -15,6 +16,7 @@ use ViralSeq;
 #Path to folder containing reference prophage .fastas
 my $prophagePath = $ARGV[0];
 my %chartHash;
+my $outputPath = $ARGV[4];
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
 open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
@@ -52,6 +54,7 @@ while (my $line = <$tableFile>) {
             isPos               => $isPos,
             gnSt                => $5,
             gnEn                => $6,
+            outputPath          => $outputPath,
         );
 
         $chartPath = "$ARGV[3]$name.txt";
@@ -92,6 +95,8 @@ while (my $line = <$tableFile>) {
         }
 
         print $outputTSF $seq->tableLine . "\n";
+        #HMMER flanking sites
+        $seq->findFlankingAtts;
         $count++;
     }
 }
