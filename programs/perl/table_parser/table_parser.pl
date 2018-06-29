@@ -4,7 +4,8 @@
     #1: path to DFAM table
     #2: path to output 'bed-like' file
     #3: Path to chart directory
-    #4: Path to parsed table output director
+    #4: Path to flanking att side directory
+    #5: Path to genome
 
 use strict;
 use warnings;
@@ -16,7 +17,8 @@ use ViralSeq;
 #Path to folder containing reference prophage .fastas
 my $prophagePath = $ARGV[0];
 my %chartHash;
-my $outputPath = $ARGV[4];
+my $attSitePath = $ARGV[4];
+my $genomePath = $ARGV[5];
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
 open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
@@ -50,11 +52,13 @@ while (my $line = <$tableFile>) {
             name                => $name . "_$count",
             refSt               => $2,
             refEn               => $3,
-            referenceSeqPath    => "$prophagePath$name.fasta",
+            referenceSeqPath    => "$prophagePath",
             isPos               => $isPos,
             gnSt                => $5,
             gnEn                => $6,
-            outputPath          => $outputPath,
+            attSitePath         => $attSitePath,
+            genomePath          => $genomePath,
+            verbose             => 1,
         );
 
         $chartPath = "$ARGV[3]$name.txt";
@@ -101,6 +105,8 @@ while (my $line = <$tableFile>) {
     }
 }
 
+close $tableFile;
+
 #since count is set to 1 initially for naming purposes, decrement by 1 for
 #reporting accuracy
 $count = $count - 1;
@@ -118,7 +124,7 @@ foreach my $hashKey (@hashKeys) {
     my $chartLine = "$hashKey\n";
 
     foreach my $entry (@chartArray) {
-        $chartLine .= "$entry\n";
+        #$chartLine .= "$entry\n";
     }
 
     print $chartOutput "$chartLine";

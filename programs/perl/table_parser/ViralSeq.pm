@@ -29,10 +29,11 @@ has gnEn => (
     required    => 1,
 );
 
-#Path to genome sequence was extracted from
+#Path to genome the sequence was extracted from
 has genomePath => (
-    is  => 'ro',
-    isa => 'Str',
+    is          => 'ro',
+    isa         => 'Str',
+    required    => 1,
 );
 
 #Start index of hit in reference sequence
@@ -63,9 +64,16 @@ has isPos => (
     required    => 1,
 );
 
-has outputPath => (
+has verbose => (
+    is          => 'ro',
+    isa         => 'Bool',
+    required    => 1,
+);
+
+has attSitePath => (
     is      => 'ro',
     isa     => 'Str',
+    default => "./attSites",
     lazy    => 1,
 );
 
@@ -99,8 +107,8 @@ sub findFlankingAtts {
     my $genomePath = $self->genomePath;
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
-    my $outputPath = $self->outputPath;
-    my $flankSize = 500;
+    my $outputPath = $self->attSitePath . "/$name";
+    my $flankSize = 2000;
     #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
     my $fiveBegin;
     my $fiveEnd;
@@ -117,6 +125,8 @@ sub findFlankingAtts {
 
     if ($fastaHeader =~ />(.+?) /) {
         $identifier = $1;
+        #replace pesky pipes with escaped pipes
+        $identifier =~ s/\|/\\|/g;
     }
     else {
         die "\nUnable to parse .fna header line with regex!\n";
@@ -153,7 +163,7 @@ sub findFlankingAtts {
     }
 
     #index genome so it's usable by esl-sfetch
-    `esl-sfetch --index $genomePath`;
+    $self->_do_cmd("esl-sfetch --index $genomePath");
 
     #Check that indexes do not exceed genome size using esl-sfetch
     do {
@@ -161,7 +171,7 @@ sub findFlankingAtts {
             $fiveBegin = $1;
         }
 
-        $fiveOutput = `esl-sfetch -n $name -c $fiveBegin..$fiveEnd $genomePath $identifier > fivePrimeFlank.fasta`;
+        $fiveOutput = $self->_do_cmd("esl-sfetch -n $name -c $fiveBegin..$fiveEnd $genomePath $identifier");
     }while ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
     do {
@@ -169,14 +179,20 @@ sub findFlankingAtts {
             $threeEnd = $1;
         }
 
-        $threeOutput = `esl-sfetch -n $name -c $threeBegin..$threeEnd $genomePath $identifier > threePrimeFlank.fasta`;
+        $threeOutput = $self->_do_cmd("esl-sfetch -n $name -c $threeBegin..$threeEnd $genomePath $identifier");
     }while ($threeOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
-    `nhmmer -f $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta`;
+    open(my $fiveHandle, ">", "./fivePrimeFlank.fasta") or die "Can't open fivePrimeFlank.fasta: $!";
+    open(my $threeHandle, ">", "./threePrimeFlank.fasta") or die "Can't open threePrimeFlank.fasta: $!";
+
+    print $fiveHandle $fiveOutput;
+    print $threeHandle $threeOutput;
+
+    $self->_do_cmd("nhmmer -o $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta");
 
     #clean up files we don't need
-    `rm $genomePath.ssi`;
-    `rm fivePrimeFlank.fasta threePrimeFlank.fasta`;
+    $self->_do_cmd("rm $genomePath.ssi");
+    #$self->_do_cmd("rm fivePrimeFlank.fasta threePrimeFlank.fasta");
 }
 
 sub tableLine {
@@ -229,7 +245,7 @@ sub _buildLength {
     my $gnEn = $self->gnEn;
 
     return abs($gnEn - $gnSt) + 1;
-
+}
 #Returns length of complete version of sequence
 sub _buildRefLength {
     my $self = shift;
@@ -243,6 +259,17 @@ sub _buildRefLength {
     }
 
     return length($fastaBody);
+}
+#Run command
+sub _do_cmd {
+    my $self = shift;
+    my $cmd = $_[0];
+
+    if ($self->verbose > 0) {
+        print "$cmd\n";
+    }
+
+    return `$cmd`;
 }
 }
 no Moose;
