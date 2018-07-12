@@ -108,7 +108,8 @@ sub findFlankingAtts {
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
     my $outputPath = $self->attSitePath . "/$name.afa";
-    my $flankSize = 20;
+    my $flankSize = 500;
+    my $genomeSize = 0;
     #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
     my $fiveBegin;
     my $fiveEnd;
@@ -117,6 +118,10 @@ sub findFlankingAtts {
     my $fiveOutput = " ";
     my $threeOutput = " ";
 
+    #Since we expect the genome to be in .fasta format, we open it to grab the
+    #header line and then extract the string of characters before the first space,
+    #which is used by esl-sfetch as an identifier. We also record the size of
+    #the genome.
     open(my $genome, "<", $genomePath) or die "Can't open $genomePath: $!";
 
     my $fastaHeader = readline($genome);
@@ -129,58 +134,58 @@ sub findFlankingAtts {
         $identifier =~ s/\|/\\|/g;
     }
     else {
-        die "\nUnable to parse .fna header line with regex!\n";
+        die "\nUnable to parse .fna header line ($fastaHeader) with regex!\n";
+    }
+
+    while (my $line = <$genome>) {
+        chomp $line;
+        $genomeSize += length $line;
     }
 
     if ($self->isPos) {
         #Since nucleotide indexing begins at 1, we want these at least == 1
-        unless (($startIndex - $flankSize) < 1) {
-            $fiveBegin = $startIndex - $flankSize;
-        }
-        else {
+        if (($startIndex - $flankSize) < 1) {
             $fiveBegin = 1;
         }
+        else {
+            $fiveBegin = $startIndex - $flankSize;
+        }
 
         $fiveEnd = $startIndex;
-
-        #These occuring beyond end of genome are handled later
-        $threeBegin = $endIndex;
-        $threeEnd = $endIndex + $flankSize;
-    }
-    else { #is on negative strand
-        #These occuring beyond end of genome are handled later
-        $fiveBegin = $startIndex + $flankSize;
-        $fiveEnd = $startIndex;
-
         $threeBegin = $endIndex;
 
-        unless (($endIndex - $flankSize) < 1) {
-            $threeEnd = $endIndex - $flankSize;
+        #Don't let threeEnd exceed genome size
+        if (($endIndex + $flankSize) > $genomeSize) {
+            $threeEnd = $genomeSize;
         }
         else {
+            $threeEnd = $endIndex + $flankSize;
+        }
+    }
+    else { #is on negative strand
+        if (($startIndex + $flankSize) > $genomeSize) {
+            $fiveBegin = $genomeSize;
+        }
+        else {
+            $fiveBegin = $startIndex + $flankSize;
+        }
+        $fiveEnd = $startIndex;
+        $threeBegin = $endIndex;
+
+        if (($endIndex - $flankSize) < 1) {
             $threeEnd = 1;
+        }
+        else {
+            $threeEnd = $endIndex - $flankSize;
         }
     }
 
     #index genome so it's usable by esl-sfetch
     $self->_do_cmd("esl-sfetch --index $genomePath");
 
-    #Check that indexes do not exceed genome size using esl-sfetch
-    do {
-        if ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/){
-            $fiveBegin = $1;
-        }
+    $fiveOutput = $self->_do_cmd("esl-sfetch -n fivePrimeFlank -c $fiveBegin..$fiveEnd $genomePath $identifier");
 
-        $fiveOutput = $self->_do_cmd("esl-sfetch -n fivePrimeFlank -c $fiveBegin..$fiveEnd $genomePath $identifier");
-    }while ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
-
-    do {
-        if ($threeOutput =~ /Subsequence end \d+ is greater than length (\d+)/){
-            $threeEnd = $1;
-        }
-
-        $threeOutput = $self->_do_cmd("esl-sfetch -n threePrimeFlank -c $threeBegin..$threeEnd $genomePath $identifier");
-    }while ($threeOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
+    $threeOutput = $self->_do_cmd("esl-sfetch -n threePrimeFlank -c $threeBegin..$threeEnd $genomePath $identifier");
 
     open(my $fiveHandle, ">", "./fivePrimeFlank.fasta") or die "Can't open fivePrimeFlank.fasta: $!";
     open(my $threeHandle, ">", "./threePrimeFlank.fasta") or die "Can't open threePrimeFlank.fasta: $!";
@@ -188,7 +193,14 @@ sub findFlankingAtts {
     print $fiveHandle $fiveOutput;
     print $threeHandle $threeOutput;
 
-    $self->_do_cmd("nhmmer -o $outputPath fivePrimeFlank.fasta threePrimeFlank.fasta");
+    my $hmmerOutput = $self->_do_cmd("nhmmer --dna fivePrimeFlank.fasta threePrimeFlank.fasta");
+
+    #The line [No hits detected that satisfy reporting thresholds] indicates that
+    #no matching sequences were found, so don't create output file.
+    unless ($hmmerOutput =~ /\[No hits detected that satisfy reporting thresholds\]/) {
+            open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
+            print $outputHandle $hmmerOutput;
+    }
 
     #clean up files we don't need
     $self->_do_cmd("rm $genomePath.ssi");

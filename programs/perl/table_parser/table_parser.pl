@@ -59,7 +59,7 @@ while (my $line = <$tableFile>) {
             gnEn                => $6,
             attSitePath         => $attSitePath,
             genomePath          => $genomePath,
-            verbose             => 1,
+            verbose             => 0,
         );
 
         $chartPath = "$ARGV[4]$name.txt";
@@ -125,7 +125,7 @@ foreach my $hashKey (@hashKeys) {
     my $chartLine = "$hashKey\n";
 
     foreach my $entry (@chartArray) {
-        #$chartLine .= "$entry\n";
+        $chartLine .= "$entry\n";
     }
 
     print $chartOutput "$chartLine";
