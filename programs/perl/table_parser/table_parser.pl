@@ -2,10 +2,11 @@
 #Arguments:
     #0: path to folder containing reference prophage sequences
     #1: path to DFAM table
-    #2: path to output 'bed-like' file
-    #3: Path to chart directory
-    #4: Path to flanking att side directory
-    #5: Path to genome
+    #2: Path to genome
+    #3: path to output 'bed-like' file
+    #4: Path to output chart directory
+    #5: Path to output flanking att side directory
+
 
 use strict;
 use warnings;
@@ -16,12 +17,12 @@ use ViralSeq;
 
 #Path to folder containing reference prophage .fastas
 my $prophagePath = $ARGV[0];
+my $genomePath = $ARGV[2];
+my $attSitePath = $ARGV[5];
 my %chartHash;
-my $attSitePath = $ARGV[4];
-my $genomePath = $ARGV[5];
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
-open(my $outputTSF, ">", $ARGV[2]) or die "Can't open $ARGV[2]: $!";
+open(my $outputTSF, ">", $ARGV[3]) or die "Can't open $ARGV[3]: $!";
 my $chartPath;
 
 my $count = 1;
@@ -61,7 +62,7 @@ while (my $line = <$tableFile>) {
             verbose             => 1,
         );
 
-        $chartPath = "$ARGV[3]$name.txt";
+        $chartPath = "$ARGV[4]$name.txt";
 
         unless (exists $chartHash{$name}) {
             my @array = (0)x$seq->referenceSeqLength;

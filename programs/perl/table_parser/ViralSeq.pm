@@ -107,8 +107,8 @@ sub findFlankingAtts {
     my $genomePath = $self->genomePath;
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
-    my $outputPath = $self->attSitePath . "/$name";
-    my $flankSize = 2000;
+    my $outputPath = $self->attSitePath . "/$name.afa";
+    my $flankSize = 20;
     #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
     my $fiveBegin;
     my $fiveEnd;
@@ -171,7 +171,7 @@ sub findFlankingAtts {
             $fiveBegin = $1;
         }
 
-        $fiveOutput = $self->_do_cmd("esl-sfetch -n $name -c $fiveBegin..$fiveEnd $genomePath $identifier");
+        $fiveOutput = $self->_do_cmd("esl-sfetch -n fivePrimeFlank -c $fiveBegin..$fiveEnd $genomePath $identifier");
     }while ($fiveOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
     do {
@@ -179,7 +179,7 @@ sub findFlankingAtts {
             $threeEnd = $1;
         }
 
-        $threeOutput = $self->_do_cmd("esl-sfetch -n $name -c $threeBegin..$threeEnd $genomePath $identifier");
+        $threeOutput = $self->_do_cmd("esl-sfetch -n threePrimeFlank -c $threeBegin..$threeEnd $genomePath $identifier");
     }while ($threeOutput =~ /Subsequence end \d+ is greater than length (\d+)/);
 
     open(my $fiveHandle, ">", "./fivePrimeFlank.fasta") or die "Can't open fivePrimeFlank.fasta: $!";
