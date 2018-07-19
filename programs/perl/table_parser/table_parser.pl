@@ -20,10 +20,11 @@ my $prophagePath = $ARGV[0];
 my $genomePath = $ARGV[2];
 my $attSitePath = $ARGV[5];
 my %chartHash;
+my $chartPath;
 
 open(my $tableFile, "<", $ARGV[1]) or die "Can't open $ARGV[1]: $!";
 open(my $outputTSF, ">", $ARGV[3]) or die "Can't open $ARGV[3]: $!";
-my $chartPath;
+
 
 my $count = 1;
 
@@ -53,7 +54,7 @@ while (my $line = <$tableFile>) {
             name                => $name . "_$count",
             refSt               => $2,
             refEn               => $3,
-            referenceSeqPath    => "$prophagePath",
+            referenceSeqPath    => "$prophagePath$name.fasta",
             isPos               => $isPos,
             gnSt                => $5,
             gnEn                => $6,
@@ -62,7 +63,7 @@ while (my $line = <$tableFile>) {
             verbose             => 0,
         );
 
-        $chartPath = "$ARGV[4]$name.txt";
+        $chartPath = "$ARGV[4]$name" . "Chart.txt";
 
         unless (exists $chartHash{$name}) {
             my @array = (0)x$seq->referenceSeqLength;
@@ -118,7 +119,6 @@ print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
 
 #Print out index-based 'charts' in tab-delimited format
 foreach my $hashKey (@hashKeys) {
-    $chartPath = "$ARGV[3]$hashKey" . "Chart.txt";
     open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
     my @chartArray = @{$chartHash{$hashKey}};
@@ -129,5 +129,5 @@ foreach my $hashKey (@hashKeys) {
     }
 
     print $chartOutput "$chartLine";
-    close $chartOutput
+    close $chartOutput;
 }

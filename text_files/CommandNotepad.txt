@@ -26,3 +26,14 @@ perl dfamscan.pl --dfam_infile  ../../tables/dfam/att_names_test.dfam --dfam_out
 =====
 perl tableizer.pl ../genomes/ ../prophage_seq/all_prophage_seq.hmm ../tables
 perl tableizer.pl ../genomes/ ../att_seq/all_att_seq.hmm ../tables
+
+=====
+SPADES on WGS Sequence
+spades_PAO1:
+spades.py -1 PAO1_R1_001.fastq -2 PAO1_R2_001.fastq -o ~/assembled_genomes/Pat_WGS_Sequence/PAO1/
+
+spades_PAO1_wt_Pf4:
+spades.py -1 PAO1-wt-Pf4_R1_001.fastq -2 PAO1-wt-Pf4_R2_001.fastq -o ~/assembled_genomes/Pat_WGS_Sequence/PAO1_wt_Pf4/
+
+spades_PAO1_rec_Pf4:
+spades.py -1 PAO1-rec-Pf4_R1_001.fastq -2 PAO1-rec-Pf4_R2_001.fastq -o ~/assembled_genomes/Pat_WGS_Sequence/PAO1_rec_Pf4/

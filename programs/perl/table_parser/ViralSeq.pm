@@ -261,7 +261,7 @@ sub _buildLength {
 #Returns length of complete version of sequence
 sub _buildRefLength {
     my $self = shift;
-    open(my $fileHandle, "<", $self->referenceSeqPath) or die "Can't open .fna file " .$self->referenceSeqPath . ": $!";
+    open(my $fileHandle, "<", $self->referenceSeqPath) or die "Can't open .fasta file " . $self->referenceSeqPath . ": $!";
     readline($fileHandle); #skip header line
 
     my $fastaBody = "";
