@@ -91,11 +91,15 @@ while (my $line = <$tableFile>) {
         #for each present in genome. To match array 0-indexing, nucleotide
         #indexes are offset by 1.
         for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
+            my $size = $seq->referenceSeqLength;
+            if ($i < 0 || $i >= $size) {
+                die "Nucleotide index is outside of bounds 1-$size for $name";
+            }
             my $arrayRef = $chartHash{$name};
             $arrayRef->[$i] += 1;
         }
 
-        if ($count == 0) {
+        if ($count == 1) {
             #Print header line
             print $outputTSF $seq->tableHeader . "\n";
         }
@@ -119,6 +123,7 @@ print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
 
 #Print out index-based 'charts' in tab-delimited format
 foreach my $hashKey (@hashKeys) {
+    $chartPath = "$ARGV[4]$hashKey" . "Chart.txt";
     open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
     my @chartArray = @{$chartHash{$hashKey}};

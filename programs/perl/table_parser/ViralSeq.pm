@@ -107,7 +107,6 @@ sub findFlankingAtts {
     my $genomePath = $self->genomePath;
     my $startIndex = $self->gnSt;
     my $endIndex = $self->gnEn;
-    my $outputPath = $self->attSitePath . "/$name.afa";
     my $flankSize = 500;
     my $genomeSize = 0;
     #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
@@ -198,20 +197,29 @@ sub findFlankingAtts {
     #The line [No hits detected that satisfy reporting thresholds] indicates that
     #no matching sequences were found, so don't create output file.
     unless ($hmmerOutput =~ /\[No hits detected that satisfy reporting thresholds\]/) {
-            open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
-            print $outputHandle $hmmerOutput;
+        my @splitLine = split('/', $genomePath);
+        my $genomeName;
+
+        if ($splitLine[-1] =~ /(.+?)\./) {
+            $genomeName = $1;
+        }
+
+        my $outputPath = $self->attSitePath . "/$genomeName.$name.$fiveBegin.afa";
+
+        open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
+        print $outputHandle $hmmerOutput;
     }
 
     #clean up files we don't need
     $self->_do_cmd("rm $genomePath.ssi");
-    #$self->_do_cmd("rm fivePrimeFlank.fasta threePrimeFlank.fasta");
+    $self->_do_cmd("rm fivePrimeFlank.fasta threePrimeFlank.fasta");
 }
 
 sub tableLine {
     my $self = shift;
 
-    my $returnString =  $self->name . "\t" . $self->gnSt . "\t" . $self->gnEn
-                        . "\t" . $self->isFullLength . "\t" . $self->refSt
+    my $returnString =  $self->name . "\t" . $self->isFullLength
+                        . "\t" . $self->gnSt . "\t" . $self->gnEn . "\t" . $self->refSt
                         . "\t" . $self->refEn . "\t" . $self->isPos
                         . "\t" . $self->referenceSeqPath;
 
@@ -223,7 +231,7 @@ sub tableLine {
 }
 
 sub tableHeader {
-    return "Name\tGnSt\tGnEn\tIsFullLength\tRefSt\tRefEn\tIsPos\tRefFile";
+    return "Name\tIsFullLength\tGnSt\tGnEn\tRefSt\tRefEn\tIsPos\tRefFile";
 }
 
 sub _buildIsFull {
