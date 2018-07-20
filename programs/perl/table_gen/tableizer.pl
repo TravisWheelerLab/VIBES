@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Takes in a path to a genome directoy, a path to a file containing reference
-#.hmm, a path to an output directory, a suffix to append to the file name,
+#.hmm, paths to output directories, a suffix to append to the file name,
 #and a boolean that sets the value of verbose.
 #Returns a .dfam table for each genome in the directory.
 
@@ -15,8 +15,9 @@ my $genomeNumber = $ARGV[0] - 1;
 my $genomeDir = $ARGV[1];
 my $referencePath = $ARGV[2];
 my $tableDir = $ARGV[3];
-my $suffix = $ARGV[4];
-my $verbose = $ARGV[5];
+my $scannedTableDir = $ARGV[4]
+my $suffix = $ARGV[5];
+my $verbose = $ARGV[6];
 
 #we assume every entry in the directory is a genome we're interested in
 my @genomes = glob "$genomeDir/*";
@@ -35,7 +36,7 @@ else {
 }
 
 my $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
-my $scannedPath = "$tableDir/$fileName" . "_$suffix" . "_scanned.dfam";
+my $scannedPath = "$scannedTableDir/$fileName" . "_$suffix" . "_scanned.dfam";
 
 my $stTime = [Time::HiRes::gettimeofday()];
 do_cmd("nhmmscan --cpu 1 --dfamtblout $tablePath $referencePath $genome");
