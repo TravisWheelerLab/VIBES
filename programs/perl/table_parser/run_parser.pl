@@ -38,7 +38,7 @@ $tsvPath = "$tsvDir/$genome.tsv";
 $genomePath = "$genomeDir/$genome.fna";
 
 
-my $parserOutput = do_cmd("perl table_parser.pl $prophagePath $tables[$tableNumber] $genomePath $tsvPath $chartDir $flankingAttDir");
+my $parserOutput = do_cmd("perl table_parser.pl $prophagePath $tables[$tableNumber] $genomePath $tsvPath $chartDir $flankingAttDir $isVerbose");
 print "$parserOutput\n";
 
 if ($isVerbose) {

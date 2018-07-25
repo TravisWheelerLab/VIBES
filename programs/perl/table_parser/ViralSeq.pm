@@ -110,6 +110,8 @@ sub findFlankingAtts {
     my $flankSize = 500;
     my $genomeSize = 0;
     #Five and three refer to the 5` and 3` ends of DNA, which runs from 5` to 3`
+    my $fiveFile = $genomePath . "fivePrimeFlank.fasta";
+    my $threeFile = $genomePath . "threePrimeFlank.fasta";
     my $fiveBegin;
     my $fiveEnd;
     my $threeBegin;
@@ -186,13 +188,13 @@ sub findFlankingAtts {
 
     $threeOutput = $self->_do_cmd("esl-sfetch -n threePrimeFlank -c $threeBegin..$threeEnd $genomePath $identifier");
 
-    open(my $fiveHandle, ">", "./fivePrimeFlank.fasta") or die "Can't open fivePrimeFlank.fasta: $!";
-    open(my $threeHandle, ">", "./threePrimeFlank.fasta") or die "Can't open threePrimeFlank.fasta: $!";
+    open(my $fiveHandle, ">", $fiveFile) or die "Can't open $fiveFile: $!";
+    open(my $threeHandle, ">", $threeFile) or die "Can't open $threeFile: $!";
 
     print $fiveHandle $fiveOutput;
     print $threeHandle $threeOutput;
 
-    my $hmmerOutput = $self->_do_cmd("nhmmer --dna fivePrimeFlank.fasta threePrimeFlank.fasta");
+    my $hmmerOutput = $self->_do_cmd("nhmmer --dna $fiveFile $threeFile");
 
     #The line [No hits detected that satisfy reporting thresholds] indicates that
     #no matching sequences were found, so don't create output file.
@@ -212,7 +214,7 @@ sub findFlankingAtts {
 
     #clean up files we don't need
     $self->_do_cmd("rm $genomePath.ssi");
-    $self->_do_cmd("rm fivePrimeFlank.fasta threePrimeFlank.fasta");
+    $self->_do_cmd("rm $fiveFile $threeFile");
 }
 
 sub tableLine {
@@ -221,17 +223,13 @@ sub tableLine {
     my $returnString =  $self->name . "\t" . $self->isFullLength
                         . "\t" . $self->gnSt . "\t" . $self->gnEn . "\t" . $self->refSt
                         . "\t" . $self->refEn . "\t" . $self->isPos
-                        . "\t" . $self->referenceSeqPath;
-
-    if ($self->genomePath) {
-        $returnString .= "\t" . $self->genomePath;
-    }
+                        . "\t" . $self->referenceSeqPath; . "\t" . $self->genomePath;
 
     return  $returnString;
 }
 
 sub tableHeader {
-    return "Name\tIsFullLength\tGnSt\tGnEn\tRefSt\tRefEn\tIsPos\tRefFile";
+    return "Name\tIsFullLength\tGnSt\tGnEn\tRefSt\tRefEn\tIsPos\tRefFile\tGenomePath";
 }
 
 sub _buildIsFull {

@@ -6,6 +6,7 @@
     #3: path to output 'bed-like' file
     #4: Path to output chart directory
     #5: Path to output flanking att side directory
+    #6: Boolean isVerbose (prints commands to stdOut)
 
 
 use strict;
@@ -19,6 +20,7 @@ use ViralSeq;
 my $prophagePath = $ARGV[0];
 my $genomePath = $ARGV[2];
 my $attSitePath = $ARGV[5];
+my $isVerbose = $ARGV[6];
 my %chartHash;
 my $chartPath;
 
@@ -60,7 +62,7 @@ while (my $line = <$tableFile>) {
             gnEn                => $6,
             attSitePath         => $attSitePath,
             genomePath          => $genomePath,
-            verbose             => 0,
+            verbose             => $isVerbose,
         );
 
         $chartPath = "$ARGV[4]$name" . "Chart.txt";
