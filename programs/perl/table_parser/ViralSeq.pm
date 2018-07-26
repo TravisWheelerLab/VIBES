@@ -101,6 +101,13 @@ has isFullLength => (
     builder => '_buildIsFull',
 );
 
+has isFlanked => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => '0',
+    writer  => '_set_isFlanked',
+);
+
 sub findFlankingAtts {
     my $self = shift;
     my $name = $self->name;
@@ -197,7 +204,8 @@ sub findFlankingAtts {
     my $hmmerOutput = $self->_do_cmd("nhmmer --dna $fiveFile $threeFile");
 
     #The line [No hits detected that satisfy reporting thresholds] indicates that
-    #no matching sequences were found, so don't create output file.
+    #no matching sequences were found, so don't create output file. In this case,
+    #the viral seq is marked as flanked
     unless ($hmmerOutput =~ /\[No hits detected that satisfy reporting thresholds\]/) {
         my @splitLine = split('/', $genomePath);
         my $genomeName;
@@ -210,6 +218,8 @@ sub findFlankingAtts {
 
         open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
         print $outputHandle $hmmerOutput;
+
+        $self->_set_isFlanked(1);
     }
 
     #clean up files we don't need
@@ -223,7 +233,7 @@ sub tableLine {
     my $returnString =  $self->name . "\t" . $self->isFullLength
                         . "\t" . $self->gnSt . "\t" . $self->gnEn . "\t" . $self->refSt
                         . "\t" . $self->refEn . "\t" . $self->isPos
-                        . "\t" . $self->referenceSeqPath; . "\t" . $self->genomePath;
+                        . "\t" . $self->referenceSeqPath . "\t" . $self->genomePath;
 
     return  $returnString;
 }
