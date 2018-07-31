@@ -70,7 +70,7 @@ has verbose => (
     required    => 1,
 );
 
-has attSitePath => (
+has flankingAttDir => (
     is      => 'ro',
     isa     => 'Str',
     default => "./attSites",
@@ -214,7 +214,7 @@ sub findFlankingAtts {
             $genomeName = $1;
         }
 
-        my $outputPath = $self->attSitePath . "/$genomeName.$name.$fiveBegin.afa";
+        my $outputPath = $self->flankingAttDir . "/$genomeName.$name.$fiveBegin.afa";
 
         open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
         print $outputHandle $hmmerOutput;
