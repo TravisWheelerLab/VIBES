@@ -35,17 +35,17 @@ foreach my $table (@tables) {
         $genomeName = $1;
     }
     else {
-        die "Can't extract genome name from table path: $tables[$tableNumber] $!";
+        die "Can't extract genome name from table path $table: $!";
     }
 
     $tsvPath = "$tsvDir/$genomeName.tsv";
     $genomePath = "$genomeDir/$genomeName.fna";
 
-    my $parserOutput = do_cmd("perl table_parser.pl $refProphageDir $table $genomePath $tsvPath $chartDir $flankingAttDir $isVerbose");
-    print "$parserOutput\n";
+    parse_tables($table, $genomePath, $tsvPath);
 
     if ($isVerbose) {
         be_verbose();
+    }
 }
 
 sub parse_tables {
@@ -101,19 +101,20 @@ sub parse_tables {
                 isPos               => $isPos,
                 gnSt                => $5,
                 gnEn                => $6,
-                attSitePath         => $flankingAttDir,
+                flankingAttDir      => $flankingAttDir,
                 genomePath          => $genomePath,
                 verbose             => $isVerbose,
             );
+
+            $seq->findFlankingAtts();
 
             if ($count == 1) {
                 print $outputTSF $seq->tableHeader() . "\n";
             }
 
             print $outputTSF $seq->tableLine() . "\n";
-            $seq->findFlankingAtts();
 
-            $chartPath = "$chartDir$name" . "Chart.txt";
+            $chartPath = "$chartDir/$name" . "Chart.txt";
 
             unless (exists $chartHash{$name}) {
                 my @array = (0)x$seq->referenceSeqLength;
@@ -168,12 +169,12 @@ sub parse_tables {
     $count = $count - 1;
 
     my @hashKeys = keys %chartHash;
-    print   "\nNumber of prophage sequences detected in $ARGV[1]: $count\nOf 50 " .
-            "reference sequences, " . scalar @hashKeys . " had hits in $ARGV[1]\n";
+    print   "\nNumber of prophage sequences in $tablePath: $count\nOf 50 " .
+            "reference sequences, " . scalar @hashKeys . " had hits in $tablePath\n";
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
-        $chartPath = "$ARGV[4]$hashKey" . "Chart.txt";
+        $chartPath = "$chartDir/$hashKey" . "Chart.txt";
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
@@ -191,8 +192,8 @@ sub parse_tables {
 sub do_cmd {
     my $cmd = $_[0];
 
-    if ($isVerbose > 0) {
-        print "$cmd\n";
+    if ($isVerbose) {
+        print "Command: $cmd\n";
     }
 
     return `$cmd`;
@@ -201,11 +202,11 @@ sub do_cmd {
 sub be_verbose {
     my $path = `pwd`;
 
-    print "\nTable: $tables[$tableNumber]\n";
-    print "Reference prophage sequence directory: $prophagePath\n";
+    print "\nTable directoy: $tableDir\n";
+    print "Reference prophage sequence directory: $refProphageDir\n";
     print "Genome directory: $genomeDir\n";
     print "Genome path: $genomePath\n";
-    print "Genome Name: $genome\n";
+    print "Genome Name: $genomeName\n";
     print "TSV Path: $tsvPath\n";
     print "Chart directory: $chartDir\n";
     print "Flanking att site directory: $flankingAttDir\n";

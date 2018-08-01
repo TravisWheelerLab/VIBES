@@ -7,7 +7,7 @@ use warnings;
 
 use Moose;
 
-my $isFullCutoff = 500;
+my $isFullCutoff = 50;
 
 has name => (
     is          => 'ro',
@@ -104,8 +104,8 @@ has isFullLength => (
 has isFlanked => (
     is      => 'ro',
     isa     => 'Bool',
-    default => '0',
     writer  => '_set_isFlanked',
+    default => '0',
 );
 
 sub findFlankingAtts {
@@ -230,16 +230,22 @@ sub findFlankingAtts {
 sub tableLine {
     my $self = shift;
 
-    my $returnString =  $self->name . "\t" . $self->isFullLength
-                        . "\t" . $self->gnSt . "\t" . $self->gnEn . "\t" . $self->refSt
-                        . "\t" . $self->refEn . "\t" . $self->isPos
-                        . "\t" . $self->referenceSeqPath . "\t" . $self->genomePath;
+    my $returnString =           $self->name
+                        . "\t" . $self->isFullLength
+                        . "\t" . $self->gnSt
+                        . "\t" . $self->gnEn
+                        . "\t" . $self->genomePath
+                        . "\t" . $self->isPos
+                        . "\t" . $self->refSt
+                        . "\t" . $self->refEn
+                        . "\t" . $self->referenceSeqPath
+                        . "\t" . $self->isFlanked;
 
     return  $returnString;
 }
 
 sub tableHeader {
-    return "Name\tIsFullLength\tGnSt\tGnEn\tRefSt\tRefEn\tIsPos\tRefFile\tGenomePath";
+    return "Name\tIsFullLength\tBacterialGenomeStart\tBacterialGenomeEnd\tBacterialGenomePath\tIsOnPositiveStrand\tReferenceStrainStart\tReferenceStrainEnd\tReferenceStrainPath\tHasFlankingAttSites";
 }
 
 sub _buildIsFull {
@@ -274,7 +280,7 @@ sub _buildLength {
 
     return abs($gnEn - $gnSt) + 1;
 }
-#Returns length of complete version of sequence
+#Returns length of reference prophage sequence
 sub _buildRefLength {
     my $self = shift;
     open(my $fileHandle, "<", $self->referenceSeqPath) or die "Can't open .fasta file " . $self->referenceSeqPath . ": $!";
@@ -294,7 +300,7 @@ sub _do_cmd {
     my $cmd = $_[0];
 
     if ($self->verbose > 0) {
-        print "$cmd\n";
+        print "$cmd\n\n";
     }
 
     return `$cmd`;
