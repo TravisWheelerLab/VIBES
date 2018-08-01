@@ -94,7 +94,7 @@ sub parse_tables {
             #Create a ViralSeq object. This will handle creating lines for the
             #output .tsv and detecting flanking att sites.
             my $seq = ViralSeq->new(
-                name                => $name . "_$count",
+                name                => "$name.$5",
                 refSt               => $2,
                 refEn               => $3,
                 referenceSeqPath    => "$refProphageDir$name.fasta",

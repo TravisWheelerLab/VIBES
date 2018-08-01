@@ -214,7 +214,7 @@ sub findFlankingAtts {
             $genomeName = $1;
         }
 
-        my $outputPath = $self->flankingAttDir . "/$genomeName.$name.$fiveBegin.afa";
+        my $outputPath = $self->flankingAttDir . "/$genomeName.$name.afa";
 
         open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
         print $outputHandle $hmmerOutput;
