@@ -1,13 +1,4 @@
 #!/usr/bin/env perl
-#Arguments:
-#   0: Reference prophage seq directory
-#   1: DFAM table directory
-#   2: Genome directory
-#   3: Output .tsv file directory
-#   4: Nucleotide chart directory
-#   5: Flanking att site directory
-#   6: Booelean to determine if verbose
-
 
 use strict;
 use warnings;
@@ -15,19 +6,39 @@ use FindBin;
 use lib $FindBin::Bin;
 # import classes
 use ViralSeq;
+use Getopt::Long;
 
-my $refProphageDir = $ARGV[0];
-my $tableDir = $ARGV[1];
-my $genomeDir = $ARGV[2];
-my $tsvDir = $ARGV[3];
-my $chartDir = $ARGV[4];
-my $flankingAttDir = $ARGV[5];
-my $isVerbose = $ARGV[6];
+#default values reflect file structure I set up on the cluster
+my $refProphageDir = "../prophage_seq";
+my $tableDir = "../tables/scanned";
+my $genomeDir = "../ps_genomes";
+my $tsvDir = "../tsv";
+my $chartDir = "../nuc_chart";
+my $flankingAttDir = "../flanking_att_sites";
+my $verbose = ''; #default false value
+my $help = ''; #^^
 my $genomeName;
 my $genomePath;
 my $tsvPath;
 
-my @tables = glob "$tableDir/*";
+GetOptions (
+    "prophage=s" => \$refProphageDir,
+    "tables=s"    => \$tableDir,
+    "genomes=s"   => \$genomeDir,
+    "tsv=s"      => \$tsvDir,
+    "indexcharts=s"    => \$chartDir,
+    "attsites=s"      => \$flankingAttDir,
+    "verbose"       => \$verbose,
+    "help"          => \$help
+    )
+or die("Error in command line arguments\n");
+
+if ($help) {
+    help();
+    exit;
+}
+
+my @tables = glob "$tableDir/*" or die "Can't find $tableDir: $!";
 
 foreach my $table (@tables) {
     #extract genome name from table name
@@ -43,7 +54,7 @@ foreach my $table (@tables) {
 
     parse_tables($table, $genomePath, $tsvPath);
 
-    if ($isVerbose) {
+    if ($verbose) {
         be_verbose();
     }
 }
@@ -103,7 +114,7 @@ sub parse_tables {
                 gnEn                => $6,
                 flankingAttDir      => $flankingAttDir,
                 genomePath          => $genomePath,
-                verbose             => $isVerbose,
+                verbose             => $verbose,
             );
 
             $seq->findFlankingAtts();
@@ -189,10 +200,33 @@ sub parse_tables {
     }
 }
 
+sub help {
+    print "
+    #table_parser.pl: Extract information about viral sequences from DFAM tables
+    #Input and output options have default values, but can be specified by user
+
+    Basic options:
+        -h or --help: Help page with information on options
+        -v or --verbose: Print additional information about values held in
+            variables and commands used by table_parser
+
+    Input options:
+        -p or --prophage: Path to directory containing reference prophage
+            strains
+        -ta or --tables: Path to DFAM table directory
+        -g or --genomes: Path to directory with bacterial genomes
+
+    Output options:
+        --tsv: Path to .tsv directory
+        -i or --indexcharts: Path to nucleotide index chart directory
+        -a or --attsites: Path to flanking att side directory
+    ";
+}
+
 sub do_cmd {
     my $cmd = $_[0];
 
-    if ($isVerbose) {
+    if ($verbose) {
         print "Command: $cmd\n";
     }
 

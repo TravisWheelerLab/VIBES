@@ -299,7 +299,7 @@ sub _do_cmd {
     my $self = shift;
     my $cmd = $_[0];
 
-    if ($self->verbose > 0) {
+    if ($self->verbose) {
         print "$cmd\n\n";
     }
 
