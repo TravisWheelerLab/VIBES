@@ -31,7 +31,7 @@ GetOptions (
     "verbose"       => \$verbose,
     "help"          => \$help
     )
-or die("Error in command line arguments\n");
+or die("Unknown option, try --help\n");
 
 if ($help) {
     help();
@@ -108,7 +108,7 @@ sub parse_tables {
                 name                => "$name.$5",
                 refSt               => $2,
                 refEn               => $3,
-                referenceSeqPath    => "$refProphageDir$name.fasta",
+                referenceSeqPath    => "$refProphageDir/$name.fasta",
                 isPos               => $isPos,
                 gnSt                => $5,
                 gnEn                => $6,

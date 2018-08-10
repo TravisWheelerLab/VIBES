@@ -57,3 +57,17 @@ open(my $outputHandle, ">", $output) or die "Can't open output .fasta file: $!";
 foreach my $entry (@contigArray) {
     print $outputHandle ">$entry\n";
 }
+
+sub help {
+    print "
+    #contig_filter.pl: Takes in a .fasta file of contigs and filters them based
+    #on length. All contigs at or above the cutoff length will be included in
+    #the output file.
+
+    Options:
+        --input: Input .fasta file of unfiltered contigs
+        --output: Output, filtered .fasta file. Will be overwritten by program
+        --cutoff: Minumum length of contigs allowed by filter
+        --help: Displays this help screen\n
+    ";
+}

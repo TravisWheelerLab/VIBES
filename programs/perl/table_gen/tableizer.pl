@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-#Takes in a path to a genome directoy, a path to a file containing reference
+#Takes in a path to a genome directory, a path to a file containing reference
 #.hmm, paths to output directories, a suffix to append to the file name,
 #and a boolean that sets the value of verbose.
 #Returns a .dfam table for each genome in the directory.
@@ -9,15 +9,28 @@
 use strict;
 use warnings;
 use Time::HiRes;
+use Getopt::Long;
 
 #Genome number from server starts at one, so decrement to match array indexing
-my $genomeNumber = $ARGV[0] - 1;
-my $genomeDir = $ARGV[1];
-my $referencePath = $ARGV[2];
-my $tableDir = $ARGV[3];
-my $scannedTableDir = $ARGV[4]
-my $suffix = $ARGV[5];
-my $verbose = $ARGV[6];
+my $genomeNumber;
+my $genomeDir = '';
+my $referencePath = '';
+my $tableDir = '';
+my $scannedTableDir = '';
+my $suffix = '';
+my $verbose = '';
+
+GetOptions (
+    "prophageinput=s"   => \$referencePath,
+    "jobnumber"         => \$$genomeNumber,
+    "tableinput=s"      => \$tableDir,
+    "outputdirectory=s" => \$scannedTableDir,
+    "genomes=s"         => \$genomeDir,
+    "suffix"            => \$suffix,
+    "verbose"           => \$verbose,
+    "help"              => \$help
+    )
+or die("Error in command line arguments\n");
 
 #we assume every entry in the directory is a genome we're interested in
 my @genomes = glob "$genomeDir/*";
