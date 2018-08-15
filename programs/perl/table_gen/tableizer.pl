@@ -77,6 +77,12 @@ sub be_verbose {
     print "Current directory: $path";
 }
 
+sub help {
+    print "
+    #tableizer.pl: Convert genomes into DFAM format tabular output";
+
+}
+
 sub do_cmd {
     my $cmd = $_[0];
 

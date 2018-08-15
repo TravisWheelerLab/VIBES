@@ -37,3 +37,11 @@ spades.py -1 PAO1-wt-Pf4_R1_001.fastq -2 PAO1-wt-Pf4_R2_001.fastq -o ~/assembled
 
 spades_PAO1_rec_Pf4:
 spades.py -1 PAO1-rec-Pf4_R1_001.fastq -2 PAO1-rec-Pf4_R2_001.fastq -o ~/assembled_genomes/Pat_WGS_Sequence/PAO1_rec_Pf4/
+
+=====
+NHMMER on SPADES Pseudomnas contigs
+
+nhmmer --tblout prophage_search.tbl  -o prophage_search.afa Pf_prophage_strain_PAO1__Reference_strain_.fasta test.fasta
+nhmmer --tblout 200_contigs.tbl  -o 200_contigs.out ../Pf_prophage_strain_PAO1__Reference_strain_.fasta 200_filtered_contigs.fasta
+nhmmer --tblout 200_scaffolds.tbl  -o 200_scaffolds.out ../Pf_prophage_strain_PAO1__Reference_strain_.fasta 200_filtered_scaffolds.fasta
+nhmmer --tblout 1k_scaffolds.tbl  -o 1k_scaffolds.out ../Pf_prophage_strain_PAO1__Reference_strain_.fasta 1k_filtered_scaffolds.fasta

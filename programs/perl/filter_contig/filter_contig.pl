@@ -64,6 +64,8 @@ sub help {
     #on length. All contigs at or above the cutoff length will be included in
     #the output file.
 
+    Basic usage: --input [InPath.fasta] --output [OutPath.fasta] --cutoff [Int]
+
     Options:
         --input: Input .fasta file of unfiltered contigs
         --output: Output, filtered .fasta file. Will be overwritten by program

@@ -22,12 +22,12 @@ my $genomePath;
 my $tsvPath;
 
 GetOptions (
-    "prophage=s" => \$refProphageDir,
-    "tables=s"    => \$tableDir,
-    "genomes=s"   => \$genomeDir,
-    "tsv=s"      => \$tsvDir,
-    "indexcharts=s"    => \$chartDir,
-    "attsites=s"      => \$flankingAttDir,
+    "prophage=s"    => \$refProphageDir,
+    "tables=s"      => \$tableDir,
+    "genomes=s"     => \$genomeDir,
+    "tsv=s"         => \$tsvDir,
+    "indexcharts=s" => \$chartDir,
+    "attsites=s"    => \$flankingAttDir,
     "verbose"       => \$verbose,
     "help"          => \$help
     )
@@ -47,6 +47,12 @@ foreach my $table (@tables) {
     }
     else {
         die "Can't extract genome name from table path $table: $!";
+    }
+
+    #create directory that will contain index charts, unless it already exists
+    my $dir = "$chartDir/$genomeName";
+    unless (-e $dir && -d $dir) {
+        do_cmd("mkdir $dir");
     }
 
     $tsvPath = "$tsvDir/$genomeName.tsv";
@@ -125,7 +131,7 @@ sub parse_tables {
 
             print $outputTSF $seq->tableLine() . "\n";
 
-            $chartPath = "$chartDir/$name" . "Chart.txt";
+            $chartPath = "$chartDir/$genomeName/$name" . "Chart.txt";
 
             unless (exists $chartHash{$name}) {
                 my @array = (0)x$seq->referenceSeqLength;
@@ -206,20 +212,21 @@ sub help {
     #Input and output options have default values, but can be specified by user
 
     Basic options:
-        -h or --help: Help page with information on options
-        -v or --verbose: Print additional information about values held in
+        --help: Displays this page
+        --verbose: Print additional information about values held in
             variables and commands used by table_parser
 
     Input options:
-        -p or --prophage: Path to directory containing reference prophage
+        --prophage: Path to directory containing reference prophage
             strains
-        -ta or --tables: Path to DFAM table directory
-        -g or --genomes: Path to directory with bacterial genomes
+        --tables: Path to DFAM table directory
+        --genomes: Path to directory with bacterial genomes
 
     Output options:
         --tsv: Path to .tsv directory
-        -i or --indexcharts: Path to nucleotide index chart directory
-        -a or --attsites: Path to flanking att side directory
+        --indexcharts: Path to nucleotide index chart directory
+        --attsites: Path to flanking att side directory
+
     ";
 }
 
