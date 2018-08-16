@@ -191,7 +191,7 @@ sub parse_tables {
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
-        $chartPath = "$chartDir/$hashKey" . "Chart.txt";
+        $chartPath = "$chartDir/$genomeName/$hashKey" . "Chart.txt";
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
