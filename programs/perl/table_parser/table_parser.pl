@@ -15,6 +15,7 @@ my $genomeDir = "../ps_genomes";
 my $tsvDir = "../tsv";
 my $chartDir = "../nuc_chart";
 my $flankingAttDir = "../flanking_att_sites";
+my $jobNumber = 0;
 my $verbose = ''; #default false value
 my $help = ''; #^^
 my $genomeName;
@@ -28,6 +29,7 @@ GetOptions (
     "tsv=s"         => \$tsvDir,
     "indexcharts=s" => \$chartDir,
     "attsites=s"    => \$flankingAttDir,
+    "jobNumber=i"    => \$jobNumber,
     "verbose"       => \$verbose,
     "help"          => \$help
     )
@@ -39,30 +41,29 @@ if ($help) {
 }
 
 my @tables = glob "$tableDir/*" or die "Can't find $tableDir: $!";
+my $table = $tables[$jobNumber];
 
-foreach my $table (@tables) {
-    #extract genome name from table name
-    if ($table =~ /([^\/]+)_viral_scanned\.dfam/) {
-        $genomeName = $1;
-    }
-    else {
-        die "Can't extract genome name from table path $table: $!";
-    }
+#extract genome name from table name
+if ($table =~ /([^\/]+)_viral_scanned\.dfam/) {
+    $genomeName = $1;
+}
+else {
+    die "Can't extract genome name from table path $table: $!";
+}
 
-    #create directory that will contain index charts, unless it already exists
-    my $dir = "$chartDir/$genomeName";
-    unless (-e $dir && -d $dir) {
-        do_cmd("mkdir $dir");
-    }
+#create directory that will contain index charts, unless it already exists
+my $dir = "$chartDir/$genomeName";
+unless (-e $dir && -d $dir) {
+    do_cmd("mkdir $dir");
+}
 
-    $tsvPath = "$tsvDir/$genomeName.tsv";
-    $genomePath = "$genomeDir/$genomeName.fna";
+$tsvPath = "$tsvDir/$genomeName.tsv";
+$genomePath = "$genomeDir/$genomeName.fna";
 
-    parse_tables($table, $genomePath, $tsvPath);
+parse_tables($table, $genomePath, $tsvPath);
 
-    if ($verbose) {
-        be_verbose();
-    }
+if ($verbose) {
+    be_verbose();
 }
 
 sub parse_tables {
