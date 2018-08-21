@@ -26,7 +26,7 @@ GetOptions (
     "tableinput=s"      => \$tableDir,
     "outputdirectory=s" => \$scannedTableDir,
     "genomes=s"         => \$genomeDir,
-    "suffix"            => \$suffix,
+    "suffix=s"          => \$suffix,
     "verbose"           => \$verbose,
     "help"              => \$help
     )

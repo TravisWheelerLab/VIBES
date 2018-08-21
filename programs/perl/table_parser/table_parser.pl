@@ -18,6 +18,7 @@ my $flankingAttDir = "../flanking_att_sites";
 my $jobNumber = 0;
 my $verbose = ''; #default false value
 my $help = ''; #^^
+my $force = 0; #^^
 my $genomeName;
 my $genomePath;
 my $tsvPath;
@@ -29,7 +30,8 @@ GetOptions (
     "tsv=s"         => \$tsvDir,
     "indexcharts=s" => \$chartDir,
     "attsites=s"    => \$flankingAttDir,
-    "jobNumber=i"    => \$jobNumber,
+    "jobnumber=i"   => \$jobNumber,
+    "force"         => \$force,
     "verbose"       => \$verbose,
     "help"          => \$help
     )
@@ -53,7 +55,17 @@ else {
 
 #create directory that will contain index charts, unless it already exists
 my $dir = "$chartDir/$genomeName";
-unless (-e $dir && -d $dir) {
+#if directory already exists, throw fatal error unless --force was used
+if (-e $dir && -d $dir) {
+    unless ($force) {
+        die "$dir already exists. Use --force to automatically overwrite it";
+    }
+    else {
+        do_cmd("rm -r $dir");
+        do_cmd("mkdir $dir");
+    }
+}
+else {
     do_cmd("mkdir $dir");
 }
 
@@ -140,13 +152,6 @@ sub parse_tables {
 
                 #if file already exists, read in its contents and populate array
                 if (open(my $chartFile, "<", $chartPath)) {
-                    #place exclusive lock on file, telling other Perl programs not
-                    #to read or change the file until we're finished with it. This
-                    #is important because table_parser is going to be run on the
-                    #cluster, where multiple instances of it will be running simultaneously
-                    #and would otherwise run the risk of overwriting or ignoring changes
-                    #to the nucleotide charts
-
                     # skip header
                     readline $chartFile;
 
@@ -216,12 +221,16 @@ sub help {
         --help: Displays this page
         --verbose: Print additional information about values held in
             variables and commands used by table_parser
+        --force: Overwrite pre-existing directories in the index chart directory
+            if necessary
 
     Input options:
         --prophage: Path to directory containing reference prophage
             strains
         --tables: Path to DFAM table directory
         --genomes: Path to directory with bacterial genomes
+        --jobnumber: Integer provided by the cluster job manager that tells
+            table_parser which table it should run on
 
     Output options:
         --tsv: Path to .tsv directory

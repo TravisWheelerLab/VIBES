@@ -292,6 +292,8 @@ sub _buildRefLength {
         $fastaBody = $fastaBody . $line;
     }
 
+    $fastaBody =~ s/\>|\n|\r//g;
+
     return length($fastaBody);
 }
 #Run command
