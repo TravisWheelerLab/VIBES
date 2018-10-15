@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Takes in a path to a genome directory, a path to a file containing reference
-#.hmm, paths to output directories, a suffix to append to the file name,
+#.hmms, paths to output directories, a suffix to append to the file name,
 #and a boolean that sets the value of verbose.
 #Returns a .dfam table for each genome in the directory.
 
@@ -19,10 +19,11 @@ my $tableDir = '';
 my $scannedTableDir = '';
 my $suffix = '';
 my $verbose = '';
+my $help = 0;
 
 GetOptions (
     "prophageinput=s"   => \$referencePath,
-    "jobnumber"         => \$$genomeNumber,
+    "jobnumber=i"         => \$$genomeNumber,
     "tableinput=s"      => \$tableDir,
     "outputdirectory=s" => \$scannedTableDir,
     "genomes=s"         => \$genomeDir,
@@ -30,7 +31,9 @@ GetOptions (
     "verbose"           => \$verbose,
     "help"              => \$help
     )
-or die("Error in command line arguments\n");
+or die("Unknown argument, try --help\n");
+
+die "Implement help()!\n";
 
 #we assume every entry in the directory is a genome we're interested in
 my @genomes = glob "$genomeDir/*";

@@ -146,6 +146,11 @@ sub parse_tables {
 
             $chartPath = "$chartDir/$genomeName/$name" . "Chart.txt";
 
+            #unless an entry for this prophage aleady exists in hash, generate
+            #a new array for this sequence by putting each line into an array
+            #index. Store this array in the hash
+            die "Change how new arrays are generated- since we're creating a new
+            dir for each genome, if an entry doesn't exist, then we ";
             unless (exists $chartHash{$name}) {
                 my @array = (0)x$seq->referenceSeqLength;
                 my $arrayRef = \@array;
@@ -171,6 +176,7 @@ sub parse_tables {
             #Iterate over nucleotides present in genomic strain, incrementing
             #for each present in genome. To match array 0-indexing, nucleotide
             #indexes are offset by 1.
+            #refSt = start location on reference seq, refEn = end location on reference seq
             for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
                 my $size = $seq->referenceSeqLength;
                 if ($i < 0 || $i >= $size) {
@@ -192,8 +198,8 @@ sub parse_tables {
     $count = $count - 1;
 
     my @hashKeys = keys %chartHash;
-    print   "\nNumber of prophage sequences in $tablePath: $count\nOf 50 " .
-            "reference sequences, " . scalar @hashKeys . " had hits in $tablePath\n";
+    print   "\nNumber of prophage sequences in $tablePath: $count" . 
+            "\nOf 50 reference sequences, " . scalar @hashKeys . " had hits in $tablePath\n";
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {

@@ -45,3 +45,11 @@ nhmmer --tblout prophage_search.tbl  -o prophage_search.afa Pf_prophage_strain_P
 nhmmer --tblout 200_contigs.tbl  -o 200_contigs.out ../Pf_prophage_strain_PAO1__Reference_strain_.fasta 200_filtered_contigs.fasta
 nhmmer --tblout 200_scaffolds.tbl  -o 200_scaffolds.out ../Pf_prophage_strain_PAO1__Reference_strain_.fasta 200_filtered_scaffolds.fasta
 nhmmer --tblout 1k_scaffolds.tbl  -o 1k_scaffolds.out ../Pf_prophage_strain_PAO1__Reference_strain_.fasta 1k_filtered_scaffolds.fasta
+
+nhmmer --tblout contigs/PAO1_rec_Pf4_1k.tbl -o contigs/PAO1_rec_Pf4_1k.out Pf_prophage_strain_PAO1__Reference_strain_.fasta contigs/PAO1_rec_Pf4_1k.fasta
+nhmmer --tblout contigs/PAO1_rec_Pf4_200.tbl -o contigs/PAO1_rec_Pf4_200.out Pf_prophage_strain_PAO1__Reference_strain_.fasta contigs/PAO1_rec_Pf4_200.fasta
+nhmmer --tblout contigs/PAO1_wt_Pf4_200.tbl -o contigs/PAO1_wt_Pf4_200.out Pf_prophage_strain_PAO1__Reference_strain_.fasta contigs/PAO1_wt_Pf4_200.fasta
+nhmmer --tblout contigs/PAO1_wt_Pf4_1k.tbl -o contigs/PAO1_wt_Pf4_1k.out Pf_prophage_strain_PAO1__Reference_strain_.fasta contigs/PAO1_wt_Pf4_1k.fasta
+
+(PAO1OR)
+nhmmer --tblout contigs/PAO1_wt_Pf4_1k_PAO1OR.tbl -o contigs/PAO1_wt_Pf4_1k_PAO1OR.out Pseudomonas_aeruginosa_genome_assembly_PAO1OR.fasta contigs/PAO1_wt_Pf4_1k.fasta
