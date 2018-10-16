@@ -67,7 +67,6 @@ sub be_verbose {
     my $path = `pwd`;
 
     print "Number: $genomeNumber\n";
-    print STDERR "Number: $genomeNumber\n";
     print "GenDir: $genomeDir\n";
     print "Ref: $referencePath\n";
     print "Table dir: $tableDir\n";

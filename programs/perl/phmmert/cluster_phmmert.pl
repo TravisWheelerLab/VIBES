@@ -30,7 +30,16 @@ GetOptions (
     )
 or die("Unknown argument, try --help\n");
 
-run_phmmer();
+if ($help) {
+    help();
+}
+else {
+    run_phmmer();
+
+    if($verbose) {
+        be_verbose();
+    }
+}
 
 sub run_phmmer {
     #put all files in directory into an array
@@ -51,10 +60,16 @@ sub run_phmmer {
 
     $outputPath = "$outputDir/$fileName.tbl";
 
+    #Ensure output file doesn't already exist, and that user wants to overwrite it
+    #if it does. Time how long it takes PHMMERT to run, which can be reported with
+    # --verbose
     checkFile($outputPath);
+    my $stTime = [Time::HiRes::gettimeofday()];
     do_cmd("phmmert --tblout $outputPath $referenceHMMPath $genome");
+    $elapsed = Time::HiRes::tv_interval($stTime);
 }
 
+# execute command at command line, printing command if --verbose
 sub do_cmd {
     my $cmd = $_[0];
 
@@ -65,7 +80,8 @@ sub do_cmd {
     return `$cmd`;
 }
 
-sub help { print "
+sub help { 
+    print "
 # cluster_phmmert.pl: runs phmmert with --tblout on genomes
 
 Usage: perl cluster_phmmert [options] --hmm [path] --genomedir [path]
@@ -103,12 +119,12 @@ sub be_verbose {
     my $path = `pwd`;
 
     print "Number: $genomeNumber\n";
-    print STDERR "Number: $genomeNumber\n";
-    print "GenDir: $genomeDir\n";
+    print "GenomeDir: $genomeDir\n";
     print "RefHMM: $referenceHMMPath\n";
     print "Output dir: $outputDir\n";
-    print "Verbose: $verbose\n";
     print "Genome: $genome\n";
-    print "Time to complete nhmmscan: $elapsed seconds\n";
+    print "Time to complete phmmert: $elapsed seconds\n";
     print "Current directory: $path";
+    print "Verbose: $verbose\n";
+    print "Force: $force\n";
 }
