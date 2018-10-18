@@ -71,7 +71,7 @@ sub scan_files {
                     my $alignEnd = $2;
                     my $eValue = $3;
 
-                    my $length = abs($alignStart - $alignEnd); #length could be negative due to
+                    my $length = abs($alignStart - $alignEnd) + 1; #length could be negative due to
                     #negative strand
 
                     if ($eValue < $minVal) {
@@ -100,8 +100,45 @@ sub scan_files {
     }
 }
 
+sub help {
+    print "\n
+#phmmert_table_scan.pl: Scans through a directory of phmmert tables, then prints
+#the e-value and length of the best match of each table to a file in .csv format
+#Expects all files in the input directory to be phmmert table files
+
+Usage: perl phmmert_table_scan.pl [options] --tabledir [path] --output [path]
+
+Options:
+    --help: Displays this help page
+    --verbose: Prints out console commands used by program
+    --rmempty: Automatically delete tables that don't have any entries
+    --force: Overwrite pre-existing files instead of stopping the program
+
+Input:
+    --tabledir: Path to a directory containing phmmert table files. All files in
+        this directory are expected to be phmmert tables.
+
+Output:
+    --output: Path to desired location of output .csv file
+    \n";
+}
+
+# Check if a file already exists. If yes, and --force hasn't been specified by the user,
+# print an error to a log file and STDERR, then stop the program. If --force has
+# been specified, then overwrite the file
+sub checkFile {
+   my $file = $_[0];
+
+   if (-f $file && !$force) {
+        open(my $errorlog, '>>', "cluster_phmmert_errors.txt") or die "Could not open file '$file' $!";
+        print $errorlog "$file already exists! To overwrite any files that already exist, rerun with --force option.\n\n";
+        die "$file already exists! To overwrite any files that already exist, rerun with --force option.\n";
+  }
+}
+
 #Prints best contents of non-empty tables to user-specified output file
 sub print_results {
+    checkFile($output);
     open(my $outputHandle, ">", $output) or die "Can't open output file $output: $!";
     print $outputHandle "$headerLine\n";
 
@@ -112,4 +149,15 @@ sub print_results {
 
         print $outputHandle "$genome," . $valuesRef->[0] . "," . $valuesRef->[1] . "\n";
     }
+}
+
+# execute command at command line, printing command if --verbose
+sub do_cmd {
+    my $cmd = $_[0];
+
+    if ($verbose > 0) {
+        print "$cmd\n";
+    }
+
+    return `$cmd`;
 }

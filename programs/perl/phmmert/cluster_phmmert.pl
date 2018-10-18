@@ -87,18 +87,18 @@ sub help {
 Usage: perl cluster_phmmert [options] --hmm [path] --genomedir [path]
     --jobnumber [int] --outputdir [path]
 
-Basic Options:
+Options:
     --help: Displays this help page
-    --verbose: Prints commands run and information intended for debugging
+    --verbose: Prints any commands run and other info. Intended for debugging
     --force: With this selected, any files with the same name as an output file
         in the output directory will be automatically overwritten.
 
-Input Options:
+Input:
     --genomedir: Path to directory populated with genomes to run phmmert against
     --jobnumber: Int assigned by server cluster, which specifies a genome to use
     --hmm: Path to reference HMM to use as phmmert query
 
-Output Options:
+Output:
     --outputdir: Path to directory to be filled with output phmmert tables"
 }
 
