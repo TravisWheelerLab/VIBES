@@ -3,9 +3,6 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use List::Util qw( min max );
-#credit to user ikegami at https://stackoverflow.com/questions/10701210/how-to-find-maximum-and-minimum-value-in-an-array-of-integers-in-perl
-#for suggesting the use of List::Util
 
 #command line argument variables that can be set by user
 my $tableDir = '';
@@ -17,7 +14,8 @@ my $verbose = 0;
 
 #other variables
 my %bestHitHash = ();
-my $headerLine = "genome,best match e-value,best match length";
+my $headerLine = "Genome,Best match e-value,Best match length";
+my $minVal = "1e-10"; #this will act as the minimum acceptable e-value
 
 GetOptions (
     "tabledir=s"    => \$tableDir,
@@ -59,8 +57,9 @@ sub scan_files {
 
             my $numberHits = 0; #we track the number of hits detected, to determine
             #whether a table is empty
-            my $minVal = "inf"; #since we want the minimum e-value, we set the starting
-            #value to be the largest possible value
+            my $bestMatch = $minVal; #set best match to minimum allowable e-value
+            my $isEmpty = 1; #used to track whether a file contains any entries at all
+            my $hasAcceptableEntry = 0; #boolean to track whether or not we find an entry with a good enough e-value
             my $bestLength = 0;
 
             #go through lines in the table, keeping the length and e-value of the best match
@@ -71,29 +70,30 @@ sub scan_files {
                     my $alignEnd = $2;
                     my $eValue = $3;
 
+                    $isEmpty = 0;
                     my $length = abs($alignStart - $alignEnd) + 1; #length could be negative due to
                     #negative strand
 
-                    if ($eValue < $minVal) {
-                        $minVal = $eValue;
+                    if ($eValue <= $bestMatch) {
+                        $bestMatch = $eValue;
                         $bestLength = $length;
+                        $hasAcceptableEntry = 1;
                     }
                 }
 
             }
 
-            #since no e-value should be infinity, we know a line was successfully read in,
-            #and that the file was therefore not empty
-            if ($minVal != "inf") {
+            #save best e-value (if any) in hash
+            if ($hasAcceptableEntry) {
                 my @values = [];
                 my $valuesRef = \@values;
 
-                $values[0] = $minVal;
+                $values[0] = $bestMatch;
                 $values[1] = $bestLength;
 
                 $bestHitHash{$genome} = $valuesRef;
             }
-            elsif ($rmEmpty) {
+            elsif ($rmEmpty && $isEmpty) {
                 do_cmd("rm $table");
             }
         }
@@ -130,7 +130,7 @@ sub checkFile {
    my $file = $_[0];
 
    if (-f $file && !$force) {
-        open(my $errorlog, '>>', "cluster_phmmert_errors.txt") or die "Could not open file '$file' $!";
+        open(my $errorlog, '>>', "phmmert_table_scan_errors.txt") or die "Could not open file '$file' $!";
         print $errorlog "$file already exists! To overwrite any files that already exist, rerun with --force option.\n\n";
         die "$file already exists! To overwrite any files that already exist, rerun with --force option.\n";
   }
