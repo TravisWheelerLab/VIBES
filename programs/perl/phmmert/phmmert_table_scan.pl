@@ -15,7 +15,7 @@ my $verbose = 0;
 #other variables
 my %bestHitHash = ();
 my $headerLine = "Genome,Best match e-value,Best match length";
-my $minVal = "1e-10"; #this will act as the minimum acceptable e-value
+my $minVal = "inf"; #this will act as the minimum acceptable e-value
 
 GetOptions (
     "tabledir=s"    => \$tableDir,

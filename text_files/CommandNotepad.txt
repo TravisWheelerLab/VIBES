@@ -53,3 +53,16 @@ nhmmer --tblout contigs/PAO1_wt_Pf4_1k.tbl -o contigs/PAO1_wt_Pf4_1k.out Pf_prop
 
 (PAO1OR)
 nhmmer --tblout contigs/PAO1_wt_Pf4_1k_PAO1OR.tbl -o contigs/PAO1_wt_Pf4_1k_PAO1OR.out Pseudomonas_aeruginosa_genome_assembly_PAO1OR.fasta contigs/PAO1_wt_Pf4_1k.fasta
+
+=====
+Stanford Mini-Pipeline (Mid-Late October 2018)
+hmmbuild --amino coab_les.hmm coaB_LES.fasta
+hmmbuild --amino coab_pf4.hmm coaB_Pf4.fasta
+
+See text_files folder for msub cluster commands
+
+phmmert -o text_files/phmmert_out/les/e(e-value).out sequence_files/hmm/coab_(isoform).hmm sequence_files/pseudomonas/(genome)
+
+=====
+Attempt to address poorly defined viral sequences (January 2019)
+nhmmer -o ref_vs_all_prophage.afa Pf_prophage_strain_PAO1__Reference_strain_.fasta prophage_seq/prophage_seq.fasta

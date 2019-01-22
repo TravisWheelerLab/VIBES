@@ -1,46 +1,70 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-import sys
+import re
 from os import walk
+from matplotlib import collections as col
 
 # read in all files in total counts dir via walk
 # for each file, populate an array in which each index corresponds to a line
 # plot as line graph
 
 
-def plotList(list, filename):
+def plotList(list, prophageName, outputDir):
     # Credit to https://matplotlib.org/gallery/lines_bars_and_markers/simple_plot.html#sphx-glr-gallery-lines-bars-and-markers-simple-plot-py
-    # for structure of code below
+    # for structure of plotting code
     fig, ax = plt.subplots()
     ax.plot(list)
 
-    ax.set(xlabel='Nucleotide Index', ylabel='Number Found', title=filename)
+    maximum = max(list)
+    yValue = maximum * -.13
+    length = len(list)
+    xValue = length/3
+
+    lines = [[(0, yValue), (xValue, yValue)]]
+    lc = col.LineCollection(lines)
+    lc.set_clip_on(False)
+    ax.add_collection(lc)
+
+    ax.set(xlabel='Nucleotide Index', ylabel='Number Found', title=prophageName)
     ax.grid()
 
-    # fig.savefig("test.png")
-    plt.show()
+    fig.savefig("%s/%s.png" % (outputDir,prophageName))
+    #plt.show()
+    plt.close()
 
 
-mypath = sys.argv[1]
-print(mypath)
+parser = argparse.ArgumentParser()
+parser.add_argument("inputDir", help="Path to directory of nucleotide count files. Expected format is [prophageName]Chart.txt")
+parser.add_argument("outputDir", help="path to directory to store output .png files")
+parser.add_argument("force", help="If output files already exist, overwrite them", action="store_true")
+args = parser.parse_args()
+
+inputDir = args.inputDir
 
 # credit to pycruft in https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory for code for grabbing file paths
 filePaths = []
-for (dirpath, dirnames, files) in walk(mypath):
+for (dirpath, dirnames, files) in walk(inputDir):
     filePaths.extend(files)
 
 filePaths.sort()
 
 # credit to Tim Anderson for advice on how to open files
-for fileName in filePaths:
+for filePath in filePaths:
     nucleotideList = []
 
-    with open("%s/%s" % (mypath, fileName), "r") as fileData:
+    with open("%s/%s" % (inputDir, filePath), "r") as fileData:
         # skip header line
         fileData.readline()
         for line in fileData:
             line.rstrip("\n")
             nucleotideList.append(int(line))
 
-    plotList(nucleotideList, fileName)
+    regMatch = re.match(r'(.+?)Chart\.txt', filePath)
+    # extract name from file path
+    prophageName = regMatch.group(1)
+
+    #print(len(nucleotideList))
+
+
+    plotList(list=nucleotideList, prophageName=prophageName, outputDir=args.outputDir)

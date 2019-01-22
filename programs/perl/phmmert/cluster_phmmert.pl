@@ -99,7 +99,8 @@ Input:
     --hmm: Path to reference HMM to use as phmmert query
 
 Output:
-    --outputdir: Path to directory to be filled with output phmmert tables"
+    --outputdir: Path to directory to be filled with output phmmert tables\n
+    "
 }
 
 # Check if a file already exists. If yes, and --force hasn't been specified by the user,
