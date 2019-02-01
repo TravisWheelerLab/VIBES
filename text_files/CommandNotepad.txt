@@ -66,3 +66,10 @@ phmmert -o text_files/phmmert_out/les/e(e-value).out sequence_files/hmm/coab_(is
 =====
 Attempt to address poorly defined viral sequences (January 2019)
 nhmmer -o ref_vs_all_prophage.afa Pf_prophage_strain_PAO1__Reference_strain_.fasta prophage_seq/prophage_seq.fasta
+
+=====
+Viral Genome Alignment to TIGRFAM DB (Jan 2019)
+hmmscant --tblout protein_annotated_prophages.tbl TIGRFAM.HMM ../prophage/prophage_seq.fasta
+
+(this one yielded actual table we're actually going to use as of 1/29)
+ hmmscant --domtblout protein_annotated_prophages.domtbl TIGRFAM.HMM ../prophage/prophage_seq.fasta

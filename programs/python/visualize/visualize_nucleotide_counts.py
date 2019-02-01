@@ -33,6 +33,33 @@ def plotList(list, prophageName, outputDir):
     #plt.show()
     plt.close()
 
+    def readInfo(domTblPath, hmmStatPath):
+        infoDict = {}
+        # read in domTblPath info as read-only
+        with open(domTblPath, "r") as domTblData:
+            # skip three header lines
+            for i in range(3):
+                domTblData.readline()
+
+            dataList = domTblData.split()
+
+            # since we split domTblData along whitespace, we need to reconstruct
+            # the description string at the end of the table line. This string
+            # always begins at index 27 and runs until the end of the list
+            descString = " ".join(dataList[27:])
+
+            infoDict["name"] = dataList[0]
+            infoDict["tlen"] = dataList[2]
+            infoDict['eValue'] = dataList[7]
+            infoDict['desc'] = descString
+
+        with open(hmmStatPath) as hmmStatData:
+            # skip header lines
+            for i in range(10):
+                hmmStatData.readline()
+
+            dataList = hmmStatData.split()
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("inputDir", help="Path to directory of nucleotide count files. Expected format is [prophageName]Chart.txt")
@@ -49,7 +76,8 @@ for (dirpath, dirnames, files) in walk(inputDir):
 
 filePaths.sort()
 
-# credit to Tim Anderson for advice on how to open files
+# credit to Tim Anderson for advice on how to open files:
+# runs through all paths in the directory, opening as read only
 for filePath in filePaths:
     nucleotideList = []
 
