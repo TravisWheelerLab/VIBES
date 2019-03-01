@@ -2,6 +2,7 @@ import subprocess
 import argparse
 from os import walk, path
 import re
+import sys
 
 
 def DomTblGen(prophageName, inputDir, outputDir):
@@ -19,27 +20,33 @@ def DomTblGen(prophageName, inputDir, outputDir):
         command = "hmmscant --domtblout %s ../../../sequence_files/hmm/TIGRFAM.HMM %s" % (outputFile, inputFile)
         subprocess.run(command.split())
 
+# credit to Viktor Kerkez in: https://stackoverflow.com/questions/18160078/how-do-you-write-tests-for-the-argparse-portion-of-a-python-module
+def parseArgs(sysArgs):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("inputDir", help="Path to directory of .fasta files. Expected format is [sequenceName].fasta")
+    parser.add_argument("outputDir", help="Path to directory to store output .domtbl files")
+    parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
+    return parser.parse_args()
 
-parser = argparse.ArgumentParser()
-parser.add_argument("inputDir", help="Path to directory of .fasta files. Expected format is [sequenceName].fasta")
-parser.add_argument("outputDir", help="Path to directory to store output .domtbl files")
-parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
-args = parser.parse_args()
 
-inputDir = args.inputDir
-outputDir = args.outputDir
-force = args.force
+if __name__ == "__main__":
+    args = parseArgs(sys.argv[1:])
+    inputDir = args.inputDir
 
-# credit to pycruft in https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory for code for grabbing file paths
-filePaths = []
-for (dirpath, dirnames, files) in walk(inputDir):
-    filePaths.extend(files)
+    inputDir = args.inputDir
+    outputDir = args.outputDir
+    force = args.force
 
-filePaths.sort()
+    # credit to pycruft in https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory for code for grabbing file paths
+    filePaths = []
+    for (dirpath, dirnames, files) in walk(inputDir):
+        filePaths.extend(files)
 
-for filePath in filePaths:
-    regMatch = re.match(r'(.+?)\.fasta', filePath)
-    # extract name from file path
-    prophageName = regMatch.group(1)
+    filePaths.sort()
 
-    DomTblGen(prophageName, inputDir, outputDir)
+    for filePath in filePaths:
+        regMatch = re.match(r'(.+?)\.fasta', filePath)
+        # extract name from file path
+        prophageName = regMatch.group(1)
+
+        DomTblGen(prophageName, inputDir, outputDir)
