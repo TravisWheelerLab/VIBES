@@ -13,7 +13,7 @@ from generate_domtbls import DomTblGen
 # for each file, populate an array in which each index corresponds to a line
 # plot as line graph
 def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
-    # Y depth constant. Used to fiddle with how far below the X-Axis lines are drawn
+    # Y depth constant. Used to fiddle with how far below the x-axis lines are drawn
     YCONST = -.13
 
     # Credit to https://matplotlib.org/gallery/lines_bars_and_markers/simple_plot.html#sphx-glr-gallery-lines-bars-and-markers-simple-plot-py
@@ -35,7 +35,7 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
     print("Tlen: %s" % domTblList[0][1])
     exit()'''
 
-    #CREATE LINE DEPTH STUFF SOMEWHERE AROUND HERE
+    # CREATE LINE DEPTH STUFF SOMEWHERE AROUND HERE
     # In case protein domains overlap, we want to stagger the drawing of
     # the lines that represent them. To accomplish this, we create a list
     # of booleans set to false. When we insert a line on a "layer," we set
@@ -57,16 +57,39 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
         # grab x and y data, from alicoords and line depth stuff respectively.
         xStart = lineList[5]
         xEnd = lineList[6]
+        description = lineList[-1]
         #USE LINE DEPTH STUFF TO FIND SINGLE Y-VAL FOR BOTH X'S
 
         lineLayer = 0
-        while (True in depthList[lineLayer][xStart:xEnd+1]):
+        while (True in depthList[lineLayer][xStart:(xEnd+1)]):
             lineLayer += 1
 
-        for index in (depthList[lineLayer][xStart:xEnd+1]):
+        print(lineLayer)
+
+        index = xStart
+
+        while (index < xEnd + 1):
             depthList[lineLayer][index] = True
+            print("Index: %d" % index)
+            index += 1
+
+        print(depthList[lineLayer])
+
+        print("done")
+
 
         y = (YMAX * YCONST) + (YCONST * lineLayer)
+
+        line = lines.Line2D(np.array([xStart, xEnd]), np.array([y, y]), clip_on=False)
+
+        ax.add_line(line)
+
+        #plt.plot([xStart, xEnd], [y, y])
+        
+
+
+
+
 
         pointList = [(xStart, y), (xEnd, y)]
 
@@ -76,9 +99,9 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
         #set clip to false
         #plot
 
-    lc = col.LineCollection(domainLines)
-    lc.set_clip_on(False)
-    ax.add_collection(lc)
+    #lc = col.LineCollection(domainLines)
+    #lc.set_clip_on(False)
+    #ax.add_collection(lc)
 
     ax.set(xlabel='Nucleotide Index', ylabel='Number Found', title=prophageName)
     ax.grid()
@@ -110,18 +133,18 @@ def buildDomTblList(domTblPath):
                     # since split() gives us strings, we cast to the proper type
                     domainName = dataList[0]
                     tlen = int(dataList[2])
-                    eValue = float(dataList[7])
+                    iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
                     hmmFrom = int(dataList[15])
                     hmmTo = int(dataList[16])
                     aliFrom = int(dataList[19])
                     aliTo = int(dataList[20])
 
                     # we only want entries with evalue 10^-5 or better
-                    if (eValue <= 1e-5):
-                        print("Passing eVal: %s" % eValue)
+                    if (iEvalue <= 1e-5):
+                        print("Passing eVal: %s" % iEvalue)
                         lineList.append(domainName)
                         lineList.append(tlen)
-                        lineList.append(eValue)
+                        lineList.append(iEvalue)
                         lineList.append(hmmFrom)
                         lineList.append(hmmTo)
                         lineList.append(aliFrom)
