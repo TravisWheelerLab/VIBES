@@ -4,8 +4,8 @@ import argparse
 import re
 from os import walk, path
 import sys
-from matplotlib import collections as col
-from matplotlib import lines
+from matplotlib import lines, cm
+from matplotlib.colors import ListedColormap
 from generate_domtbls import DomTblGen
 
 
@@ -13,12 +13,14 @@ from generate_domtbls import DomTblGen
 # for each file, populate an array in which each index corresponds to a line
 # plot as line graph
 def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
+
+    print(prophageName)
     # Y depth constant. Used to fiddle with how far below the x-axis lines are drawn
     YCONST = -.13
+    STACKCONST = .015
 
-    # Credit to https://matplotlib.org/gallery/lines_bars_and_markers/simple_plot.html#sphx-glr-gallery-lines-bars-and-markers-simple-plot-py
-    # for structure of plotting code
-    fig, ax = plt.subplots()
+    fig = plt.figure(figsize=(8,6))
+    ax = fig.add_subplot(111)
     ax.plot(countList)
 
     domTblPath = "%s%s.domtbl" % (domTblDir, prophageName)
@@ -52,11 +54,13 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
     # find max height of chart. Useful for determining y-values below
     YMAX = max(countList)
     domainLines = []
+    descStrings = []
 
     for lineList in domTblList:
         # grab x and y data, from alicoords and line depth stuff respectively.
-        xStart = lineList[5]
-        xEnd = lineList[6]
+        # subtract 1 from x-coords to adjust for 0-indexed graph
+        xStart = lineList[5] - 1
+        xEnd = lineList[6] - 1
         description = lineList[-1]
         #USE LINE DEPTH STUFF TO FIND SINGLE Y-VAL FOR BOTH X'S
 
@@ -64,46 +68,42 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
         while (True in depthList[lineLayer][xStart:(xEnd+1)]):
             lineLayer += 1
 
-        print(lineLayer)
+        #print(lineLayer)
 
         index = xStart
 
         while (index < xEnd + 1):
             depthList[lineLayer][index] = True
-            print("Index: %d" % index)
+            #print("Index: %d" % index)
             index += 1
 
-        print(depthList[lineLayer])
+        #print(depthList[lineLayer])
 
         print("done")
 
 
-        y = (YMAX * YCONST) + (YCONST * lineLayer)
+        y = (YMAX * YCONST) - ((STACKCONST * YMAX) * lineLayer)
 
         line = lines.Line2D(np.array([xStart, xEnd]), np.array([y, y]), clip_on=False)
 
         ax.add_line(line)
 
-        #plt.plot([xStart, xEnd], [y, y])
-        
+        domainLines.append(line)
+        descStrings.append(description)
 
+    # plot line. Use number of domain lines to determine how many colors we need
+    # set clip to false
+    # plot
 
-
-
-
-        pointList = [(xStart, y), (xEnd, y)]
-
-        domainLines.append(pointList)
-
-        #plot line. Determine color. Annotate with description, or store line and description in key
-        #set clip to false
-        #plot
-
-    #lc = col.LineCollection(domainLines)
-    #lc.set_clip_on(False)
-    #ax.add_collection(lc)
+    # Create colormap. Credit to https://stackoverflow.com/questions/4971269/how-to-pick-a-new-color-for-each-plotted-line-within-a-figure-in-matplotlib
+    colors = iter(cm.jet(np.linspace(0,1,len(domainLines))))
+    for i in range(len(domainLines)):
+        currentColor = next(colors)
+        domainLines[i].set_color(currentColor)
 
     ax.set(xlabel='Nucleotide Index', ylabel='Number Found', title=prophageName)
+    # credit to https://stackoverflow.com/questions/7125009/how-to-change-legend-size-with-matplotlib-pyplot for legend settings
+    ax.legend(domainLines, descStrings, loc=1, prop={'size':6})
     ax.grid()
 
     #fig.savefig("%s/%s.png" % (outputDir,prophageName))
