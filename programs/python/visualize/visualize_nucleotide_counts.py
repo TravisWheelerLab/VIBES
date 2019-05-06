@@ -16,10 +16,10 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
 
     print(prophageName)
     # Y depth constant. Used to fiddle with how far below the x-axis lines are drawn
-    YCONST = -.13
-    STACKCONST = .015
+    YCONST = -.1
+    STACKCONST = .1
 
-    fig = plt.figure(figsize=(8,6))
+    fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111)
     ax.plot(countList)
 
@@ -62,10 +62,9 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
         xStart = lineList[5] - 1
         xEnd = lineList[6] - 1
         description = lineList[-1]
-        #USE LINE DEPTH STUFF TO FIND SINGLE Y-VAL FOR BOTH X'S
 
         lineLayer = 0
-        while (True in depthList[lineLayer][xStart:(xEnd+1)]):
+        while (True in depthList[lineLayer][xStart:(xEnd + 1)]):
             lineLayer += 1
 
         #print(lineLayer)
@@ -81,12 +80,15 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
 
         print("done")
 
-
         y = (YMAX * YCONST) - ((STACKCONST * YMAX) * lineLayer)
 
-        line = lines.Line2D(np.array([xStart, xEnd]), np.array([y, y]), clip_on=False)
+        line = lines.Line2D(np.array([xStart, xEnd]), np.array([y, y]), clip_on=False, linewidth=3)
 
         ax.add_line(line)
+
+        # create annotation for line, based on line's center point and offset to be under line
+        xCenter = xStart + abs((xEnd - xStart) / 2)
+        ax.annotate(description, xy=(xCenter, y - (y * STACKCONST * 2)), annotation_clip=False, horizontalalignment='center', fontsize=10)
 
         domainLines.append(line)
         descStrings.append(description)
@@ -96,17 +98,18 @@ def plotList(countList, prophageName, outputDir, domTblDir, hmmStatDict):
     # plot
 
     # Create colormap. Credit to https://stackoverflow.com/questions/4971269/how-to-pick-a-new-color-for-each-plotted-line-within-a-figure-in-matplotlib
-    colors = iter(cm.jet(np.linspace(0,1,len(domainLines))))
+    colors = iter(cm.jet(np.linspace(0, 1, len(domainLines))))
     for i in range(len(domainLines)):
         currentColor = next(colors)
         domainLines[i].set_color(currentColor)
 
     ax.set(xlabel='Nucleotide Index', ylabel='Number Found', title=prophageName)
     # credit to https://stackoverflow.com/questions/7125009/how-to-change-legend-size-with-matplotlib-pyplot for legend settings
-    ax.legend(domainLines, descStrings, loc=1, prop={'size':6})
-    ax.grid()
+    #ax.legend(domainLines, descStrings, loc=1, prop={'size': 6})
+    #ax.grid()
 
-    #fig.savefig("%s/%s.png" % (outputDir,prophageName))
+    plt.tight_layout()
+    fig.savefig("%s/%s.png" % (outputDir,prophageName), transparent=True)
     plt.show()
     plt.close()
 
@@ -118,40 +121,40 @@ def buildDomTblList(domTblPath):
 
     # read in domTblPath info as read-only
     with open(domTblPath, "r") as domTblData:
-            for line in domTblData:
-                # '#' char indicates a line doesn't contain data
-                if(line[0] != "#"):
-                    # create a list to store this line's data
-                    lineList = []
-                    dataList = line.split()
+        for line in domTblData:
+            # '#' char indicates a line doesn't contain data
+            if(line[0] != "#"):
+                # create a list to store this line's data
+                lineList = []
+                dataList = line.split()
 
-                    # since we split domTblData along whitespace, we need to reconstruct
-                    # the description string at the end of the table line. This string
-                    # always begins at index 27 and runs until the end of the list
-                    descString = " ".join(dataList[27:])
+                # since we split domTblData along whitespace, we need to reconstruct
+                # the description string at the end of the table line. This string
+                # always begins at index 27 and runs until the end of the list
+                descString = " ".join(dataList[27:])
 
-                    # since split() gives us strings, we cast to the proper type
-                    domainName = dataList[0]
-                    tlen = int(dataList[2])
-                    iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
-                    hmmFrom = int(dataList[15])
-                    hmmTo = int(dataList[16])
-                    aliFrom = int(dataList[19])
-                    aliTo = int(dataList[20])
+                # since split() gives us strings, we cast to the proper type
+                domainName = dataList[0]
+                tlen = int(dataList[2])
+                iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
+                hmmFrom = int(dataList[15])
+                hmmTo = int(dataList[16])
+                aliFrom = int(dataList[19])
+                aliTo = int(dataList[20])
 
-                    # we only want entries with evalue 10^-5 or better
-                    if (iEvalue <= 1e-5):
-                        print("Passing eVal: %s" % iEvalue)
-                        lineList.append(domainName)
-                        lineList.append(tlen)
-                        lineList.append(iEvalue)
-                        lineList.append(hmmFrom)
-                        lineList.append(hmmTo)
-                        lineList.append(aliFrom)
-                        lineList.append(aliTo)
-                        lineList.append(descString)
+                # we only want entries with evalue 10^-5 or better
+                if (iEvalue <= 1e-5):
+                    print("Passing eVal: %s" % iEvalue)
+                    lineList.append(domainName)
+                    lineList.append(tlen)
+                    lineList.append(iEvalue)
+                    lineList.append(hmmFrom)
+                    lineList.append(hmmTo)
+                    lineList.append(aliFrom)
+                    lineList.append(aliTo)
+                    lineList.append(descString)
 
-                        infoList.append(lineList)
+                    infoList.append(lineList)
 
     return infoList
 
