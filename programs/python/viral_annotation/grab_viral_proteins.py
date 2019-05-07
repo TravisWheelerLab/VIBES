@@ -22,14 +22,14 @@ def filterEntries(inputFasta, outputFasta, force, verbose):
     savedEntries = 0
 
     # Since this regex statement will be used many times, we compile it ahead of time to save a little time. This regex statement
-    # looks for any occurances of 'virus' or 'phage', ignoring case
-    virusRegex = re.compile(r'(virus|phage)', re.I)
+    # looks for a '>' at the start of a line, followed by at least 0 non-newline characters, followed by either 'virus' or 'phage'.
+    # This is to ensure that matches are in header lines, rather than sequence data, since the statement ignores case
+    virusRegex = re.compile(r'>[^\n\r]*(virus|phage)', re.IGNORECASE)
 
     # This variable stores either 'w' or 'x'. 'w' tells it to overwrite the output if it already exists (--force set),
     # 'x' instructs open() to only open the output file if it doesn't already exist (--force not set),
     # credit for conditional assignment syntax to https://stackoverflow.com/questions/394809/does-python-have-a-ternary-conditional-operator
     openPermission = 'w' if force else 'x'
-
 
     try:
         with open(outputFasta, openPermission) as outputFileHandle:
@@ -39,9 +39,13 @@ def filterEntries(inputFasta, outputFasta, force, verbose):
                 entriesList = re.split(r'>', inputData)
 
                 for entry in entriesList:
-                    # if the header line contains virus or phage (regardless of upper or lower case), we want to save it to output
+                    #re-attach '>' to front of entry's header line
+                    entry = ">%s" % entry
+
+                    # if the header line contains virus or phage (regardless of upper or lower case), we want to save it to output.
+                    # Ignore matches in any line after the header
                     if re.search(virusRegex, entry):
-                        outputFileHandle.write(">%s" % entry)
+                        outputFileHandle.write(entry)
                         savedEntries += 1
 
         if verbose:
