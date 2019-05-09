@@ -22,9 +22,9 @@ def filterEntries(inputFasta, outputFasta, force, verbose):
     savedEntries = 0
 
     # Since this regex statement will be used many times, we compile it ahead of time to save a little time. This regex statement
-    # looks for a '>' at the start of a line, followed by at least 0 non-newline characters, followed by either 'virus' or 'phage'.
+    # looks for a '>' at the start of a line, followed by at least 0 non-newline characters, followed by either 'virus', 'viral', or 'phage'.
     # This is to ensure that matches are in header lines, rather than sequence data, since the statement ignores case
-    virusRegex = re.compile(r'>[^\n\r]*(virus|phage)', re.IGNORECASE)
+    virusRegex = re.compile(r'>[^\n\r]*(virus|viral|phage)', re.IGNORECASE)
 
     # This variable stores either 'w' or 'x'. 'w' tells it to overwrite the output if it already exists (--force set),
     # 'x' instructs open() to only open the output file if it doesn't already exist (--force not set),
@@ -39,7 +39,7 @@ def filterEntries(inputFasta, outputFasta, force, verbose):
                 entriesList = re.split(r'>', inputData)
 
                 for entry in entriesList:
-                    #re-attach '>' to front of entry's header line
+                    # re-attach '>' to front of entry's header line
                     entry = ">%s" % entry
 
                     # if the header line contains virus or phage (regardless of upper or lower case), we want to save it to output.
@@ -49,7 +49,7 @@ def filterEntries(inputFasta, outputFasta, force, verbose):
                         savedEntries += 1
 
         if verbose:
-            print("%d entries contained virus or phage in their headers" % savedEntries)
+            print("%d entries contained virus, viral, or phage in their headers" % savedEntries)
 
     # catch case where --force isn't set and file already exists:
     except FileExistsError:
