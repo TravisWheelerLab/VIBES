@@ -4,7 +4,7 @@ use warnings;
 use Getopt::Long;
 use File::Temp qw(tempfile);
 use Cwd;
-#use Dfamscan;
+use File::Basename;
 
 my $VERSION = 1.4;
 
@@ -27,8 +27,8 @@ BEGIN {
 
 
 my $e_max = 10000;
-my $score_dominate_default  = 5;
-my $rph_trim_default        = 10;
+#my $score_dominate_default  = 5;
+#my $rph_trim_default        = 10;
 my $min_cov_frac_default    = 0.75;
 my $default_cpu             = 8;
 
@@ -47,7 +47,7 @@ sub main {
    if ($args->{no_rph_removal} ) {
       printf STDERR ("nhmmer hits (no overlap removal):   %7d\n", $cnt_before);
    } else {
-      $hits = Dfamscan::filter_covered_hits($hits, $args);
+      $hits = &filter_covered_hits_using_masklevel($hits, $args->{min_cov_frac}, 1);
       logdie("Error running covered-hit-filter\n") unless ($hits);
       my $cnt_after = 1 + $#{$hits};
       printf STDERR ("nhmmer hits before overlap removal: %7d\n", $cnt_before);
@@ -57,11 +57,11 @@ sub main {
 
    my $sorted = [];
    if ( $args->{sort_method} eq "seq") {
-      $sorted = Dfamscan::by_seqandorientandpos($hits);
+      $sorted = by_seqandorientandpos_local($hits);
    } elsif ($args->{sort_method} eq "model") {
-      $sorted = Dfamscan::by_modelandseqandorientandpos($hits);
+      $sorted = by_modelandseqandorientandpos_local($hits);
    } elsif ($args->{sort_method} eq "eval") {
-      $sorted = Dfamscan::by_evalue($hits);
+      $sorted = by_evalue_local($hits);
    }
 
    open DFOUT, ">$args->{dfam_outfile}" or logdie ("Can't open $args->{dfam_outfile}: $!");
@@ -104,12 +104,12 @@ sub processCommandLineArgs {
     "T=f",
     "masking_thresh|cut_ga",
     "annotation_thresh|cut_tc",
-    "species=i",
+    "species=s",
     "trf_outfile=s",
     "cpu=i",
     "no_rph_removal",
-    "rph_trim=i",
-    "score_dominate=f",
+#    "rph_trim=i",
+#    "score_dominate=f",
     "min_cov_frac=f",
     "sortby_model",
     "sortby_seq",
@@ -179,10 +179,8 @@ sub processCommandLineArgs {
    } elsif ($args{annotation_thresh}) {
       $thresh_arg_cnt++;
       $args{mask_method} = "TC";
-   } elsif ($args{species}) {
-      $thresh_arg_cnt++;
-      $args{mask_method} = "SP";
-   }
+   } 
+
    if ($thresh_arg_cnt > 1) { #only one should be specified
       help("Only one threshold method should be given");
    }
@@ -204,18 +202,18 @@ sub processCommandLineArgs {
       help("Only one sort method should be specified");
    }
 
-   if ($args{no_rph_removal}) {
-     if ($args{rph_trim}) {
-        help("Don't specify both --no_rph_removal and --rph_trim" );
-     }
-   } else {
-      $args{rph_trim} = $rph_trim_default;
-   }
+#   if ($args{no_rph_removal}) {
+#     if ($args{rph_trim}) {
+#        help("Don't specify both --no_rph_removal and --rph_trim" );
+#     }
+#   } else {
+#      $args{rph_trim} = $rph_trim_default;
+#   }
 
 
-   unless ($args{score_dominate}) {
-      $args{score_dominate} = $score_dominate_default;
-   }
+#   unless ($args{score_dominate}) {
+#      $args{score_dominate} = $score_dominate_default;
+#   }
 
    unless ($args{min_cov_frac}) {
       $args{min_cov_frac} = $min_cov_frac_default;
@@ -247,15 +245,11 @@ sub version {
 sub help {
 
 print STDERR <<EOF;
-
 Command line options for controlling $0
 -------------------------------------------------------------------------------
-
    --help       : prints this help messeage
    --version    : prints version information for this program and
                   both nhmmscan and trf
-
-
    Requires either
     --dfam_infile <s>    Use this is you've already run nhmmscan, and
                          just want to perfom dfamscan filtering/sorting.
@@ -265,34 +259,26 @@ Command line options for controlling $0
    or both of these
     --fastafile <s>      Use these if you want dfamscan to control a
     --hmmfile <s>        run of nhmmscan, then do filtering/sorting
-
    Requires
     --dfam_outfile <s>   Output file, also in dfamtblout format
-
    Optionally, one of these  (only -E and -T allowed with --dfam_infile)
     -E <f>               >0, <=$e_max
     -T <f>
     --masking_thresh/--cut_ga
     --annotation_thresh/--cut_tc  Default
-    --species <i>        (not yet implemented)
-
+    --species <i>        Currently allowed are "Other", "Homo sapiens", 
+                         "Mus Musculus", "Danio rerio", "Drosophila melanogaster",
+                         or "Caenorhabditis elegans"
    Optionally one of these
     --sortby_eval
     --sortby_model
     --sortby_seq         Default
-
    Redundant Profile Hit (RPH) removal (only if not --no_rph_removal)
-    --rph_trim <i>       If hit A has higher score than hit B and covers
-                         all but at most rph_trim bases on either side,
-                         then A dominates B. Default $rph_trim_default
-    --score_dominate <f> If hit A has score this much higher (bits) than
-                         hit B, then A can dominate B even if it's is
-                         shorter, so long as the --min_cov_frac threshold
-                         is met. Default $score_dominate_default
-    --min_cov_frac <f>   If hit A exceeds hit B by --score_dominate bits,
-                         and either A or B is covered at least --min_cov_frac
-                         by the other, then A dominates B. Default $min_cov_frac_default
-
+    --min_cov_frac <f>   This is similar to the MaskLevel concept in 
+                         crossmatch.  A match is considered non-redundant
+                         if at least (100-min_cov_frac)% of it's aligned
+                         bases are not contained within the domain of any
+                         higher-scoring hit. Default: $min_cov_frac_default
    All optional
     --trf_outfile <s>    Runs trf, put results in <s>; only with --fastafile
     --cpu <i>            Default $default_cpu
@@ -391,56 +377,65 @@ sub get_nhmmscan_hits {
 
       }
       close FH;
-   } else { # ($args{fastafile} && $args{hmmfile});
+   } else { # ($args->{fastafile} && $args->{hmmfile});
       my $cmd = "nhmmscan --noali";
 
-      if ($args->{mask_method} eq "SP") {
-         #um ...   do I have to split the hmm file in half, part for matching species, and part for not?
-         logdie("Don't know how to handle --species yet");
-         # two nhmmer jobs?
+      my $hmmFile = $args->{hmmfile};
+      if (defined $args->{species} && $args->{species} !~ /Other/i) 
+      {
+        # Turn something like "Homo sapiens" into "homo_sapiens"
+        # Also handle wierd things like " Homo sapiens " and still return "homo_sapiens"
+        my $speciesFileName = lc($args->{species});
+        $speciesFileName =~ s/^\s+//;
+        $speciesFileName =~ s/\s+$//;
+        $speciesFileName =~ s/\s+/_/g;
+        $speciesFileName .= "_dfam.hmm";
+        my($file, $dir, $ext) = fileparse($args->{hmmfile});
+        # Check if cache already exists
+        if ( ! -s "$dir/$speciesFileName" )
+        {
+          # Extract files for a specific species 
+          die "ERROR: A species specific Dfam2.0 pressed hmm file could " 
+            . "not be found for $dir/$speciesFileName.  Currently dfamscan " 
+            . "cannot auto-generate these files."
+        }
+        $hmmFile = "$dir/$speciesFileName";
+      } 
 
-      } else {
-
-         if ($args->{mask_method} eq "E") {
-            $cmd .= " -E $args->{E}";
-         } elsif ($args->{mask_method} eq "T") {
-            $cmd .= " -T $args->{T}";
-         } elsif ($args->{mask_method} eq "GA") {
-            $cmd .= " --cut_ga";
-         } elsif ($args->{mask_method} eq "TC") {
-            $cmd .= " --cut_tc";
-         }
-
-
-         my ($tmpfh, $dfout_filename) = tempfile();
-
-         $cmd .= " --dfamtblout $dfout_filename";
-         $cmd .= " --cpu=$args->{cpu}";
-         $cmd .= " $args->{hmmfile}";
-         $cmd .= " $args->{fastafile}";
-
-         #print ("$cmd\n");
-         my $result = system ("$cmd > /dev/null");
-         logdie("Error running command:\n$cmd\n") if $result;
-         open FH, "<$dfout_filename";
-         while (my $line = <FH>) {
-            if ($line =~ /^#/) {
-               $header .= $line if  !$header_done;
-               next;
-            }
-            $header_done = 1;
-            push @hits, get_hit_from_hitline($line);
-         }
-         close FH;
-         unlink $dfout_filename;
+      if ($args->{mask_method} eq "E") {
+        $cmd .= " -E $args->{E}";
+      } elsif ($args->{mask_method} eq "T") {
+        $cmd .= " -T $args->{T}";
+      } elsif ($args->{mask_method} eq "GA") {
+        $cmd .= " --cut_ga";
+      } elsif ($args->{mask_method} eq "TC") {
+        $cmd .= " --cut_tc";
       }
+
+      my ($tmpfh, $dfout_filename) = tempfile();
+
+      $cmd .= " --dfamtblout $dfout_filename";
+      $cmd .= " --cpu=$args->{cpu}";
+      $cmd .= " $hmmFile";
+      $cmd .= " $args->{fastafile}";
+
+      #print ("$cmd\n");
+      my $result = system ("$cmd > /dev/null");
+      logdie("Error running command:\n$cmd\n") if $result;
+      open FH, "<$dfout_filename";
+      while (my $line = <FH>) {
+          if ($line =~ /^#/) {
+             $header .= $line if  !$header_done;
+             next;
+          }
+          $header_done = 1;
+          push @hits, get_hit_from_hitline($line);
+       }
+       close FH;
+       unlink $dfout_filename;
    }
    return \@hits, $header;
 }
-
-
-
-
 
 
 sub get_hit_from_hitline {
@@ -464,243 +459,171 @@ sub get_hit_from_hitline {
     };
 }
 
-package Dfamscan;
 
-use strict;
+sub filter_covered_hits_using_masklevel {
+  my $sHits = by_seq_start_end_score_local($_[0]);
+  my $masklevel = $_[1];
+  my $keepLowScoringSigExt = $_[2];
+  my $DEBUG = 0;
 
-#our $VERSION = 1.4;
+  my %deleteHash = ();    # Hash to hold indexes of filtered entries
+  my @scores = ();
+  my $highest_prev_end = 0;
+  my $prev_seq = "";
+  for ( my $i = 0 ; $i <= $#{$sHits}; $i++ ) {
+    my $hit = $sHits->[$i];
+    my $hit_seq = $hit->{seq};
+    my $hit_start = $hit->{start};
+    my $hit_end = $hit->{end};
+    my $hit_score = $hit->{score};
 
-$|++;
+    # If we are still on the same sequence *and* this
+    # overlaps something we already have, then simply add it 
+    # and continue
+    if ( $hit_seq eq $prev_seq && $hit_start < $highest_prev_end - 5 ) {
+      push @scores, [ $hit_score, $i, ($hit_end - $hit_start) ];
+    }else {  
+      # Either we have moved on to another sequence and/or 
+      # found a hit that doesn't overlap anything in @scores
+      # (or @scores is empty).  Only process clusters with >1
+      # annotation ( singletons are not dominated by anything ).
+      if ( @scores > 1 ) {
+        # Sort by score descending, then by length descending
+        @scores = sort { ($b->[0] <=> $a->[0] ) || ($b->[2] <=> $a->[2]) } @scores;
+        for ( my $j = 0; $j <= $#scores; $j++ ){
+           my $jidx = $scores[$j]->[1];
+           if ( exists $deleteHash{$jidx} && $deleteHash{$jidx} == 1 ){
+              next;
+           }
+           for ( my $k = $j+1; $k <= $#scores; $k++ ){
+             my $kidx = $scores[$k]->[1];
+             if ( exists $deleteHash{$kidx} && $deleteHash{$kidx} == 1 ) {
+               next;
+             }
+             my $hit_a = $sHits->[ $jidx ];
+             my $hit_a_start = $hit_a->{start};
+             my $hit_a_end = $hit_a->{end};
+             my $hit_a_score = $hit_a->{score};
+             my $hit_b = $sHits->[ $kidx ];
+             my $hit_b_start = $hit_b->{start};
+             my $hit_b_end = $hit_b->{end};
+             my $hit_b_score = $hit_b->{score};
 
+             # Short circuit if no overlap possible
+             if ( $hit_b_end < $hit_a_start || $hit_b_start > $hit_a_end ) {
+               next;
+             }
 
-
-sub filter_covered_hits {
-   my @sorted = @{ by_seqandpos($_[0])};
-
-   my $args   = $_[1];
-   my $i=0;
-   my $j;
-   my $tmp;
-
-   my @dominated;
-   my $cur_seq = "";
-
-   my ($model_a, $acc_a, $seq_a, $score_a, $eval_a, $orient_a, $start_a, $end_a);
-   my ($model_b, $acc_b, $seq_b, $score_b, $eval_b, $orient_b, $start_b, $end_b);
-
-   for ($i=0; $i<$#sorted; $i++) {
-      ($model_a, $acc_a, $seq_a, $score_a, $eval_a, $orient_a, $start_a, $end_a) = get_vals_from_hit($sorted[$i]);
-
-      if ($end_a <= $start_a + 5) {
-         $dominated[$i] = 1;
-         next;
-      }
-      #set these to jumpstart the loop below
-      $j=$i;
-      $seq_b   = $seq_a;
-      $start_b = $start_a;
-      $end_b   = $end_a;
-
-      if ($seq_a ne $cur_seq) {
-         $cur_seq = $seq_a;
-      }
-
-      #grab all the hits that are even just-a-little overlapping
-      while ($j<$#sorted && $seq_b eq $seq_a && $start_b < $end_a - 5) {
-         $end_a = ($end_b > $end_a ? $end_b : $end_a);
-         $j++;
-         ($model_b, $acc_b, $seq_b, $score_b, $eval_b, $orient_b, $start_b, $end_b) = get_vals_from_hit($sorted[$j]);
-      }
-      if ($j == $#sorted && $seq_b eq $seq_a && $start_b < $end_a) {
-         mask_dominated($i, $j, \@sorted, \@dominated, $args);
-         $i = $j; # so the next loop, the first entry will be the one that comes right after the end of the current range.
-      } else {
-         mask_dominated($i, $j-1, \@sorted, \@dominated, $args);
-         $i = $j-1; # so the next loop, the first entry will be the one that comes right after the end of the current range.
-      }
+             my $covered_start = $hit_a_start;
+             $covered_start = $hit_b_start if ($hit_a_start <= $hit_b_start);
+             my $covered_end = $hit_a_end;
+             $covered_end = $hit_b_end if ($hit_a_end >= $hit_b_end );
+             my $covered_len = $covered_end - $covered_start + 1;
+             my $a_len = $hit_a_end - $hit_a_start + 1;
+             my $b_len = $hit_b_end - $hit_b_start + 1;
+             if ( $keepLowScoringSigExt ) {
+                if ( ($covered_len / $b_len) >= $masklevel ) {
+                    $deleteHash{$kidx} = 1;
+                    next;
+                }
+             }else {
+                if ( ($covered_len / $a_len) >= $masklevel ||
+                     ($covered_len / $b_len) >= $masklevel ) {
+                    $deleteHash{$kidx} = 1;
+                    next;
+                }
+             }
+           }
+         } # for ( j
+       } # if
+       @scores = ();
+       push @scores, [ $hit_score, $i, ($hit_end - $hit_start) ];
+     }
+     $prev_seq = $hit_seq;
+     if ( $hit_end > $highest_prev_end ) {
+         $highest_prev_end = $hit_end;
+     }
    }
+   #### Trailing case
+      if ( @scores > 1 ) {
+        # Sort by score descending, then by length descending
+        @scores = sort { ($b->[0] <=> $a->[0] ) || ($b->[2] <=> $a->[2]) } @scores;
+        for ( my $j = 0; $j <= $#scores; $j++ ){
+           my $jidx = $scores[$j]->[1];
+           if ( exists $deleteHash{$jidx} && $deleteHash{$jidx} == 1 ){
+              next;
+           }
+           for ( my $k = $j+1; $k <= $#scores; $k++ ){
+             my $kidx = $scores[$k]->[1];
+             if ( exists $deleteHash{$kidx} && $deleteHash{$kidx} == 1 ) {
+               next;
+             }
+             my $hit_a = $sHits->[ $jidx ];
+             my $hit_a_start = $hit_a->{start};
+             my $hit_a_end = $hit_a->{end};
+             my $hit_a_score = $hit_a->{score};
+             my $hit_b = $sHits->[ $kidx ];
+             my $hit_b_start = $hit_b->{start};
+             my $hit_b_end = $hit_b->{end};
+             my $hit_b_score = $hit_b->{score};
 
+             # Short circuit if no overlap possible
+             if ( $hit_b_end < $hit_a_start || $hit_b_start > $hit_a_end ) {
+               next;
+             }
 
+             my $covered_start = $hit_a_start;
+             $covered_start = $hit_b_start if ($hit_a_start <= $hit_b_start);
+             my $covered_end = $hit_a_end;
+             $covered_end = $hit_b_end if ($hit_a_end >= $hit_b_end );
+             my $covered_len = $covered_end - $covered_start + 1;
+             my $a_len = $hit_a_end - $hit_a_start + 1;
+             my $b_len = $hit_b_end - $hit_b_start + 1;
+             if ( $keepLowScoringSigExt ) {
+                if ( ($covered_len / $b_len) >= $masklevel ) {
+                    $deleteHash{$kidx} = 1;
+                    next;
+                }
+             }else {
+                if ( ($covered_len / $a_len) >= $masklevel ||
+                     ($covered_len / $b_len) >= $masklevel ) {
+                    $deleteHash{$kidx} = 1;
+                    next;
+                }
+             }
+           }
+         } # for ( j
+       } # if
 
-   $i = 0;
-   $j = 0;
-   while ($j <= $#sorted) {
-      unless ($dominated[$j]) {
-         $sorted[$i] = $sorted[$j];
-         $i++;
-      }
-      $j++;
-   }
+  my $i = 0;
+  my $j = 0;
+  while ($j <= $#{$sHits}) {
+     unless ( exists $deleteHash{$j} ) {
+        $sHits->[$i] = $sHits->[$j];
+        $i++;
+     }
+     $j++;
+  }
 
-   #resize the array, to drop off leftover cruft;
-   $#sorted = $i-1;
+  # resize the array, to drop off leftover cruft;
+  splice(@{$sHits},$i);
 
-   return \@sorted;
-
-}
-
-sub mask_dominated {
-   my ($first, $last, $sorted_ref, $dominated_ref, $args) = @_;
-   my $i;
-   my $j;
-
-   return if $first == $last; # no chance one hit dominates itself
-
-   #this needs to get the list of un-dominated hits, then find the ones that
-   #those dominate, then repeat with the remainder
-   my $todo_cnt = $last-$first+1;
-
-   my @todo_mask;
-   for ($i=$first; $i<=$last; $i++) {
-      $todo_mask[$i] = 1;
-   }
-
-   my @unbeaten;
-   while ($todo_cnt > 0) {
-      my %beaten;
-      for ($i=$first; $i<=$last-1; $i++) {
-         next if ( !$todo_mask[$i] || $beaten{$i});
-
-         # while going through the list to find hits that are not dominated,
-         # keep a hash of, for each hit, the ones it dominates
-         for ($j=$i+1; $j<=$last; $j++) {
-            next if ( !$todo_mask[$j] || $beaten{$j});
-            my $res = compare_hits ( $$sorted_ref[$i], $$sorted_ref[$j], $args);
-            if ($res == 1) {
-               $beaten{$j} = 1;
-            } elsif ($res == -1) {
-               $beaten{$i} = 1;
-               last; # i has been dominated, so stop
-            }
-         }
-      }
-
-      for ($i=$first; $i<=$last; $i++) {
-         next if ( !$todo_mask[$i] || $beaten{$i});
-         for ($j=$first; $j<=$last; $j++) {
-            next if $i == $j;
-            next if !$todo_mask[$j];
-            # Since we didn't track all pairs of hits, just re-test which hits are dominated by an unbeaten hit.
-            my $res = compare_hits ( $$sorted_ref[$i], $$sorted_ref[$j], $args);
-
-            if ($res == 1) {
-               $todo_cnt--;
-               $todo_mask[$j] = 0;
-               $$dominated_ref[$j] = 1;
-            }
-         }
-         push (@unbeaten, $i);
-         $todo_mask[$i] = 0;
-         $todo_cnt--;
-      }
-   }
-
-   @unbeaten = sort {$a<=>$b} @unbeaten;
-
-}
-
-
-#if A dominates, return 1;  if B dominates, return -1, else return 0
-sub compare_hits {
-   my $tmp;
-   my ($hit_a, $hit_b, $args) = @_;
-   my ($i, $j);
-
-   my ($covered_start, $covered_end, $covered_len, $a_len, $b_len);
-
-
-   my $swap_mod=1;
-   if ($hit_b->{start} < $hit_a->{start} || ($hit_b->{start} == $hit_a->{start} && $hit_b->{end} > $hit_a->{end}) ) {
-      my $tmp = $hit_a;
-      $hit_a = $hit_b;
-      $hit_b = $tmp;
-      $swap_mod = -1;
-   }
-
-
-   if ( $hit_a->{score} == $hit_b->{score} ) {
-      if ( $hit_a->{end}-$hit_a->{start} >= $hit_b->{end}-$hit_b->{start}) {
-          return $swap_mod;
-      } else {
-          return -1 * $swap_mod;
-      }
-   } elsif ( $hit_a->{score} >= $hit_b->{score} &&  $hit_a->{end} >= $hit_b->{end} - $args->{rph_trim}) { # A is clearly superior both in score and (essentially) in boundary
-      return $swap_mod;
-   } elsif ( $hit_a->{score} >= $hit_b->{score} + $args->{score_dominate} ) {
-      # A has (default ~100x) better E-value; if one of the two hits is mostly covered by the other, A dominates B
-      $covered_start = $hit_a->{start} > $hit_b->{start} ? $hit_a->{start} : $hit_b->{start};
-      $covered_end   = $hit_a->{end} < $hit_b->{end}     ? $hit_a->{end}   : $hit_b->{end};
-      $covered_len   = $covered_end-$covered_start +1;
-      $a_len = $hit_a->{end} - $hit_a->{start} + 1;
-      $b_len = $hit_b->{end} - $hit_b->{start} + 1;
-      if ( $covered_len/$a_len >= $args->{min_cov_frac} || $covered_len/$b_len >= $args->{min_cov_frac} ) {
-         return $swap_mod;
-      }
-   } elsif ( $hit_b->{score} >= $hit_a->{score} &&  $hit_b->{start} <= $hit_a->{start} + $args->{rph_trim} ) { # B is cleanly superior both in score and (essentially) in boundary
-      return -1 * $swap_mod;
-   } elsif ( $hit_b->{score} >= $hit_a->{score} + $args->{score_dominate}) {
-      # B has (default ~100x) better E-value; if one of the two hits is mostly covered by the other, B dominates A
-      $covered_start = $hit_a->{start} > $hit_b->{start} ? $hit_a->{start} : $hit_b->{start};
-      $covered_end   = $hit_a->{end} < $hit_b->{end}     ? $hit_a->{end}   : $hit_b->{end};
-      $covered_len   = $covered_end-$covered_start +1;
-      $a_len = $hit_a->{end} - $hit_a->{start} + 1;
-      $b_len = $hit_b->{end} - $hit_b->{start} + 1;
-	  if ( $covered_len/$a_len >= $args->{min_cov_frac} || $covered_len/$b_len >= $args->{min_cov_frac} ) {
-         return -1 * $swap_mod;
-      }
-   }
-
-   return 0;
-
+  return $sHits;
 }
 
 
-sub get_vals_from_hit {
-   my $a      = $_[0];
-
-   my $model  = $a->{model};
-   my $acc    = $a->{acc};
-   my $seq    = $a->{seq};
-   my $score  = $a->{score};
-   my $eval   = $a->{e_val};
-   my $orient = $a->{orient};
-   my $start  = $a->{start};
-   my $end    = $a->{end};
-
-   return ($model, $acc, $seq, $score, $eval, $orient, $start, $end);
-
-}
-
-
-## sorting helper functions
-
-sub by_modelandseqandorientandpos {
-  my $input = shift;
-  my @result = sort {
-    ($a->{model} cmp $b->{model})
-    || ($a->{seq} cmp $b->{seq})
-    || ($a->{orient} cmp $b->{orient})
-    || ($a->{start} <=> $b->{start})
-    || ($a->{end}   <=> $b->{end})
-    || ($a->{score} <=> $b->{score})
-  } @$input;
-  return \@result;
-}
-
-
-sub by_seqandpos {
+sub by_seq_start_end_score_local {
   my $input = shift;
   my @result = sort {
     ($a->{seq} cmp $b->{seq})
     || ($a->{start} <=> $b->{start})
     || ($a->{end}   <=> $b->{end})
     || ($a->{score} <=> $b->{score})
-    || ($a->{model} cmp $b->{model})
   } @$input;
   return \@result;
 }
 
-sub by_seqandorientandpos {
+sub by_seqandorientandpos_local {
   my $input = shift;
   my @result = sort {
     ($a->{seq} cmp $b->{seq})
@@ -713,19 +636,20 @@ sub by_seqandorientandpos {
   return \@result;
 }
 
-sub by_model {
+sub by_modelandseqandorientandpos_local {
   my $input = shift;
   my @result = sort {
     ($a->{model} cmp $b->{model})
     || ($a->{seq} cmp $b->{seq})
     || ($a->{orient} cmp $b->{orient})
     || ($a->{start} <=> $b->{start})
+    || ($a->{end}   <=> $b->{end})
     || ($a->{score} <=> $b->{score})
   } @$input;
   return \@result;
 }
 
-sub by_evalue {
+sub by_evalue_local {
   my $input = shift;
   my @result = sort {
     ($a->{e_val} <=> $b->{e_val})
@@ -738,17 +662,5 @@ sub by_evalue {
   return \@result;
 }
 
-sub by_score {
-  my $input = shift;
-  my @result = sort {
-    ($a->{score} <=> $b->{score})
-    || ($a->{e_val} <=> $b->{e_val})
-    || ($a->{seq} cmp $b->{seq})
-    || ($a->{orient} cmp $b->{orient})
-    || ($a->{start} <=> $b->{start})
-    || ($a->{model} cmp $b->{model})
-  } @$input;
-  return \@result;
-}
 
 1;
