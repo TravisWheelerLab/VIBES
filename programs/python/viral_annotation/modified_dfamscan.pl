@@ -64,7 +64,7 @@ sub main {
       $sorted = by_evalue_local($hits);
    }
 
-   open DFOUT, ">$args->{dfam_outfile}" or logdie ("Can't open $args->{dfam_outfile}: $!");
+   open DFOUT, ">$args->{domtbl_outfile}" or logdie ("Can't open $args->{domtbl_outfile}: $!");
    print DFOUT $header;
    foreach my $row (@$sorted) {
      print DFOUT $row->{line};
@@ -96,10 +96,10 @@ sub processCommandLineArgs {
   &GetOptions( \%args,
     "help",
     "version",
-    "dfam_infile=s",
+    "domtbl_infile=s",
     "fastafile=s",
     "hmmfile=s",
-    "dfam_outfile=s",
+    "domtbl_outfile=s",
     "E=f",
     "T=f",
     "masking_thresh|cut_ga",
@@ -116,7 +116,7 @@ sub processCommandLineArgs {
     "sortby_eval",
     "log_file=s",
   )
-  or logdie ("Unknown option, try running --help for more infortmation.");
+  or logdie ("Unknown option, try running --help for more information.");
 
   help() if ($args{help});
   version() if ($args{version});
@@ -133,27 +133,27 @@ sub processCommandLineArgs {
     }
   }
 
-  if ($args{dfam_infile}) { #queries have already been run
-    help("Illegal flags used in addition to --dfam_infile" ) if ($args{fastafile} || $args{hmmfile} || $args{trf_outfile} || $args{masking_thresh} || $args{annotation_thresh} || $args{species});
-    logdie("Unable to open $args{dfam_infile}: $!")  unless -e $args{dfam_infile};
+  if ($args{domtbl_infile}) { #queries have already been run
+    help("Illegal flags used in addition to --domtbl_infile" ) if ($args{fastafile} || $args{hmmfile} || $args{trf_outfile} || $args{masking_thresh} || $args{annotation_thresh} || $args{species});
+    logdie("Unable to open $args{domtbl_infile}: $!")  unless -e $args{domtbl_infile};
   }
   elsif ( $args{fastafile} && $args{hmmfile} ) { #need to run nhmmer
-    help("Flag --dfam_infile may not be used with --hmmfile") if ($args{dfam_infile});
+    help("Flag --domtbl_infile may not be used with --hmmfile") if ($args{domtbl_infile});
     logdie("Unable to open $args{fastafile}: $!")  unless -e $args{fastafile};
     logdie("Unable to open $args{hmmfile}: $!")    unless -e $args{hmmfile};
   }
   else {
-    help("Use either (--dfam_infile) or (--fastafile and --hmmfile)");
+    help("Use either (--domtbl_infile) or (--fastafile and --hmmfile)");
   }
 
-  if ( $args{dfam_outfile} ) {
+  if ( $args{domtbl_outfile} ) {
     # does the containing directory exist?
-    if ( $args{dfam_outfile} =~ m[^(.+)/]) { #some other directory, it better exist
+    if ( $args{domtbl_outfile} =~ m[^(.+)/]) { #some other directory, it better exist
       logdie("The directory $1 does not exist")  unless (-d $1);
     }
    }
    else {
-     help("Must specify --dfam_outfile");
+     help("Must specify --domtbl_outfile");
    }
 
    if ( $args{trf_outfile} ) {
@@ -242,7 +242,7 @@ sub version {
    exit;
 }
 
-sub help {
+sub help { ##CHANGE ME!!
 
 print STDERR <<EOF;
 Command line options for controlling $0
@@ -251,7 +251,7 @@ Command line options for controlling $0
    --version    : prints version information for this program and
                   both nhmmscan and trf
    Requires either
-    --dfam_infile <s>    Use this is you've already run nhmmscan, and
+    --domtbl_infile <s>  Use this is you've already run nhmmscan, and
                          just want to perfom dfamscan filtering/sorting.
                          The file must be the one produced by nhmmscan's
                          --dfamtblout flag.
@@ -355,8 +355,8 @@ sub get_nhmmscan_hits {
    my @hits;
    my $header= "";
    my $header_done = 0;
-   if ($args->{dfam_infile}) {
-      open FH, "<$args->{dfam_infile}";
+   if ($args->{domtbl_infile}) {
+      open FH, "<$args->{domtbl_infile}";
       while (my $line = <FH>) {
          if ($line =~ /^#/) {
             $header .= $line if  !$header_done;
@@ -377,70 +377,17 @@ sub get_nhmmscan_hits {
 
       }
       close FH;
-   } else { # ($args->{fastafile} && $args->{hmmfile});
-      my $cmd = "nhmmscan --noali";
-
-      my $hmmFile = $args->{hmmfile};
-      if (defined $args->{species} && $args->{species} !~ /Other/i) 
-      {
-        # Turn something like "Homo sapiens" into "homo_sapiens"
-        # Also handle wierd things like " Homo sapiens " and still return "homo_sapiens"
-        my $speciesFileName = lc($args->{species});
-        $speciesFileName =~ s/^\s+//;
-        $speciesFileName =~ s/\s+$//;
-        $speciesFileName =~ s/\s+/_/g;
-        $speciesFileName .= "_dfam.hmm";
-        my($file, $dir, $ext) = fileparse($args->{hmmfile});
-        # Check if cache already exists
-        if ( ! -s "$dir/$speciesFileName" )
-        {
-          # Extract files for a specific species 
-          die "ERROR: A species specific Dfam2.0 pressed hmm file could " 
-            . "not be found for $dir/$speciesFileName.  Currently dfamscan " 
-            . "cannot auto-generate these files."
-        }
-        $hmmFile = "$dir/$speciesFileName";
-      } 
-
-      if ($args->{mask_method} eq "E") {
-        $cmd .= " -E $args->{E}";
-      } elsif ($args->{mask_method} eq "T") {
-        $cmd .= " -T $args->{T}";
-      } elsif ($args->{mask_method} eq "GA") {
-        $cmd .= " --cut_ga";
-      } elsif ($args->{mask_method} eq "TC") {
-        $cmd .= " --cut_tc";
-      }
-
-      my ($tmpfh, $dfout_filename) = tempfile();
-
-      $cmd .= " --dfamtblout $dfout_filename";
-      $cmd .= " --cpu=$args->{cpu}";
-      $cmd .= " $hmmFile";
-      $cmd .= " $args->{fastafile}";
-
-      #print ("$cmd\n");
-      my $result = system ("$cmd > /dev/null");
-      logdie("Error running command:\n$cmd\n") if $result;
-      open FH, "<$dfout_filename";
-      while (my $line = <FH>) {
-          if ($line =~ /^#/) {
-             $header .= $line if  !$header_done;
-             next;
-          }
-          $header_done = 1;
-          push @hits, get_hit_from_hitline($line);
-       }
-       close FH;
-       unlink $dfout_filename;
    }
    return \@hits, $header;
 }
 
 
 sub get_hit_from_hitline {
-   my ($model, $acc, $seq, $score, $eval, $tmp1, $tmp2, $tmp3, $orient, $start, $end) = split(/\s+/,$_[0]);
-   if ($orient eq "-") {
+   my ($model, $acc, $tmp1, $seq, $tmp2, $tmp3, $tmp4, $tmp5, $tmp6, $tmp7, $tmp8, $tmp9, $eval, $score, $tmp10, $tmp11, $tmp12,
+       $tmp13, $tmp14, $start, $end) = split(/\s+/,$_[0]); #CHANGE ME!
+   my $orient = "+";
+   if ($start > $end) { #CHANGE ME: Orientation not a field for domtbls; instead, see if start is greater than end and assign orient
+      $orient = "-";
       $tmp1 = $start;
       $start = $end;
       $end = $tmp1;
