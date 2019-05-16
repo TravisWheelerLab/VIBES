@@ -39,7 +39,7 @@ main();
 sub main {
    my $args = processCommandLineArgs();
 
-   verify_programs($args);
+   #verify_programs($args);
    my ($hits, $header) = get_nhmmscan_hits($args); #array pointer
    my $cnt_before = 1 + $#{$hits};
 
@@ -64,18 +64,18 @@ sub main {
       $sorted = by_evalue_local($hits);
    }
 
-   open DFOUT, ">$args->{domtbl_outfile}" or logdie ("Can't open $args->{domtbl_outfile}: $!");
-   print DFOUT $header;
+   open DTOUT, ">$args->{domtbl_outfile}" or logdie ("Can't open $args->{domtbl_outfile}: $!");
+   print DTOUT $header;
    foreach my $row (@$sorted) {
-     print DFOUT $row->{line};
+     print DTOUT $row->{line};
    }
-   close DFOUT;
+   close DTOUT;
 
-   if ($args->{trf_outfile}) {
-      my $cnt = run_trf($args->{fastafile}, $args->{trf_outfile});
-      logdie("Error running TRF\n") if ($cnt == -1);
-      printf STDERR ("TRF repeat count:                   %7d\n", $cnt);
-   }
+   #if ($args->{trf_outfile}) {
+   #   my $cnt = run_trf($args->{fastafile}, $args->{trf_outfile});
+   #   logdie("Error running TRF\n") if ($cnt == -1);
+   #   printf STDERR ("TRF repeat count:                   %7d\n", $cnt);
+   #}
 
 }
 
@@ -97,15 +97,15 @@ sub processCommandLineArgs {
     "help",
     "version",
     "domtbl_infile=s",
-    "fastafile=s",
-    "hmmfile=s",
+#    "fastafile=s",
+#    "hmmfile=s",
     "domtbl_outfile=s",
     "E=f",
     "T=f",
     "masking_thresh|cut_ga",
     "annotation_thresh|cut_tc",
-    "species=s",
-    "trf_outfile=s",
+#    "species=s",
+#    "trf_outfile=s",
     "cpu=i",
     "no_rph_removal",
 #    "rph_trim=i",
@@ -250,39 +250,31 @@ Command line options for controlling $0
    --help       : prints this help messeage
    --version    : prints version information for this program and
                   both nhmmscan and trf
-   Requires either
-    --domtbl_infile <s>  Use this is you've already run nhmmscan, and
-                         just want to perfom dfamscan filtering/sorting.
-                         The file must be the one produced by nhmmscan's
-                         --dfamtblout flag.
-                         (Note: must be nhmmscan output, not nhmmer output)
-   or both of these
-    --fastafile <s>      Use these if you want dfamscan to control a
-    --hmmfile <s>        run of nhmmscan, then do filtering/sorting
    Requires
-    --dfam_outfile <s>   Output file, also in dfamtblout format
-   Optionally, one of these  (only -E and -T allowed with --dfam_infile)
-    -E <f>               >0, <=$e_max
+    --domtbl_infile <s>   Use this if you've already run hmmscant, and
+                          just want to perfom domtblscan filtering/sorting.
+                          The file must be the one produced by hmmscant's
+                          --domtblout flag.
+                          (Note: must be hmmscant output)
+    --domtbl_outfile <s>  Output file, also in domtblout format
+   Optionally, one of these  (only -E and -T allowed with --domtbl_infile)
+    -E <f>                >0, <=$e_max
     -T <f>
     --masking_thresh/--cut_ga
     --annotation_thresh/--cut_tc  Default
-    --species <i>        Currently allowed are "Other", "Homo sapiens", 
-                         "Mus Musculus", "Danio rerio", "Drosophila melanogaster",
-                         or "Caenorhabditis elegans"
    Optionally one of these
     --sortby_eval
     --sortby_model
-    --sortby_seq         Default
-   Redundant Profile Hit (RPH) removal (only if not --no_rph_removal)
-    --min_cov_frac <f>   This is similar to the MaskLevel concept in 
-                         crossmatch.  A match is considered non-redundant
-                         if at least (100-min_cov_frac)% of it's aligned
-                         bases are not contained within the domain of any
-                         higher-scoring hit. Default: $min_cov_frac_default
+    --sortby_seq          Default
+   Redundant Profile Hit  (RPH) removal (only if not --no_rph_removal)
+    --min_cov_frac <f>    This is similar to the MaskLevel concept in 
+                          crossmatch.  A match is considered non-redundant
+                          if at least (100-min_cov_frac)% of it's aligned
+                          bases are not contained within the domain of any
+                          higher-scoring hit. Default: $min_cov_frac_default
    All optional
-    --trf_outfile <s>    Runs trf, put results in <s>; only with --fastafile
-    --cpu <i>            Default $default_cpu
-    --no_rph_removal     Don't remove redundant profile hits
+    --cpu <i>             Default $default_cpu
+    --no_rph_removal      Don't remove redundant profile hits
     --log_file <s>
 EOF
 
@@ -373,7 +365,7 @@ sub get_nhmmscan_hits {
                next if ($vals[3] < $args->{T});
             }
          }
-         push @hits, get_hit_from_hitline($line);
+         push @hits, get_hit_from_hitline($line); 
 
       }
       close FH;
@@ -384,14 +376,14 @@ sub get_nhmmscan_hits {
 
 sub get_hit_from_hitline {
    my ($model, $acc, $tmp1, $seq, $tmp2, $tmp3, $tmp4, $tmp5, $tmp6, $tmp7, $tmp8, $tmp9, $eval, $score, $tmp10, $tmp11, $tmp12,
-       $tmp13, $tmp14, $start, $end) = split(/\s+/,$_[0]); #CHANGE ME!
+       $tmp13, $tmp14, $start, $end) = split(/\s+/,$_[0]);
    my $orient = "+";
-   if ($start > $end) { #CHANGE ME: Orientation not a field for domtbls; instead, see if start is greater than end and assign orient
+   if ($start > $end) {
       $orient = "-";
       $tmp1 = $start;
       $start = $end;
       $end = $tmp1;
-   }
+   }    
 
    return {
       model  => $model,

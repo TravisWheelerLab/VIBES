@@ -23,7 +23,7 @@ my $help = 0;
 
 GetOptions (
     "prophageinput=s"   => \$referencePath,
-    "jobnumber=i"         => \$$genomeNumber,
+    "jobnumber=i"       => \$$genomeNumber,
     "tableinput=s"      => \$tableDir,
     "outputdirectory=s" => \$scannedTableDir,
     "genomes=s"         => \$genomeDir,
