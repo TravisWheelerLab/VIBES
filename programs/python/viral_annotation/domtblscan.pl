@@ -228,17 +228,17 @@ sub version {
    my $args = shift;
    printf ("%16s : version %s\n", $0 , $VERSION);
 
-   if (in_path('nhmmscan')) {
-      my $res = `nhmmscan -h`;
-      $res =~ /^# (HMMER .+?);/m;
-      printf ("%16s : version %s\n", "nhmmscan" , $1);
-   }
+   #if (in_path('nhmmscan')) {
+   #   my $res = `nhmmscan -h`;
+   #   $res =~ /^# (HMMER .+?);/m;
+   #   printf ("%16s : version %s\n", "nhmmscan" , $1);
+   #}
 
-   if (in_path('trf')) {
-      my $res = `trf`;
-      $res =~ /Tandem Repeats Finder, Version (\S+)/m;
-      printf ("%16s : version %s\n", "trf", $1);
-   }
+   #if (in_path('trf')) {
+   #   my $res = `trf`;
+   #   $res =~ /Tandem Repeats Finder, Version (\S+)/m;
+   #   printf ("%16s : version %s\n", "trf", $1);
+   #}
    exit;
 }
 
@@ -248,8 +248,7 @@ print STDERR <<EOF;
 Command line options for controlling $0
 -------------------------------------------------------------------------------
    --help       : prints this help messeage
-   --version    : prints version information for this program and
-                  both nhmmscan and trf
+   --version    : prints version information for this program
    Requires
     --domtbl_infile <s>   Use this if you've already run hmmscant, and
                           just want to perfom domtblscan filtering/sorting.
@@ -269,7 +268,7 @@ Command line options for controlling $0
    Redundant Profile Hit  (RPH) removal (only if not --no_rph_removal)
     --min_cov_frac <f>    This is similar to the MaskLevel concept in 
                           crossmatch.  A match is considered non-redundant
-                          if at least (100-min_cov_frac)% of it's aligned
+                          if at least (100-min_cov_frac)% of its aligned
                           bases are not contained within the domain of any
                           higher-scoring hit. Default: $min_cov_frac_default
    All optional
