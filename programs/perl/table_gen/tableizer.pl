@@ -17,7 +17,7 @@ my $referencePath = '';
 my $tableDir = '';
 my $scannedTableDir = '';
 my $suffix = '';
-my $rmMatchless = '';
+my $mvMatchless = '';
 my $verbose = 0;
 my $help = 0;
 
@@ -28,7 +28,7 @@ GetOptions (
     "output_dir=s"      => \$scannedTableDir,
     "bac_dir=s"         => \$genomeDir,
     "suffix=s"          => \$suffix,
-    "rm_matchless=s"      => \$rmMatchless,
+    "mv_matchless=s"    => \$mvMatchless,
     "verbose"           => \$verbose,
     "help"              => \$help
     )
@@ -46,6 +46,8 @@ my @genomes = glob "$genomeDir/*";
 my $genome = $genomes[$genomeNumber];
 my @splitLine = split('/', $genome);
 my $fileName;
+my $tablePath;
+my $scannedPath;
 
 if ($splitLine[-1] =~ /(.+)\./) {
     $fileName = $1;
@@ -57,15 +59,22 @@ else {
     die "Unable to extract file name from path: $genome\n";
 }
 
-my $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
-my $scannedPath = "$scannedTableDir/$fileName" . "_$suffix" . "_scanned.dfam";
+# If a suffix is set, use it; otherwise don't append anything
+if ($suffix) {
+    $tablePath = "$tableDir/$fileName" . "_$suffix.dfam";
+    $scannedPath = "$scannedTableDir/$fileName" . "_$suffix" . "_scanned.dfam";
+}
+else {
+    $tablePath = "$tableDir/$fileName.dfam";
+    $scannedPath = "$scannedTableDir/$fileName" . "_scanned.dfam";
+}
 
 my $stTime = [Time::HiRes::gettimeofday()];
 do_cmd("nhmmscan --cpu 1 --dfamtblout $tablePath $referencePath $genome");
 my $elapsed = Time::HiRes::tv_interval($stTime);
 
-if (has_no_matches($tablePath) and $rmMatchless) {
-    do_cmd("mv $tablePath $rmMatchless");
+if (has_no_matches($tablePath) and $mvMatchless) {
+    do_cmd("mv $tablePath $mvMatchless");
 }
 else {
     do_cmd("perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath");
@@ -106,11 +115,13 @@ Required:
  --output_dir <s>   Path to directory of scanned .dfam tables, which have 
                     redundant hits removed
  --bac_dir <s>      Path to directory of baterial genomes in .fasta format
- --suffix <s>       Suffix to append to file names
-                    (i.e. strain_name_suffix.dfam)
 
 Optional:
  --verbose          Prints debugging information
+ --suffix <s>       Suffix to append to file names
+                    (i.e. strain_name_suffix.dfam)
+ --mv_matchless <s> Moves any .dfam files without any entries to a folder
+                    intended to hold matchless files.
 ";
 
 }
