@@ -6,6 +6,7 @@ use Getopt::Long;
 
 my $inputPath = '';
 my $outputPath = '';
+my $cpuCount = 0;
 my $amino = 0;
 my $dna = 0;
 my $rna = 0;
@@ -15,6 +16,7 @@ my $help = 0;
 GetOptions (
     "input=s"   => \$inputPath,
     "output=s"  => \$outputPath,
+    "cpu=i"     => \$cpuCount,
     "amino"     => \$amino,
     "dna"       => \$dna,
     "rna"       => \$rna,
@@ -85,6 +87,10 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
             $hmmbuildCmd .= "--amino ";
         }
 
+        if ($cpuCount > 0) {
+            $hmmbuildCmd .= "--cpu $cpuCount ";
+        }
+
         $hmmbuildCmd .= "$tempHmmFile $tempFastaFile";
 
         do_cmd($hmmbuildCmd);
@@ -95,6 +101,10 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 
         $inc++;
     }
+}
+
+sub help {
+    
 }
 
 close $fileHandle;

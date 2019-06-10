@@ -73,3 +73,9 @@ hmmscant --tblout protein_annotated_prophages.tbl TIGRFAM.HMM ../prophage/propha
 
 (this one yielded actual table we're actually going to use as of 1/29)
  hmmscant --domtblout protein_annotated_prophages.domtbl TIGRFAM.HMM ../prophage/prophage_seq.fasta
+
+ =====
+ Thu Jun  6 14:27:47 MDT 2019
+Annotating Pseudomonas Prophages with Viral Protein Database (from uniprot reference seqs)
+
+Downloaded reviewed viral proteins from https://www.uniprot.org/uniprot/?query=reviewed:yes%20taxonomy:10239
