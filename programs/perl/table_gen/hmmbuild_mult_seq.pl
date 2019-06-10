@@ -53,11 +53,10 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
         $entry =~ s/^>//;
         # capture header, sequence data separately
         $entry =~ m/(.+?)\n(.+)/s;
-        my $name = $1;
+        my $header = $1;
         my $seq = $2;
         # remove any whitespace in sequence data
         $seq =~ s/\s//g;
-
 
         my $tempFastaFile = "temp$inc";
         
@@ -66,7 +65,7 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 
         open(my $fastaFile, ">", $tempFastaFile) or die "Can't create temporary .fasta file at $tempFastaFile: $!";
         {
-            print $fastaFile ">$name\n$seq";
+            print $fastaFile ">$header\n$seq";
         }
 
         close $fastaFile;
@@ -87,9 +86,17 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
             $hmmbuildCmd .= "--amino ";
         }
 
+        # set number of cpus for hmmbuild to use
         if ($cpuCount > 0) {
             $hmmbuildCmd .= "--cpu $cpuCount ";
         }
+
+        # grab header line up to first whitespace character
+        $header =~ m/(.+?)\s/;
+        my $name = $1;
+
+        # set name of sequence to header line
+        $hmmbuildCmd .= "-n $name ";
 
         $hmmbuildCmd .= "$tempHmmFile $tempFastaFile";
 
@@ -104,7 +111,7 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 }
 
 sub help {
-    
+
 }
 
 close $fileHandle;
