@@ -96,7 +96,7 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
         my $name = $1;
 
         # set name of sequence to header line
-        $hmmbuildCmd .= "-n $name ";
+        $hmmbuildCmd .= "-n \"$name\" ";
 
         $hmmbuildCmd .= "$tempHmmFile $tempFastaFile";
 
@@ -111,7 +111,29 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 }
 
 sub help {
+    print "
+#$0
+#Runs hmmbuild on each entry in input .fasta file, creating a HMM for each.
+#Automatically concatenates all HMMS into one output file
+-------------------------------------------------------------------------------
+--help: Prints this message
 
+Required:
+ --input <s>        Input .fasta file of multiple sequences we want to create
+                    HMMS for
+ --output <s>       Output .hmm file to store resultant HMMS in
+
+Optional:
+ --verbose          Prints information about commands used, how many .fasta
+                    entries have been hmmbuilt
+ --cpu <i>          How many threads hmmbuild will use (default 2)
+
+ Only one of the following 3 optional flags can be used at a time:
+  --amino           Specifies that .fasta entries contain amino acid seq
+  --dna             Specifies that .fasta entries contain DNA seq
+  --rna             Specifies that .fasta entries contain RNA seq
+ 
+";
 }
 
 close $fileHandle;
