@@ -214,7 +214,7 @@ sub findFlankingAtts {
             $genomeName = $1;
         }
 
-        my $outputPath = $self->flankingAttDir . "/$genomeName.$name.afa";
+        my $outputPath = $self->flankingAttDir . "/$genomeName.$name.$startIndex.afa";
 
         open(my $outputHandle, ">", $outputPath) or die "Can't open $outputPath: $!";
         print $outputHandle $hmmerOutput;
@@ -283,18 +283,28 @@ sub _buildLength {
 #Returns length of reference prophage sequence
 sub _buildRefLength {
     my $self = shift;
+    my $seq = '';
+
     open(my $fileHandle, "<", $self->referenceSeqPath) or die "Can't open .fasta file " . $self->referenceSeqPath . ": $!";
-    readline($fileHandle); #skip header line
+    {
+    local $/ = "\n>"; # set end of input record separator to \n>, so it splits on lines starting with >. Unfortunately,
+    # this is necessary because very rarely, .fasta header lines will contain > characters somewhere in the middle
 
-    my $fastaBody = "";
+    # grab each entry, save it in a temporary file, run it through hmmbuild, and delete it
+    while (my $entry = <$fileHandle>)  {
 
-    while (my $line = <$fileHandle>) {
-        $fastaBody = $fastaBody . $line;
+        # remove any > characters at beginning or end of entry, leaving any in the middle of header lines intact
+        $entry =~ s/>$//;
+        $entry =~ s/^>//;
+        # capture header, sequence data separately
+        $entry =~ m/.+?\n(.+)/s;
+        $seq = $1;
+
+        $seq =~ s/[^A-Za-z-_]//;
+    }
     }
 
-    $fastaBody =~ s/\>|\n|\r//g;
-
-    return length($fastaBody);
+    return length($seq);
 }
 #Run command
 sub _do_cmd {
