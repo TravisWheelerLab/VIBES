@@ -64,7 +64,7 @@ sub main {
       $sorted = by_evalue_local($hits);
    }
 
-   open DTOUT, ">$args->{domtbl_outfile}" or logdie ("Can't open $args->{domtbl_outfile}: $!");
+   open DTOUT, ">$args->{outfile}" or logdie ("Can't open $args->{outfile}: $!");
    print DTOUT $header;
    foreach my $row (@$sorted) {
      print DTOUT $row->{line};
@@ -96,10 +96,10 @@ sub processCommandLineArgs {
   &GetOptions( \%args,
     "help",
     "version",
-    "domtbl_infile=s",
+    "infile=s",
 #    "fastafile=s",
 #    "hmmfile=s",
-    "domtbl_outfile=s",
+    "outfile=s",
     "E=f",
     "T=f",
     "masking_thresh|cut_ga",
@@ -133,27 +133,27 @@ sub processCommandLineArgs {
     }
   }
 
-  if ($args{domtbl_infile}) { #queries have already been run
-    help("Illegal flags used in addition to --domtbl_infile" ) if ($args{fastafile} || $args{hmmfile} || $args{trf_outfile} || $args{masking_thresh} || $args{annotation_thresh} || $args{species});
-    logdie("Unable to open $args{domtbl_infile}: $!")  unless -e $args{domtbl_infile};
+  if ($args{infile}) { #queries have already been run
+    help("Illegal flags used in addition to --infile" ) if ($args{fastafile} || $args{hmmfile} || $args{trf_outfile} || $args{masking_thresh} || $args{annotation_thresh} || $args{species});
+    logdie("Unable to open $args{infile}: $!")  unless -e $args{infile};
   }
   elsif ( $args{fastafile} && $args{hmmfile} ) { #need to run nhmmer
-    help("Flag --domtbl_infile may not be used with --hmmfile") if ($args{domtbl_infile});
+    help("Flag --infile may not be used with --hmmfile") if ($args{infile});
     logdie("Unable to open $args{fastafile}: $!")  unless -e $args{fastafile};
     logdie("Unable to open $args{hmmfile}: $!")    unless -e $args{hmmfile};
   }
   else {
-    help("Use either (--domtbl_infile) or (--fastafile and --hmmfile)");
+    help("Use either (--infile) or (--fastafile and --hmmfile)");
   }
 
-  if ( $args{domtbl_outfile} ) {
+  if ( $args{outfile} ) {
     # does the containing directory exist?
-    if ( $args{domtbl_outfile} =~ m[^(.+)/]) { #some other directory, it better exist
+    if ( $args{outfile} =~ m[^(.+)/]) { #some other directory, it better exist
       logdie("The directory $1 does not exist")  unless (-d $1);
     }
    }
    else {
-     help("Must specify --domtbl_outfile");
+     help("Must specify --outfile");
    }
 
    if ( $args{trf_outfile} ) {
@@ -250,13 +250,13 @@ Command line options for controlling $0
    --help       : prints this help messeage
    --version    : prints version information for this program
    Requires
-    --domtbl_infile <s>   Use this if you've already run hmmscant, and
+    --infile <s>   Use this if you've already run hmmscant, and
                           just want to perfom domtblscan filtering/sorting.
                           The file must be the one produced by hmmscant's
                           --domtblout flag.
                           (Note: must be hmmscant output)
-    --domtbl_outfile <s>  Output file, also in domtblout format
-   Optionally, one of these  (only -E and -T allowed with --domtbl_infile)
+    --outfile <s>  Output file, also in domtblout format
+   Optionally, one of these  (only -E and -T allowed with --infile)
     -E <f>                >0, <=$e_max
     -T <f>
     --masking_thresh/--cut_ga
@@ -346,8 +346,8 @@ sub get_nhmmscan_hits {
    my @hits;
    my $header= "";
    my $header_done = 0;
-   if ($args->{domtbl_infile}) {
-      open FH, "<$args->{domtbl_infile}";
+   if ($args->{infile}) {
+      open FH, "<$args->{infile}";
       while (my $line = <FH>) {
          if ($line =~ /^#/) {
             $header .= $line if  !$header_done;
