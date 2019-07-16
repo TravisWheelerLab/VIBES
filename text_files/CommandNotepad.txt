@@ -79,3 +79,55 @@ hmmscant --tblout protein_annotated_prophages.tbl TIGRFAM.HMM ../prophage/propha
 Annotating Pseudomonas Prophages with Viral Protein Database (from uniprot reference seqs)
 
 Downloaded reviewed viral proteins from https://www.uniprot.org/uniprot/?query=reviewed:yes%20taxonomy:10239
+
+On bioinfo:
+perl hmmbuild_mult_seq.pl --input ../seq/viral_proteins_swissprot/uniprot-reviewed-viral.fasta --output ../hmm/viral_proteins/swissprot_viral_prots.hmm --amino --cpu 4 --verbose
+
+hmmpress swissprot_viral_prots.hmm
+
+hmmscant --domtblout tables/domtbl/uniprot_annotated_prophages.domtbl hmm/viral_proteins/swissprot_viral_prots.hmm seq/prophage_seq/prophage_seq.fasta (goddamnit, wrong program...)
+
+perl fasta_split.pl --input ../../../sequence_files/prophage/prophage_seq.fasta --output ../../../sequence_files/prophage/individual_phage/
+
+python3 generate_domtbls.py ../seq/prophage_seq/individual_phage/ ../hmm/viral_proteins/swissprot_viral_prots.hmm ../tables/domtbl/ (on bioinfo)
+
+hmmstat swissprot_viral_prots.hmm >swissprot_viral_prots.hmmstat
+
+downloaded all complete genomes from pseudomonas.com: http://pseudomonas.com/strain/download?c1=organism&v1=&v2=complete&c2=assemblyLevel (335 at time of writing on June 14th)
+
+perl hmmbuild_mult_seq.pl --input ../../../sequence_files/prophage/prophage_seq.fasta --output ../../../hmm/prophage_genomes/50_ref_phage.hmm --verbose
+
+hmmpress 50_ref_phage.hmm
+
+Ran 2019-06-14_complete.sh on HPC (50 reference phages vs. 335 complete Ps genomes from pseudomonas.com)
+
+Ran 2019-06-19_table_parser_complete.sh on HPC
+
+perl scan_domtbls.pl --input ../../../tables/domtbl/viral_prot_unscanned/ --output ../../../tables/domtbl/2019-06-21_viral_prot_scanned/ (output available in 2019-06-21_scan_domtbls) (Redid this command after editing scan_domtbls to sort output by sequence start location rather than e-value)
+
+Thu Jun 27 15:28:59 MDT 2019
+Added Pat's recombinase, pseudogene seq to viral protein database in uniprot-reviewed-and-pat-seq.fasta
+perl hmmbuild_mult_seq.pl --input ../seq/viral_proteins_swissprot/uniprot-reviewed-and-pat-seq.fasta --output ../hmm/viral_proteins/swissprot_and_pat_seq.hmm --amino --cpu 6 --verbose on bioinfo)
+
+python3 generate_domtbls.py ../seq/prophage_seq/individual_phage/ ../hmm/viral_proteins/swissprot_and_pat_seq.hmm ../tables/domtbl/2019-06-27_viral_prot_swiss_pat_unscanned/ (on bioinfo)
+
+perl scan_domtbls.pl --input ../../../tables/domtbl/2019-06-27_viral_prot_swiss_pat_unscanned/ --output ../../../tables/domtbl/2019-06-27_viral_prot_swiss_pat_scanned/ --verbose
+
+perl combine_charts.pl --inputdir ../../../tables/nuc_chart/2019-06-19_complete --outputdir ../../../tables/nuc_chart/2019-06-19_complete_combined_test/ --verbose
+(generated lab meeting chart counts)
+
+esl-sfetch -o LES400_partial.fasta -c 10600..13728 Pf_prophage_strain_LES400.fasta "Pf_prophage_strain_LES400"
+
+esl-sfetch -o X13273_1374860_partial -c 3600..5500 Pf_prophage_strain_X13273_1374860–1380892.fasta Pf_prophage_strain_X13273_1374860–1380892
+
+esl-translate LES400_partial.fasta
+
+esl-translate X13273_1374860_partial.fasta
+
+==== Add Pfam to annotate step
+
+Downloaded Pfam-A.hmm.gz from ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release on Wed Jul  3 17:00:54 MDT 2019
+
+gunzip Pfam-A.hmm.gz
+
+python3 generate_domtbls.py ../seq/prophage_seq/individual_phage/ ../hmm/Pfam_A/Pfam-A.hmm ../tables/domtbl/2019-07-03_Pfam_A_prophage_unscanned/

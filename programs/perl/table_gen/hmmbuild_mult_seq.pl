@@ -126,7 +126,7 @@ Required:
 Optional:
  --verbose          Prints information about commands used, how many .fasta
                     entries have been hmmbuilt
- --cpu <i>          How many threads hmmbuild will use (default 2)
+ --cpu <i>          How many threads hmmbuild will use (i > 0)
 
  Only one of the following 3 optional flags can be used at a time:
   --amino           Specifies that .fasta entries contain amino acid seq

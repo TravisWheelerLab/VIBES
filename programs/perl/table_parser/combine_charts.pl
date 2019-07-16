@@ -28,7 +28,7 @@ if ($help) {
     help();
 }
 else {
-    #iterate through all files and directories in dir
+    #iterate through all files and directories in dir, giving them as input to scan_index_file()
     find(\&scan_index_file, $inputDir);
 
     #test printing statement
@@ -81,7 +81,8 @@ sub scan_index_file {
         }
 
         close $fileHandle;
-        #print scalar @{$arrayRef} . "\n";
+        #print "$prophage\n";
+        #print scalar @{$arrayRef} . "\n\n";
     }
     else {
         print "Entering dir: $file\n" if $verbose;
@@ -103,6 +104,9 @@ sub print_combined_charts {
         foreach my $index (@indexArray) {
             $contents .= "$index\n";
         }
+
+        #print "$key\n";
+        #print scalar @indexArray . "\n\n";
 
         print $outputHandle "$contents";
         close $outputHandle;
