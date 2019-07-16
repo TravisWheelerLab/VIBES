@@ -8,14 +8,14 @@ use lib $FindBin::Bin;
 use ViralSeq;
 use Getopt::Long;
 
-#default values reflect file structure I set up on the cluster
-my $refProphageDir = "../prophage_seq";
-my $tableDir = "../tables/scanned";
-my $genomeDir = "../ps_genomes";
-my $tsvDir = "../tsv";
-my $chartDir = "../nuc_chart";
-my $flankingAttDir = "../flanking_att_sites";
+my $refProphageDir = "";
+my $tableDir = "";
+my $genomeDir = "";
+my $tsvDir = "";
+my $chartDir = "";
+my $flankingAttDir = "";
 my $jobNumber = 0;
+my $suffix = '';
 my $verbose = ''; #default false value
 my $help = ''; #^^
 my $force = 0; #^^
@@ -31,6 +31,7 @@ GetOptions (
     "indexcharts=s" => \$chartDir,
     "attsites=s"    => \$flankingAttDir,
     "jobnumber=i"   => \$jobNumber,
+    "suffix=s"      => \$suffix,
     "force"         => \$force,
     "verbose"       => \$verbose,
     "help"          => \$help
@@ -46,7 +47,7 @@ my @tables = glob "$tableDir/*" or die "Can't find $tableDir: $!";
 my $table = $tables[$jobNumber];
 
 #extract genome name from table name
-if ($table =~ /([^\/]+)_viral_scanned\.dfam/) {
+if ($table =~ /([^\/]+)$suffix\.dfam/) {
     $genomeName = $1;
 }
 else {
@@ -124,7 +125,7 @@ sub parse_tables {
             #Create a ViralSeq object. This will handle creating lines for the
             #output .tsv and detecting flanking att sites.
             my $seq = ViralSeq->new(
-                name                => "$name.$5",
+                name                => "$name",
                 refSt               => $2,
                 refEn               => $3,
                 referenceSeqPath    => "$refProphageDir/$name.fasta",
@@ -136,7 +137,11 @@ sub parse_tables {
                 verbose             => $verbose,
             );
 
-            $seq->findFlankingAtts();
+
+            # if option was specified by user, run this
+            if ($flankingAttDir) {
+                $seq->findFlankingAtts();
+            }
 
             if ($count == 1) {
                 print $outputTSF $seq->tableHeader() . "\n";
@@ -144,13 +149,11 @@ sub parse_tables {
 
             print $outputTSF $seq->tableLine() . "\n";
 
-            $chartPath = "$chartDir/$genomeName/$name" . "Chart.txt";
+            $chartPath = "$chartDir/$genomeName/$name" . ".txt";
 
-            #unless an entry for this prophage aleady exists in hash, generate
+            #unless an entry for this prophage already exists in hash, generate
             #a new array for this sequence by putting each line into an array
             #index. Store this array in the hash
-            die "Change how new arrays are generated- since we're creating a new
-            dir for each genome, if an entry doesn't exist, then we ";
             unless (exists $chartHash{$name}) {
                 my @array = (0)x$seq->referenceSeqLength;
                 my $arrayRef = \@array;
@@ -179,6 +182,7 @@ sub parse_tables {
             #refSt = start location on reference seq, refEn = end location on reference seq
             for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
                 my $size = $seq->referenceSeqLength;
+
                 if ($i < 0 || $i >= $size) {
                     die "Nucleotide index is outside of bounds 1-$size for $name";
                 }
@@ -207,7 +211,10 @@ sub parse_tables {
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
+        my $arraySize = @chartArray;
         my $chartLine = "$hashKey\n";
+
+        print "$hashKey length: $arraySize\n";
 
         foreach my $entry (@chartArray) {
             $chartLine .= "$entry\n";
@@ -221,7 +228,6 @@ sub parse_tables {
 sub help {
     print "
     #table_parser.pl: Extract information about viral sequences from DFAM tables
-    #Input and output options have default values, but can be specified by user
 
     Basic options:
         --help: Displays this page
@@ -243,7 +249,7 @@ sub help {
         --indexcharts: Path to nucleotide index chart directory
         --attsites: Path to flanking att side directory
 
-    ";
+";
 }
 
 sub do_cmd {
