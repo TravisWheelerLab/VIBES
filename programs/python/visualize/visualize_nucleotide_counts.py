@@ -4,6 +4,7 @@ import argparse
 import re
 from os import walk
 import sys
+import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import lines, cm
 
@@ -17,7 +18,7 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
 
     print(prophageName)
 
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(11, 17))
     ax = fig.add_subplot(111)
     ax.plot(countList)
 
@@ -132,8 +133,8 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
     line2DList = []
 
     # draw lines
-    plotAnnotationDict(ax, longLineDict, sortedLongKeys, depthList, YMAX, line2DList)
-    plotAnnotationDict(ax, shortLineDict, sortedShortKeys, depthList, YMAX, line2DList)
+    plotAnnotationDict(fig, ax, longLineDict, sortedLongKeys, depthList, YMAX, line2DList)
+    plotAnnotationDict(fig, ax, shortLineDict, sortedShortKeys, depthList, YMAX, line2DList)
 
     line2DList = sorted(line2DList, key=lambda line: line.get_xdata()[0])
 
@@ -159,7 +160,7 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
 # Accepts a MatPlotLib axis, a dictionary, and a list of dictionary keys. Each value in the dictionary is expected to be a list of lists,
 # where each inner list contains information necessary to draw and label each line. The order of keys in keyList determines the order in which
 # lines are drawn
-def plotAnnotationDict(ax, lineListDict, keyList, depthList, YMAX, line2DList):
+def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DList):
     # Y depth constant. Used to fiddle with how far below the x-axis lines are drawn
     Y_CONST = -.22
     # Offset between lines on different vertical layers (depth layers)
@@ -167,7 +168,6 @@ def plotAnnotationDict(ax, lineListDict, keyList, depthList, YMAX, line2DList):
     # How far above annotation lines labels are placed
     LABEL_OFFSET_CONST = .014
     # How much space each character in a label is estimated to take
-    PAD_CONST = .013
 
     for key in keyList:
         valueList = lineListDict[key]
@@ -179,8 +179,21 @@ def plotAnnotationDict(ax, lineListDict, keyList, depthList, YMAX, line2DList):
             xEnd = lineList[6] - 1
             accID = lineList[-1]
             genomeLength = lineList[1]
-            # minimum length of line or padded line required to ensure label length is matched, preventing overlap
-            minimumSize = PAD_CONST * genomeLength * len(accID)
+
+            # To determine width of annotation text label, we place the label on the plot and draw it, generating its size. We then get its coordinates and
+            # convert them into data units rather than display units. We use this to determine whether or not a line is long enough to prevent label overlap,
+            # or if we should pad out its ends (padding only affects line and label placement, and is not represented on the plot itself). Finally, we determine
+            # the actual x and y location to place both the label and the line it annotates. Credit to
+            # https://stackoverflow.com/questions/41267733/getting-the-coordinates-of-a-matplotlib-annotation-label-in-figure-coordinates
+            ann = ax.annotate(accID, xy=(0, 0), annotation_clip=False, horizontalalignment='center', fontsize=10)
+
+            fig.canvas.draw()
+
+            inv = ax.transData.inverted()
+
+            box = mpl.text.Text.get_window_extent(ann)
+            textAxCoords = inv.transform(box.extents)
+            textWidth = textAxCoords[2] - textAxCoords[0]
 
             # CREATE LINE DEPTH STUFF SOMEWHERE AROUND HERE
             # In case protein domains overlap, we want to stagger the drawing of
@@ -202,11 +215,11 @@ def plotAnnotationDict(ax, lineListDict, keyList, depthList, YMAX, line2DList):
             lineLength = xEnd - xStart + 1
             # Some annotation lines are long enough that we don't need to pad out their ends to prevent label overlap. In these cases,
             # skip adding padding
-            if(lineLength < minimumSize):
+            if(lineLength < textWidth):
                 # determine size of buffer to append to ends of protein x-axis coordinates. This should
                 # improve protein line placement and graph readability by staggering lines that
                 # occur near to each other, but don't overlap
-                padding = int((minimumSize - lineLength) / 2)
+                padding = int((textWidth - lineLength) / 2)
                 paddedStart = xStart - padding
                 paddedEnd = xEnd + padding
 
@@ -250,11 +263,17 @@ def plotAnnotationDict(ax, lineListDict, keyList, depthList, YMAX, line2DList):
             ax.add_line(line)
             line2DList.append(line)
 
-            # create annotation for line, based on line's center point and offset to be under line
+            # determine where we want label and set its position to new location
             xCenter = xStart + abs((xEnd - xStart) / 2)
 
             labelOffset = YMAX * LABEL_OFFSET_CONST
-            ax.annotate(accID, xy=(xCenter, (y + labelOffset)), annotation_clip=False, horizontalalignment='center', fontsize=10)
+            annCoords = (xCenter, y + labelOffset)
+            ann.set_position(annCoords)
+
+            # To cut down on guesswork and ensure we don't have text annotation labels overlapping regardless of plot dimensions, we get the dimensions of
+            # the text itself from the plot. To do this, we must draw the plot and then get the coordinates of each of its corners. We then convert the coordinates,
+            # which are in display units, into figure axis units.
+            # credit to https://stackoverflow.com/questions/41267733/getting-the-coordinates-of-a-matplotlib-annotation-label-in-figure-coordinates
 
 
 # Read in the contents of a .domtbl file. Returns a list of lists of
