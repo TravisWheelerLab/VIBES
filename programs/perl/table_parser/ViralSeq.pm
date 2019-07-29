@@ -89,6 +89,11 @@ has referenceSeqLength => (
     builder => '_buildRefLength',
 );
 
+has bacGenomeLength => (
+    is      => 'ro',
+    lazy    => 1,
+    builder => '_buildBacGenomeLength');
+
 has percentComplete => (
     is      => 'ro',
     lazy    => 1,
@@ -103,9 +108,8 @@ has isFullLength => (
 
 has isFlanked => (
     is      => 'ro',
-    isa     => 'Bool',
     writer  => '_set_isFlanked',
-    default => '0',
+    default => 'Att Scan not run!',
 );
 
 sub findFlankingAtts {
@@ -221,6 +225,9 @@ sub findFlankingAtts {
 
         $self->_set_isFlanked(1);
     }
+    else {
+        $self->_set_isFlanked(0);
+    }
 
     #clean up files we don't need
     $self->_do_cmd("rm $genomePath.ssi");
@@ -229,23 +236,29 @@ sub findFlankingAtts {
 
 sub tableLine {
     my $self = shift;
+    my $genomeName;
+
+    # extract genome name from .fasta file path
+    $self->genomePath =~ /([^\/]+)\./;
+    $genomeName = $1;
 
     my $returnString =           $self->name
                         . "\t" . $self->isFullLength
-                        . "\t" . $self->gnSt
-                        . "\t" . $self->gnEn
-                        . "\t" . $self->genomePath
-                        . "\t" . $self->isPos
                         . "\t" . $self->refSt
                         . "\t" . $self->refEn
-                        . "\t" . $self->referenceSeqPath
-                        . "\t" . $self->isFlanked;
+                        . "\t" . $self->referenceSeqLength
+                        . "\t" . $self->isFlanked
+                        . "\t" . $genomeName
+                        . "\t" . $self->gnSt
+                        . "\t" . $self->gnEn
+                        . "\t" . $self->bacGenomeLength
+                        . "\t" . $self->isPos;
 
     return  $returnString;
 }
 
 sub tableHeader {
-    return "Name\tIsFullLength\tBacterialGenomeStart\tBacterialGenomeEnd\tBacterialGenomePath\tIsOnPositiveStrand\tReferenceStrainStart\tReferenceStrainEnd\tReferenceStrainPath\tHasFlankingAttSites";
+    return "Name\tFull Length\tViral Genome Start\tViral Genome End\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tBacterial Genome Start\tBacterial Genome End\tBacterial Genome Length\tIsOnPositiveStrand";
 }
 
 sub _buildIsFull {
@@ -306,6 +319,21 @@ sub _buildRefLength {
 
     return length($seq);
 }
+#Uses esl-seqstat to determine bacterial genome length, returns length
+sub _buildBacGenomeLength {
+    my $self = shift;
+    my $bacGenomePath = $self->genomePath;
+    my $bacGenomeLength;
+
+    my $seqstatOutput = `esl-seqstat $bacGenomePath`;
+    
+    #capture total genome size from seqstat output with regex
+    $seqstatOutput =~ /Total # residues:\s+?(\d+)\s/ or die "esl-seqstat regex failed for output $seqstatOutput: $!";
+    $bacGenomeLength = $1;
+
+    return $bacGenomeLength;
+}
+
 #Run command
 sub _do_cmd {
     my $self = shift;

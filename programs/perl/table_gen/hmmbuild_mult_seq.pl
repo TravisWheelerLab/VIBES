@@ -7,6 +7,7 @@ use Getopt::Long;
 my $inputPath = '';
 my $outputPath = '';
 my $cpuCount = 0;
+my $hmmPress = 0;
 my $amino = 0;
 my $dna = 0;
 my $rna = 0;
@@ -17,6 +18,7 @@ GetOptions (
     "input=s"   => \$inputPath,
     "output=s"  => \$outputPath,
     "cpu=i"     => \$cpuCount,
+    "hmmpress"  => \$hmmPress,
     "amino"     => \$amino,
     "dna"       => \$dna,
     "rna"       => \$rna,
@@ -50,13 +52,13 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 
         # remove any > characters at beginning or end of entry, leaving any in the middle of header lines intact
         $entry =~ s/>$//;
-        $entry =~ s/^>//;
+        $entry =~ s/^([^\w]+?>|>)//;
         # capture header, sequence data separately
         $entry =~ m/(.+?)\n(.+)/s;
         my $header = $1;
         my $seq = $2;
-        # remove any whitespace in sequence data
-        $seq =~ s/\s//g;
+        # remove any non-word characters in sequence data
+        $seq =~ s/[^\w]//g;
 
         my $tempFastaFile = "temp$inc";
         
@@ -127,6 +129,7 @@ Optional:
  --verbose          Prints information about commands used, how many .fasta
                     entries have been hmmbuilt
  --cpu <i>          How many threads hmmbuild will use (i > 0)
+ --hmmpress         Automatically runs hmmpress on output .hmm file
 
  Only one of the following 3 optional flags can be used at a time:
   --amino           Specifies that .fasta entries contain amino acid seq
@@ -139,6 +142,11 @@ Optional:
 close $fileHandle;
 
 do_cmd("cat $pathToFolder/temp*.hmm > $outputPath");
+
+if ($hmmPress) {
+    do_cmd("hmmpress $outputPath")
+}
+
 do_cmd("rm $pathToFolder/temp*");
 
 sub do_cmd {

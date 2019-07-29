@@ -12,20 +12,25 @@ from matplotlib import lines, cm
 # read in all files in total counts dir via walk
 # for each file, populate an array in which each index corresponds to a line
 # plot as line graph
-def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, minEval):
+def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval):
     # Minimum length a line should be to be added to length-based dictionary
     LONG_LINE_CONST = .04
 
     print(prophageName)
 
-    fig = plt.figure(figsize=(11, 17))
+    fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111)
+    ax.set(xlabel='Position', ylabel='Occurrences', title=prophageName)
     ax.plot(countList)
 
     # list of booleans with a length equivalent to genome being plotted. We want to avoid annotating these images with protein domains
     # in locations already annotated by proteins, so indexes annotated by protein data will be set to true. If a domain's annotation overlaps
     # with any of these true values, we don't include it
     isOccupiedList = [False] * len(countList)
+
+    protDomtblLists = []
+    pfamDomtblLists = []
+    dfamLists = []
 
     # if directory path string isn't empty, then read in information from file in that directory
     if protDomtblDir:
@@ -36,6 +41,10 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
         pfamDomtblPath = "%s/%s.domtbl" % (pfamDomtblDir, prophageName)
         pfamDomtblLists = buildDomtblList(pfamDomtblPath, minEval, "Pfam A")
 
+    if dfamDir:
+        dfamPath = "%s/%s.dfam" % (dfamDir, prophageName)
+        dfamLists = buildDfamList(dfamPath, minEval, len(countList))
+
     # Below, we generate our long annotation list and short annotation list. We create two lists because we want longer lines to be
     # drawn closer to the x-axis, but we also want lines drawn in order of start position as a secondary priority. To accomplish this,
     # we first plot lines we consider long enough to be especially interesting in order of start pos, then shorter ones in order of start
@@ -45,7 +54,8 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
     longLineDict = {}
     shortLineDict = {}
 
-    for protLineList in protDomtblLists:
+    # currently, we expected .dfam format data to be recombinase and pseudogene matches
+    for protLineList in protDomtblLists and dfamLists:
         # to determine cases where protein domain annotations overlap with protein annotations
         # we also set values corresponding to protein annotation coordinates to True in isOccupiedList.
         xStart = protLineList[5] - 1
@@ -136,6 +146,7 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
     plotAnnotationDict(fig, ax, longLineDict, sortedLongKeys, depthList, YMAX, line2DList)
     plotAnnotationDict(fig, ax, shortLineDict, sortedShortKeys, depthList, YMAX, line2DList)
 
+    # sort lines by xStart
     line2DList = sorted(line2DList, key=lambda line: line.get_xdata()[0])
 
     for line2D in line2DList:
@@ -147,13 +158,11 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
         if (colorCount == len(colors)):
             colorCount = 0
 
-    ax.set(xlabel='Position', ylabel='Occurrences', title=prophageName)
-
     plt.tight_layout()
-    pp = PdfPages("%s/%s.pdf" % (outputDir,prophageName))
-    pp.savefig()
+    pp = PdfPages("%s/%s.pdf" % (outputDir, prophageName))
+    pp.savefig(bbox_inches='tight')
     pp.close()
-    plt.show()
+    # plt.show()
     plt.close()
 
 
@@ -161,10 +170,10 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, m
 # where each inner list contains information necessary to draw and label each line. The order of keys in keyList determines the order in which
 # lines are drawn
 def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DList):
-    # Y depth constant. Used to fiddle with how far below the x-axis lines are drawn
-    Y_CONST = -.22
+    # How far below the x-axis we want to start drawing lines and labels, in pixels
+    Y_CONST = 100  # how far below x-axis in pixels to begin drawing lines
     # Offset between lines on different vertical layers (depth layers)
-    STACK_CONST = .06
+    STACK_CONST = 30  # offset between lines in display units (pixels?)
     # How far above annotation lines labels are placed
     LABEL_OFFSET_CONST = .014
     # How much space each character in a label is estimated to take
@@ -182,17 +191,16 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
 
             # To determine width of annotation text label, we place the label on the plot and draw it, generating its size. We then get its coordinates and
             # convert them into data units rather than display units. We use this to determine whether or not a line is long enough to prevent label overlap,
-            # or if we should pad out its ends (padding only affects line and label placement, and is not represented on the plot itself). Finally, we determine
-            # the actual x and y location to place both the label and the line it annotates. Credit to
+            # or if we should pad out its ends (padding only affects line and label placement, and is not represented on the plot itself). Credit to
             # https://stackoverflow.com/questions/41267733/getting-the-coordinates-of-a-matplotlib-annotation-label-in-figure-coordinates
             ann = ax.annotate(accID, xy=(0, 0), annotation_clip=False, horizontalalignment='center', fontsize=10)
 
             fig.canvas.draw()
 
-            inv = ax.transData.inverted()
+            dataInv = ax.transData.inverted()  # convert from display units (pixels?) to data units
 
             box = mpl.text.Text.get_window_extent(ann)
-            textAxCoords = inv.transform(box.extents)
+            textAxCoords = dataInv.transform(box.extents)
             textWidth = textAxCoords[2] - textAxCoords[0]
 
             # CREATE LINE DEPTH STUFF SOMEWHERE AROUND HERE
@@ -243,7 +251,6 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
                     # if a part of layer is occupied, reset progress to ensure beginning of next layer is free
                     index = paddedStart
                     lineLayer += 1
-
                 index += 1
 
             #print(lineLayer)
@@ -257,7 +264,22 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
 
             #print(depthList[lineLayer])
 
-            y = (YMAX * Y_CONST) - ((STACK_CONST * YMAX) * lineLayer)
+            #yOffset = dataInv.transform(yOffset)
+
+
+            
+            #axesTrans = ax.transAxes  # convert from axes units (0-1) to display units
+
+            # yOffset = axesTrans.transform((0, -.1725))
+            xAxisPos = ax.transData.transform([0, 0])  # we use this to determine location of origin, which has height of x-axis, in pixels
+
+            yPosList = [0, xAxisPos[1] - Y_CONST - (lineLayer * STACK_CONST)]
+
+            yPosArray = dataInv.transform(yPosList)  # transform back to data units
+
+            y = yPosArray[1]
+
+            #y = (firstLayerLoc[1] + (lineLayer * StackConstUnits[1]))
 
             line = lines.Line2D(np.array([xStart, xEnd]), np.array([y, y]), clip_on=False, linewidth=3)
             ax.add_line(line)
@@ -274,6 +296,45 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
             # the text itself from the plot. To do this, we must draw the plot and then get the coordinates of each of its corners. We then convert the coordinates,
             # which are in display units, into figure axis units.
             # credit to https://stackoverflow.com/questions/41267733/getting-the-coordinates-of-a-matplotlib-annotation-label-in-figure-coordinates
+
+# read in information from .dfam format files
+def buildDfamList(dfamPath, minEval, genomeLength):
+    infoList = []
+
+    # read in info from .dfam file
+    with open(dfamPath, "r") as dfamData:
+        for line in dfamData:
+            # '#' char indicates a line doesn't contain data
+            if(line[0] != "#"):
+                # create a list to store this line's data
+                lineList = []
+                dataList = line.split()
+
+                # since split() gives us strings, we cast to the proper type
+                matchName = dataList[0]
+                iEvalue = float(dataList[4])
+                hmmFrom = int(dataList[6])
+                hmmTo = int(dataList[7])
+                aliFrom = int(dataList[9])
+                aliTo = int(dataList[10])
+
+                # temporary solution, since currently all expected .dfam files have had match names purposefully made short by me
+                accID = matchName
+
+                # we only want entries with e-value <= minimum (default 1e-5)
+                if (iEvalue <= minEval):
+                    lineList.append(matchName)
+                    lineList.append(genomeLength)
+                    lineList.append(iEvalue)
+                    lineList.append(hmmFrom)
+                    lineList.append(hmmTo)
+                    lineList.append(aliFrom)
+                    lineList.append(aliTo)
+                    lineList.append(accID)
+
+                    infoList.append(lineList)
+
+    return infoList
 
 
 # Read in the contents of a .domtbl file. Returns a list of lists of
@@ -348,8 +409,9 @@ def parseArgs(sysArgs):
     parser = argparse.ArgumentParser(sysArgs)
     parser.add_argument("count_dir", help="Path to directory of nucleotide count files. Expected format is [prophageName]Chart.txt")
     parser.add_argument("output_dir", help="Path to directory to store output .png files")
-    parser.add_argument("--swissprot_domtbl", help="Path to directory of .domtbl files resulting from a search against a database of Swissprot proteins. Expects Swissprot entries to begin with '>sp|[AccID]|', and for file names to be [prophageName].")
-    parser.add_argument("--pfam_domtbl", help="Path to directory of .domtbl files resulting from a search against a Pfam A database. AccIDs should be in the 'accession' column, and file names are expected to be [prophageName].domtbl")
+    parser.add_argument("--swissprot_domtbl", help="Path to directory of .domtbl files resulting from a search against a database of Swissprot proteins. Expects Swissprot entries to begin with '>sp|[AccID]|', and for file names to be [prophageName].domtbl.")
+    parser.add_argument("--pfam_domtbl", help="Path to directory of .domtbl files resulting from a search against a Pfam A database. AccIDs should be in the 'accession' column, and file names are expected to be [prophageName].domtbl. ")
+    parser.add_argument("--dfam_dir", help="Path to directory of .dfam files annotating viral genomes. Expects .dfam files to contain matches of protein DNA sequences to viral genomes. Expects file names to be [prophageName].dfam")
     parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
     parser.add_argument("--min_eval", type=int, default=1e-5, help="Minimum e-value required for a .domtbl entry to be included. Default is 1e-5")
 
@@ -362,6 +424,7 @@ if __name__ == "__main__":
     minEval = args.min_eval
     protDomtblDir = args.swissprot_domtbl
     pfamDomtblDir = args.pfam_domtbl
+    dfamDir = args.dfam_dir
     outputDir = args.output_dir
 
     # credit to pycruft in https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory for code for grabbing file paths
@@ -391,4 +454,4 @@ if __name__ == "__main__":
         print(len(nucleotideList))
         print("Hey, fix that you commented out plotList()\n")'''
 
-        drawPlot(nucleotideList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, minEval)
+        drawPlot(nucleotideList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval)

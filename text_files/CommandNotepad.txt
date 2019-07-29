@@ -131,3 +131,16 @@ Downloaded Pfam-A.hmm.gz from ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_rel
 gunzip Pfam-A.hmm.gz
 
 python3 generate_domtbls.py ../seq/prophage_seq/individual_phage/ ../hmm/Pfam_A/Pfam-A.hmm ../tables/domtbl/2019-07-03_Pfam_A_prophage_unscanned/
+
+==== Updated hmmer to 3.3dev
+Downloaded all pseudmonas draft genomes on Pseudomonas.com (07/22/2019, totalling 4512)
+
+perl fasta_split.pl --input ../../../sequence_files/viral_proteins/nuc/Pat_nuc_seqs.fasta --output ../../../sequence_files/viral_proteins/nuc/
+
+perl hmmbuild_mult_seq.pl --input ../../../sequence_files/viral_proteins/nuc/Pat_nuc_seqs.fasta --output ../../../hmm/viral_proteins/2019-07-24_pat_nuc_seqs.hmm --verbose --dna --hmmpress
+
+Reinstalled hmmer 3.3dev on HPC:
+autoconf
+./configure --prefix="$HOME/myapps"
+make (got clock skew warning)
+make install

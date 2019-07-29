@@ -214,8 +214,6 @@ sub parse_tables {
         my $arraySize = @chartArray;
         my $chartLine = "$hashKey\n";
 
-        print "$hashKey length: $arraySize\n";
-
         foreach my $entry (@chartArray) {
             $chartLine .= "$entry\n";
         }
