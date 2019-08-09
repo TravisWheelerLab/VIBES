@@ -17,6 +17,7 @@ my $hmmPath = '';
 my $tableDir = '';
 my $scannedTableDir = '';
 my $mvMatchless = '';
+my $cpu = 0;
 my $verbose = 0;
 my $help = 0;
 
@@ -27,6 +28,7 @@ GetOptions (
     "scan_dir=s"        => \$scannedTableDir,
     "gen_dir=s"         => \$genomeDir,
     "mv_matchless=s"    => \$mvMatchless,
+    "cpu=i"             => \$cpu,
     "verbose"           => \$verbose,
     "help"              => \$help
     )
@@ -35,6 +37,10 @@ or die("Unknown argument, try --help\n");
 if($help) {
     help();
     exit
+}
+
+if ($cpu < 0) {
+    die("--cpu must be at least 0\n")
 }
 
 #we assume every entry in the directory is a genome we're interested in
@@ -62,7 +68,7 @@ $scannedPath = "$scannedTableDir/$fileName.dfam";
 
 
 my $stTime = [Time::HiRes::gettimeofday()];
-do_cmd("nhmmscan --cpu 1 --dfamtblout $tablePath $hmmPath $genome");
+do_cmd("nhmmscan --cpu $cpu --dfamtblout $tablePath $hmmPath $genome");
 my $elapsed = Time::HiRes::tv_interval($stTime);
 
 if (has_no_matches($tablePath) and $mvMatchless) {
@@ -105,12 +111,14 @@ Required:
  --job_number <i>   For n genomes, 0 <= i <= n-1
  --dfam_dir <s>     Path to directory of unscanned .dfam tables, which will
                     retain redundant hits
- --scan_dir <s>   Path to directory of scanned .dfam tables, which have 
+ --scan_dir <s>     Path to directory of scanned .dfam tables, which have 
                     redundant hits removed
  --gen_dir <s>      Path to directory of baterial genomes in .fasta format
 
 Optional:
  --verbose          Prints debugging information
+ --cpu <i>          Tells nhmmscan how many worker threads to use (min 0). Total
+                    number of threads will be (1 + <i>)
  --mv_matchless <s> Moves any .dfam files without any entries to a folder
                     intended to hold matchless files.
 ";
@@ -123,8 +131,13 @@ sub do_cmd {
     if ($verbose > 0) {
         print "$cmd\n";
     }
+    my $res = `$cmd 2>&1`;
 
-    return `$cmd`;
+    if ($verbose > 0) {
+        print "$res\n";
+    }
+    
+    return ;
 }
 
 # checks if a .dfam file has no matches. Returns 1 if no matches are found, 0 if matches are present
