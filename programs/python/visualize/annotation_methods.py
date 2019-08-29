@@ -1,8 +1,37 @@
 import re
 
 
-def genAnnotationDict(protDomtblLists, dfamLists, pfamDomtblLists, genomeLength):
+def genAnnotationDict(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval):
+    genomeLength = None
+
+    # first, ensure that either protDomtblDir or pfamDomtblDir points to a directory (this will allow us to find genome length)
+    if protDomtblDir is None and pfamDomtblDir is None:
+        print("At least one of protDomtblDir or pfamDomtblDir must be specified")
+        exit()
+
+    # if directory path string isn't empty, then read in information from file in that directory
+    if protDomtblDir:
+        domTblPath = "%s/%s.domtbl" % (protDomtblDir, prophageName)
+        protDomtblLists = buildDomtblList(domTblPath, minEval, "swissProt")
+
+        # we grab genomeLength from first entry of list of line info lists for use in buildDfamList
+        genomeLength = protDomtblLists[0][1]
+
+    if pfamDomtblDir:
+        pfamDomtblPath = "%s/%s.domtbl" % (pfamDomtblDir, prophageName)
+        pfamDomtblLists = buildDomtblList(pfamDomtblPath, minEval, "Pfam A")
+
+        # we grab genomeLength from first entry of list of line info lists for use in buildDfamList
+        genomeLength = pfamDomtblLists[0][1]
+
+    if dfamDir:
+        dfamPath = "%s/%s.dfam" % (dfamDir, prophageName)
+        dfamLists = buildDfamList(dfamPath, minEval, genomeLength)
+
     annotationDict = {}
+    # list of booleans with a length equivalent to genome being plotted. We want to avoid annotating these images with protein domains
+    # in locations already annotated by proteins, so indexes annotated by protein data will be set to true. If a domain's annotation overlaps
+    # with any of these true values, we don't include it
     isOccupiedList = [False] * genomeLength
 
     # currently, we expected .dfam format data to be recombinase and pseudogene matches
@@ -37,9 +66,10 @@ def genAnnotationDict(protDomtblLists, dfamLists, pfamDomtblLists, genomeLength)
         # If key already in dictionary, append our list of line info to value (list of lists of line info)
         if not overlapsWithProtein:
             if xStart in annotationDict:
-                annotationDict[xStart].append(protLineList)
+                annotationDict[xStart].append(pfamLineList)
             else:
-                valueList = [protLineList]
+                valueList = []
+                valueList.append(pfamLineList)
                 annotationDict[xStart] = valueList
 
     return annotationDict
@@ -57,6 +87,7 @@ def buildDfamList(dfamPath, minEval, genomeLength):
                 # create a list to store this line's data
                 lineList = []
                 dataList = line.split()
+                joinString = " "
 
                 # since split() gives us strings, we cast to the proper type
                 matchName = dataList[0]
@@ -65,6 +96,7 @@ def buildDfamList(dfamPath, minEval, genomeLength):
                 hmmTo = int(dataList[7])
                 aliFrom = int(dataList[9])
                 aliTo = int(dataList[10])
+                description = joinString.join(dataList[14:])
 
                 # temporary solution, since currently all expected .dfam files have had match names purposefully made short by me
                 accID = matchName
@@ -79,6 +111,7 @@ def buildDfamList(dfamPath, minEval, genomeLength):
                     lineList.append(aliFrom)
                     lineList.append(aliTo)
                     lineList.append(accID)
+                    lineList.append(description)
 
                     infoList.append(lineList)
 
@@ -98,6 +131,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
                 # create a list to store this line's data
                 lineList = []
                 dataList = line.split()
+                joinString = " "
 
                 # since split() gives us strings, we cast to the proper type
                 domainName = dataList[0]
@@ -107,6 +141,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
                 hmmTo = int(dataList[16])
                 aliFrom = int(dataList[19])
                 aliTo = int(dataList[20])
+                description = joinString.join(dataList[27:])
 
                 if fileSource == "swissProt":
                     # use regex to extract accession ID from domainName
@@ -125,6 +160,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
                     lineList.append(aliFrom)
                     lineList.append(aliTo)
                     lineList.append(accID)
+                    lineList.append(description)
 
                     infoList.append(lineList)
 

@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import re
 from os import walk
+from annotation_methods import genAnnotationDict
 import sys
 import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
@@ -13,8 +14,10 @@ from matplotlib import lines, cm
 # for each file, populate an array in which each index corresponds to a line
 # plot as line graph
 def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval):
-    # Minimum length a line should be to be added to length-based dictionary
+    # Minimum length a line should be to be added to 'long-line' dictionary
     LONG_LINE_CONST = .04
+    genomeLength = len(countList)
+    longLineLength = LONG_LINE_CONST * genomeLength
 
     print(prophageName)
 
@@ -23,105 +26,33 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
     ax.set(xlabel='Position', ylabel='Occurrences', title=prophageName)
     ax.plot(countList)
 
-    # list of booleans with a length equivalent to genome being plotted. We want to avoid annotating these images with protein domains
-    # in locations already annotated by proteins, so indexes annotated by protein data will be set to true. If a domain's annotation overlaps
-    # with any of these true values, we don't include it
-    isOccupiedList = [False] * len(countList)
-
-    protDomtblLists = []
-    pfamDomtblLists = []
-    dfamLists = []
-
-    # if directory path string isn't empty, then read in information from file in that directory
-    if protDomtblDir:
-        domTblPath = "%s/%s.domtbl" % (protDomtblDir, prophageName)
-        protDomtblLists = buildDomtblList(domTblPath, minEval, "swissProt")
-
-    if pfamDomtblDir:
-        pfamDomtblPath = "%s/%s.domtbl" % (pfamDomtblDir, prophageName)
-        pfamDomtblLists = buildDomtblList(pfamDomtblPath, minEval, "Pfam A")
-
-    if dfamDir:
-        dfamPath = "%s/%s.dfam" % (dfamDir, prophageName)
-        dfamLists = buildDfamList(dfamPath, minEval, len(countList))
-
-    # Below, we generate our long annotation list and short annotation list. We create two lists because we want longer lines to be
-    # drawn closer to the x-axis, but we also want lines drawn in order of start position as a secondary priority. To accomplish this,
-    # we first plot lines we consider long enough to be especially interesting in order of start pos, then shorter ones in order of start
-
-    # create dictionary intended to hold lines. Keys will be starting index in genome, values will be lists of Line2D objects.
-    # This will allow lines to be drawn in order of their starting indexes, ensuring identical colors don't occur twice in a row
+    annotationDict = genAnnotationDict(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
     longLineDict = {}
     shortLineDict = {}
 
-    # currently, we expected .dfam format data to be recombinase and pseudogene matches
-    for protLineList in protDomtblLists and dfamLists:
-        # to determine cases where protein domain annotations overlap with protein annotations
-        # we also set values corresponding to protein annotation coordinates to True in isOccupiedList.
-        xStart = protLineList[5] - 1
-        xEnd = protLineList[6]
-        genomeLength = protLineList[1]
-        longLineCutoff = LONG_LINE_CONST * genomeLength
-        lineLength = xEnd - xStart + 1
+    # Below, we generate our long annotation list and short annotation list. We create two lists because we want longer lines to be
+    # drawn closer to the x-axis, but we also want lines drawn in order of start position as a secondary priority. To accomplish this,
+    # we first plot lines we consider long enough to be especially interesting in order of start pos, then shorter ones in order of start pos
+    for key in annotationDict:
+        for lineList in annotationDict[key]:
+            annoLineLength = lineList[6] - lineList[5] + 1
 
-        index = xStart
-
-        while index < xEnd:
-            isOccupiedList[index] = True
-            index += 1
-
-        if (lineLength >= longLineCutoff):
-            if xStart in longLineDict:
-                longLineDict[xStart].append(protLineList)
-            else:
-                valueList = [protLineList]
-                longLineDict[xStart] = valueList
-        else:
-            # We want to sort annotation lines by length to prioritize drawing longest lines closest to the x-axis, so we use line length as the key.
-            # If key already in dictionary, append our list of line info to value (list of lists of line info)
-            if xStart in shortLineDict:
-                shortLineDict[xStart].append(protLineList)
-            else:
-                valueList = [protLineList]
-                shortLineDict[xStart] = valueList
-
-    for pfamLineList in pfamDomtblLists:
-        xStart = pfamLineList[5] - 1
-        xEnd = pfamLineList[6]
-        genomeLength = pfamLineList[1]
-        longLineCutoff = LONG_LINE_CONST * genomeLength
-        lineLength = xEnd - xStart + 1
-
-        # should be False if no protein annotation lines overlap with domain annotation
-        overlapsWithProtein = False
-        index = xStart
-
-        while index < xEnd:
-            if isOccupiedList[index]:
-                overlapsWithProtein = True
-            index += 1
-
-        # We want to sort annotation lines by length to prioritize drawing longest lines closest to the x-axis, so we use line length as the key.
-        # If key already in dictionary, append our list of line info to value (list of lists of line info)
-        if not overlapsWithProtein:
-            while index < xEnd:
-                isOccupiedList[index] = True
-                index += 1
-
-            if (lineLength >= longLineCutoff):
-                if xStart in longLineDict:
-                    longLineDict[xStart].append(pfamLineList)
+            # if long enough to be considered a long line, we add to long line dictionary (for which each key is the start position and each value is a list of line lists)
+            if(annoLineLength >= longLineLength):
+                if key in longLineDict:
+                    longLineDict[key].append(lineList)
                 else:
-                    valueList = [pfamLineList]
-                    longLineDict[xStart] = valueList
+                    valueList = []
+                    valueList.append(lineList)
+                    longLineDict[key] = valueList
             else:
-                # We want to sort annotation lines by length to prioritize drawing longest lines closest to the x-axis, so we use line length as the key.
-                # If key already in dictionary, append our list of line info to value (list of lists of line info)
-                if xStart in shortLineDict:
-                    shortLineDict[xStart].append(pfamLineList)
+                if key in shortLineDict:
+                    shortLineDict[key].append(lineList)
                 else:
-                    valueList = [pfamLineList]
-                    shortLineDict[xStart] = valueList
+                    valueList = []
+                    valueList.append(lineList)
+                    shortLineDict[key] = valueList
+
 
     # find max height of chart. Used in plotting lines and labels
     YMAX = max(countList)
@@ -162,7 +93,7 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
     pp = PdfPages("%s/%s.pdf" % (outputDir, prophageName))
     pp.savefig(bbox_inches='tight')
     pp.close()
-    # plt.show()
+    #plt.show()
     plt.close()
 
 
@@ -186,7 +117,7 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
             # subtract 1 from x-coords to adjust for 0-indexed graph
             xStart = lineList[5] - 1
             xEnd = lineList[6] - 1
-            accID = lineList[-1]
+            accID = lineList[7]
             genomeLength = lineList[1]
 
             # To determine width of annotation text label, we place the label on the plot and draw it, generating its size. We then get its coordinates and
@@ -266,8 +197,6 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
 
             #yOffset = dataInv.transform(yOffset)
 
-
-            
             #axesTrans = ax.transAxes  # convert from axes units (0-1) to display units
 
             # yOffset = axesTrans.transform((0, -.1725))
@@ -297,91 +226,6 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
             # which are in display units, into figure axis units.
             # credit to https://stackoverflow.com/questions/41267733/getting-the-coordinates-of-a-matplotlib-annotation-label-in-figure-coordinates
 
-# read in information from .dfam format files
-def buildDfamList(dfamPath, minEval, genomeLength):
-    infoList = []
-
-    # read in info from .dfam file
-    with open(dfamPath, "r") as dfamData:
-        for line in dfamData:
-            # '#' char indicates a line doesn't contain data
-            if(line[0] != "#"):
-                # create a list to store this line's data
-                lineList = []
-                dataList = line.split()
-
-                # since split() gives us strings, we cast to the proper type
-                matchName = dataList[0]
-                iEvalue = float(dataList[4])
-                hmmFrom = int(dataList[6])
-                hmmTo = int(dataList[7])
-                aliFrom = int(dataList[9])
-                aliTo = int(dataList[10])
-
-                # temporary solution, since currently all expected .dfam files have had match names purposefully made short by me
-                accID = matchName
-
-                # we only want entries with e-value <= minimum (default 1e-5)
-                if (iEvalue <= minEval):
-                    lineList.append(matchName)
-                    lineList.append(genomeLength)
-                    lineList.append(iEvalue)
-                    lineList.append(hmmFrom)
-                    lineList.append(hmmTo)
-                    lineList.append(aliFrom)
-                    lineList.append(aliTo)
-                    lineList.append(accID)
-
-                    infoList.append(lineList)
-
-    return infoList
-
-
-# Read in the contents of a .domtbl file. Returns a list of lists of
-# relevant data. Each list in the LoL corresponds to one line of the file
-def buildDomtblList(domTblPath, minEval, fileSource):
-    infoList = []
-
-    # read in domTblPath info as read-only
-    with open(domTblPath, "r") as domTblData:
-        for line in domTblData:
-            # '#' char indicates a line doesn't contain data
-            if(line[0] != "#"):
-                # create a list to store this line's data
-                lineList = []
-                dataList = line.split()
-
-                # since split() gives us strings, we cast to the proper type
-                domainName = dataList[0]
-                tlen = int(dataList[2])
-                iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
-                hmmFrom = int(dataList[15])
-                hmmTo = int(dataList[16])
-                aliFrom = int(dataList[19])
-                aliTo = int(dataList[20])
-
-                if fileSource == "swissProt":
-                    # use regex to extract accession ID from domainName
-                    nameSearch = re.search(r'\|(.+?)\|', domainName)
-                    accID = nameSearch[1]
-                else:
-                    accID = dataList[1]
-
-                # we only want entries with e-value <= minimum (default 1e-5)
-                if (iEvalue <= minEval):
-                    lineList.append(domainName)
-                    lineList.append(tlen)
-                    lineList.append(iEvalue)
-                    lineList.append(hmmFrom)
-                    lineList.append(hmmTo)
-                    lineList.append(aliFrom)
-                    lineList.append(aliTo)
-                    lineList.append(accID)
-
-                    infoList.append(lineList)
-
-    return infoList
-
 
 # reads in model length field ('M') for each domain in a .hmmstattbl file
 # returns a dictionary containing all domains in file, with domain name key
@@ -395,7 +239,7 @@ def buildHmmStatDict(hmmStatPath):
             # checks for the empty line that occurs at EOF
             if(line[0] != "#" and not line):
                 dataList = line.split()
-                print("Line: %s" % (line))
+                #print("Line: %s" % (line))
                 domName = dataList[1]
                 modelLength = dataList[6]
 
@@ -413,7 +257,7 @@ def parseArgs(sysArgs):
     parser.add_argument("--pfam_domtbl", help="Path to directory of .domtbl files resulting from a search against a Pfam A database. AccIDs should be in the 'accession' column, and file names are expected to be [prophageName].domtbl. ")
     parser.add_argument("--dfam_dir", help="Path to directory of .dfam files annotating viral genomes. Expects .dfam files to contain matches of protein DNA sequences to viral genomes. Expects file names to be [prophageName].dfam")
     parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
-    parser.add_argument("--min_eval", type=int, default=1e-5, help="Minimum e-value required for a .domtbl entry to be included. Default is 1e-5")
+    parser.add_argument("--min_eval", type=float, default=1e-5, help="Minimum e-value required for a .domtbl entry to be included. Default is 1e-5")
 
     return parser.parse_args()
 

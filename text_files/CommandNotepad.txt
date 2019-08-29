@@ -144,3 +144,22 @@ autoconf
 ./configure --prefix="$HOME/myapps"
 make (got clock skew warning)
 make install
+
+== Updated generate_domtbls.py to allow for alt genetic codes (08/02/2019)
+python3 generate_domtbls.py ../../seq/prophage_seq/individual_phage/ ../../hmm/viral_proteins/swissprot_viral_prots.hmm ../../tables/domtbl/2019-08-02_swissprot_prophage_code11/ --genetic_code 11 (on bioinfo)
+
+Ran 2019-08-02_complete_tableizer_3.3dev.sh on HPC. Three of these (Pseudomonas_citronellolis_P3B5_4025, Pseudomonas_citronellolis_SJTE-3_4026, Pseudomonas_furukawaii_KF707_5864) failed to complete because they exceeded the 4 hour 30 min time limit. These were rerun individually, with their own .sh files.
+
+These .sh files were:
+2019-08-05_cleanup_long_run_1.sh
+2019-08-05_cleanup_long_run_2.sh
+2019-08-05_cleanup_long_run_3.sh
+
+Ran scan_domtbls.pl: perl scan_domtbls.pl --input ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11 --output ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/ -v
+
+python visualize_nucleotide_counts.py ../../../tables/nuc_chart/2019-06-19_complete_combined_test/ test/test_output/ --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/
+
+perl hmmbuild_mult_seq.pl --amino --hmmpress -input ../seq/viral_protein/uniprot-reviewed-viral-coat-prot.fasta --output ../hmm/viral_proteins/2019-08-12_swissprot_coat_prots.hmm --cpu 6 -v (on bioinfo)
+
+Ran 2019-08-06_draft_tblzr_3.3d.sh on HPC. Of the ~4500 subjobs, ~20 failed to complete for reasons that aren't yet entirely clear (some are definitely due to running too long, but others may have been killed similar to problems encountered earlier with the job manager). Any individual runs in interactive instances or
+via 1-job (individual) .sh files will be recorded below.
