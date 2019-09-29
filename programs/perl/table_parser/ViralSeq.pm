@@ -15,6 +15,12 @@ has name => (
     required    => 1,
 );
 
+has evalue => (
+    is          => 'ro',
+    isa         => 'Num',
+    required    => 1,
+);
+
 #Start index in genome
 has gnSt => (
     is          => 'ro',
@@ -51,9 +57,9 @@ has refEn => (
 );
 
 #path to file containing complete viral sequence
-has referenceSeqPath => (
+has referenceSeqLength => (
     is          => 'ro',
-    isa         => 'Str',
+    isa         => 'Num',
     required    => 1,
 );
 
@@ -81,12 +87,6 @@ has seqLength => (
     is      => 'ro',
     lazy    => 1,
     builder => '_buildLength',
-);
-
-has referenceSeqLength => (
-    is      => 'ro',
-    lazy    => 1,
-    builder => '_buildRefLength',
 );
 
 has bacGenomeLength => (
@@ -243,6 +243,7 @@ sub tableLine {
     $genomeName = $1;
 
     my $returnString =           $self->name
+                        . "\t" . $self->evalue
                         . "\t" . $self->isFullLength
                         . "\t" . $self->refSt
                         . "\t" . $self->refEn
@@ -258,13 +259,18 @@ sub tableLine {
 }
 
 sub tableHeader {
-    return "Name\tFull Length\tViral Genome Start\tViral Genome End\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tBacterial Genome Start\tBacterial Genome End\tBacterial Genome Length\tIsOnPositiveStrand";
+    return "Name\tE-Value\tIs Full Length Insertion\tMatch Start Position on Viral Genome\tMatch End Position on Viral Genome\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tMatch Start Position on Bacterial Genome\tMatch End Position on Bacterial Genome\tBacterial Genome Length\tOn Positive Strand";
 }
 
 sub _buildIsFull {
     my $self = shift;
     my $beginMatches = 0;
     my $endMatches = 0;
+
+    print($self->name . "\n");
+    print($self->refSt . "\n");
+    print($self->referenceSeqLength . "\n");
+    print("\n\n");
 
     if ($self->refSt <= $isFullCutoff) {
         $beginMatches = 1;
@@ -293,32 +299,7 @@ sub _buildLength {
 
     return abs($gnEn - $gnSt) + 1;
 }
-#Returns length of reference prophage sequence
-sub _buildRefLength {
-    my $self = shift;
-    my $seq = '';
 
-    open(my $fileHandle, "<", $self->referenceSeqPath) or die "Can't open .fasta file " . $self->referenceSeqPath . ": $!";
-    {
-    local $/ = "\n>"; # set end of input record separator to \n>, so it splits on lines starting with >. Unfortunately,
-    # this is necessary because very rarely, .fasta header lines will contain > characters somewhere in the middle
-
-    # grab each entry, save it in a temporary file, run it through hmmbuild, and delete it
-    while (my $entry = <$fileHandle>)  {
-
-        # remove any > characters at beginning or end of entry, leaving any in the middle of header lines intact
-        $entry =~ s/>$//;
-        $entry =~ s/^>//;
-        # capture header, sequence data separately
-        $entry =~ m/.+?\n(.+)/s;
-        $seq = $1;
-
-        $seq =~ s/[^A-Za-z-_]//;
-    }
-    }
-
-    return length($seq);
-}
 #Uses esl-seqstat to determine bacterial genome length, returns length
 sub _buildBacGenomeLength {
     my $self = shift;

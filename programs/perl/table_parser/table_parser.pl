@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use FindBin;
 use lib $FindBin::Bin;
-# import classes
 use ViralSeq;
 use Getopt::Long;
 
@@ -22,16 +21,18 @@ my $force = 0; #^^
 my $genomeName;
 my $genomePath;
 my $tsvPath;
+my $maxEval = 1e-5;
 
 GetOptions (
     "prophage=s"    => \$refProphageDir,
-    "tables=s"      => \$tableDir,
-    "genomes=s"     => \$genomeDir,
+    "dfam=s"        => \$tableDir,
+    "bac_genomes=s" => \$genomeDir,
     "tsv=s"         => \$tsvDir,
-    "indexcharts=s" => \$chartDir,
-    "attsites=s"    => \$flankingAttDir,
-    "jobnumber=i"   => \$jobNumber,
+    "index_charts=s"=> \$chartDir,
+    "att_sites=s"   => \$flankingAttDir,
+    "job_number=i"  => \$jobNumber,
     "suffix=s"      => \$suffix,
+    "max_eval"      => \$maxEval,
     "force"         => \$force,
     "verbose"       => \$verbose,
     "help"          => \$help
@@ -56,7 +57,7 @@ else {
 
 #create directory that will contain index charts, unless it already exists
 my $dir = "$chartDir/$genomeName";
-#if directory already exists, throw fatal error unless --force was used
+#if directory already exists, throw fatal error unless --force was specified
 if (-e $dir && -d $dir) {
     unless ($force) {
         die "$dir already exists. Use --force to automatically overwrite it";
@@ -73,7 +74,7 @@ else {
 $tsvPath = "$tsvDir/$genomeName.tsv";
 $genomePath = "$genomeDir/$genomeName.fna";
 
-parse_tables($table, $genomePath, $tsvPath);
+parse_tables($table, $genomePath, $tsvPath, $maxEval);
 
 if ($verbose) {
     be_verbose();
@@ -94,6 +95,7 @@ sub parse_tables {
     my $tablePath = $_[0];
     my $genomePath = $_[1];
     my $outputTSV = $_[2];
+    my $maxEval = $_[3];
     my $count = 1;
     my %chartHash;
     my $chartPath;
@@ -107,16 +109,17 @@ sub parse_tables {
         if ($line =~ /#/) {
         }
 
-        #Well folks, it's already time for a monsterous, unreadable Regex line.
-        #To summarize its twisted inner workings: Group 1 captures the name of the
-        #strain, group 2 nabs the start index of the reference strain hit,
-        #group 3 grabs the end index of the reference strain hit, group 4 obtains
-        #the + or - sign indicating which strand the sequence is one, group 5 nicks
-        #the start index in the bacterial genome, and group 6 contains the end index
-        #in the bacterial genome.
-        elsif ($line =~ /(.+?)\s+.+?\s+.+?\s+.+?\s+.+?\s+.+?\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s/){
+        #group 1: target name
+        #group 2: match e-value
+        #group 3: match start position on target (phage)
+        #group 4: match end position on target (phage)
+        #group 5: positive or negative strand
+        #group 6: match start position on query (bacterial genome)
+        #group 7: match end position on query (bacterial genome)
+        #group 8: target model length (length of prophage)
+        elsif ($line =~ /(.+?)\s+.+?\s+.+?\s+.+?\s+(.+?)\s+.+?\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+.+?\s+.+?\s+(\d+)\s/){
             my $name = $1;
-            my $strand = $4;
+            my $strand = $5;
             my $isPos = 0;
 
             if ($strand eq "+"){
@@ -126,12 +129,13 @@ sub parse_tables {
             #output .tsv and detecting flanking att sites.
             my $seq = ViralSeq->new(
                 name                => "$name",
-                refSt               => $2,
-                refEn               => $3,
-                referenceSeqPath    => "$refProphageDir/$name.fasta",
+                evalue              => $2,
+                refSt               => $3,
+                refEn               => $4,
+                referenceSeqLength  => $8,
                 isPos               => $isPos,
-                gnSt                => $5,
-                gnEn                => $6,
+                gnSt                => $6,
+                gnEn                => $7,
                 flankingAttDir      => $flankingAttDir,
                 genomePath          => $genomePath,
                 verbose             => $verbose,
@@ -143,55 +147,57 @@ sub parse_tables {
                 $seq->findFlankingAtts();
             }
 
-            if ($count == 1) {
-                print $outputTSF $seq->tableHeader() . "\n";
-            }
+            if ($seq->evalue <= $maxEval) {
+                if ($count == 1) {
+                    print $outputTSF $seq->tableHeader() . "\n";
+                }
 
-            print $outputTSF $seq->tableLine() . "\n";
+                print $outputTSF $seq->tableLine() . "\n";
 
-            $chartPath = "$chartDir/$genomeName/$name" . ".txt";
+                $chartPath = "$chartDir/$genomeName/$name" . ".txt";
 
-            #unless an entry for this prophage already exists in hash, generate
-            #a new array for this sequence by putting each line into an array
-            #index. Store this array in the hash
-            unless (exists $chartHash{$name}) {
-                my @array = (0)x$seq->referenceSeqLength;
-                my $arrayRef = \@array;
+                #unless an entry for this prophage already exists in hash, generate
+                #a new array for this sequence by putting each line into an array
+                #index. Store this array in the hash
+                unless (exists $chartHash{$name}) {
+                    print("Unless!\n");
+                    my @array = (0)x$seq->referenceSeqLength;
+                    my $arrayRef = \@array;
 
-                #if file already exists, read in its contents and populate array
-                if (open(my $chartFile, "<", $chartPath)) {
-                    # skip header
-                    readline $chartFile;
+                    #if file already exists, read in its contents and populate array
+                    if (open(my $chartFile, "<", $chartPath)) {
+                        # skip header
+                        readline $chartFile;
 
-                    my $index = 0;
-                    while (my $line = <$chartFile>) {
-                        chomp $line;
-                        $arrayRef->[$index] = $line;
-                        $index += 1;
+                        my $index = 0;
+                        while (my $line = <$chartFile>) {
+                            chomp $line;
+                            $arrayRef->[$index] = $line;
+                            $index += 1;
+                        }
+
+                        close $chartFile;
                     }
-
-                    close $chartFile;
+                    $chartHash{$name} = $arrayRef;
                 }
-                $chartHash{$name} = $arrayRef;
-            }
 
-            #Each array index corresponds to a nucleotide in the reference strain.
-            #Iterate over nucleotides present in genomic strain, incrementing
-            #for each present in genome. To match array 0-indexing, nucleotide
-            #indexes are offset by 1.
-            #refSt = start location on reference seq, refEn = end location on reference seq
-            for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
-                my $size = $seq->referenceSeqLength;
+                #Each array index corresponds to a nucleotide in the reference strain.
+                #Iterate over nucleotides present in genomic strain, incrementing
+                #for each present in genome. To match array 0-indexing, nucleotide
+                #indexes are offset by 1.
+                #refSt = start location on reference seq, refEn = end location on reference seq
+                for (my $i = $seq->refSt - 1; $i < $seq->refEn; $i++) {
+                    my $size = $seq->referenceSeqLength;
 
-                if ($i < 0 || $i >= $size) {
-                    die "Nucleotide index is outside of bounds 1-$size for $name";
+                    if ($i < 0 || $i >= $size) {
+                        die "Nucleotide index is outside of bounds 1-$size for $name";
+                    }
+                    my $arrayRef = $chartHash{$name};
+                    $arrayRef->[$i] += 1;
                 }
-                my $arrayRef = $chartHash{$name};
-                $arrayRef->[$i] += 1;
-            }
-            #we only care about lines that matched the regex statement, so count
-            #increments inside of if statement
+            #we only care about lines that matched the regex statement and had a good e-value, so count increments inside of if statements
             $count++;
+            }
         }
     }
 
@@ -202,12 +208,15 @@ sub parse_tables {
     $count = $count - 1;
 
     my @hashKeys = keys %chartHash;
-    print   "\nNumber of prophage sequences in $tablePath: $count" . 
-            "\nOf 50 reference sequences, " . scalar @hashKeys . " had hits in $tablePath\n";
+    print   "\nNumber of passing prophage matches in $tablePath: $count" . 
+            "\n" . scalar @hashKeys . " strains had hits in $tablePath\n";
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
-        $chartPath = "$chartDir/$genomeName/$hashKey" . "Chart.txt";
+        print("Foreeach!\n");
+        my $chartPath = "$chartDir/$genomeName/$hashKey" . "Chart.txt";
+        print($chartPath);
+        print((-e "$chartDir/$genomeName" && -d "$chartDir/$genomeName"));
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
@@ -219,7 +228,7 @@ sub parse_tables {
         }
 
         print $chartOutput "$chartLine";
-        close $chartOutput;
+        close $chartOutput or die "Can't close $chartPath: $!";
     }
 }
 
@@ -232,20 +241,26 @@ sub help {
         --verbose: Print additional information about values held in
             variables and commands used by table_parser
         --force: Overwrite pre-existing directories in the index chart directory
-            if necessary
+            if they already exist. This will erase all files in these
+            directories
 
     Input options:
-        --prophage: Path to directory containing reference prophage
-            strains
-        --tables: Path to DFAM table directory
-        --genomes: Path to directory with bacterial genomes
+        --dfam: Path to DFAM table directory
+        --bac_genomes: Path to directory with bacterial genomes
         --jobnumber: Integer provided by the cluster job manager that tells
-            table_parser which table it should run on
+            table_parser which dfam file it should use
 
     Output options:
-        --tsv: Path to .tsv directory
-        --indexcharts: Path to nucleotide index chart directory
-        --attsites: Path to flanking att side directory
+        --tsv: Path to .tsv directory. All .tsv file values are tab-delimited
+        --indexcharts: Path to nucleotide index chart directory. Each files in 
+            this directory will be the length of its respective viral genome + 1
+            (because the first line is a header line). Each line therefore
+            corresponds to a position in the viral genome, with its int value
+            being the number of times that position was found to have a match
+            in the bacterial genome
+        --attsites: Path to flanking att side directory. Att site detection is
+            spotty at best in its current implementation- use of this feature
+            is not currently recommended.
 
 ";
 }
@@ -264,7 +279,6 @@ sub be_verbose {
     my $path = `pwd`;
 
     print "\nTable directoy: $tableDir\n";
-    print "Reference prophage sequence directory: $refProphageDir\n";
     print "Genome directory: $genomeDir\n";
     print "Genome path: $genomePath\n";
     print "Genome Name: $genomeName\n";
