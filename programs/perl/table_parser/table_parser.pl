@@ -160,7 +160,6 @@ sub parse_tables {
                 #a new array for this sequence by putting each line into an array
                 #index. Store this array in the hash
                 unless (exists $chartHash{$name}) {
-                    print("Unless!\n");
                     my @array = (0)x$seq->referenceSeqLength;
                     my $arrayRef = \@array;
 
@@ -213,7 +212,6 @@ sub parse_tables {
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
-        print("Foreeach!\n");
         my $chartPath = "$chartDir/$genomeName/$hashKey" . "Chart.txt";
         print($chartPath);
         print((-e "$chartDir/$genomeName" && -d "$chartDir/$genomeName"));
@@ -243,6 +241,7 @@ sub help {
         --force: Overwrite pre-existing directories in the index chart directory
             if they already exist. This will erase all files in these
             directories
+        --max_eval: Maximum allowable match evalue for match to be used
 
     Input options:
         --dfam: Path to DFAM table directory

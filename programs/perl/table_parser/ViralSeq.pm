@@ -267,11 +267,6 @@ sub _buildIsFull {
     my $beginMatches = 0;
     my $endMatches = 0;
 
-    print($self->name . "\n");
-    print($self->refSt . "\n");
-    print($self->referenceSeqLength . "\n");
-    print("\n\n");
-
     if ($self->refSt <= $isFullCutoff) {
         $beginMatches = 1;
     }
