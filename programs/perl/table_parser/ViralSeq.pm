@@ -64,9 +64,9 @@ has referenceSeqLength => (
 );
 
 #Is sequence on positive strand?
-has isPos => (
+has strand => (
     is          => 'ro',
-    isa         => 'Bool',
+    isa         => 'Str',
     required    => 1,
 );
 
@@ -81,6 +81,13 @@ has flankingAttDir => (
     isa     => 'Str',
     default => "./attSites",
     lazy    => 1,
+);
+
+has isPos => (
+    is      => 'ro',
+    isa     => 'Bool',
+    lazy    => 1,
+    builder => '_buildIsPos'
 );
 
 has seqLength => (
@@ -109,7 +116,7 @@ has isFullLength => (
 has isFlanked => (
     is      => 'ro',
     writer  => '_set_isFlanked',
-    default => 'Att Scan not run!',
+    default => 'Att Scan not run',
 );
 
 sub findFlankingAtts {
@@ -253,13 +260,13 @@ sub tableLine {
                         . "\t" . $self->gnSt
                         . "\t" . $self->gnEn
                         . "\t" . $self->bacGenomeLength
-                        . "\t" . $self->isPos;
+                        . "\t" . $self->strand;
 
     return  $returnString;
 }
 
 sub tableHeader {
-    return "Name\tE-Value\tIs Full Length Insertion\tMatch Start Position on Viral Genome\tMatch End Position on Viral Genome\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tMatch Start Position on Bacterial Genome\tMatch End Position on Bacterial Genome\tBacterial Genome Length\tOn Positive Strand";
+    return "Name\tE-Value\tIs Full Length Insertion\tMatch Start Position on Viral Genome\tMatch End Position on Viral Genome\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tMatch Start Position on Bacterial Genome\tMatch End Position on Bacterial Genome\tBacterial Genome Length\tStrand";
 }
 
 sub _buildIsFull {
@@ -308,6 +315,17 @@ sub _buildBacGenomeLength {
     $bacGenomeLength = $1;
 
     return $bacGenomeLength;
+}
+
+sub _buildIsPos {
+    my $self = shift;
+    my $isPos = 0;
+
+    if ($self->strand == '+') {
+        $isPos = 1;
+    }
+
+    return $isPos;
 }
 
 #Run command

@@ -120,11 +120,7 @@ sub parse_tables {
         elsif ($line =~ /(.+?)\s+.+?\s+.+?\s+.+?\s+(.+?)\s+.+?\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+.+?\s+.+?\s+(\d+)\s/){
             my $name = $1;
             my $strand = $5;
-            my $isPos = 0;
 
-            if ($strand eq "+"){
-                $isPos = 1;
-            }
             #Create a ViralSeq object. This will handle creating lines for the
             #output .tsv and detecting flanking att sites.
             my $seq = ViralSeq->new(
@@ -133,7 +129,7 @@ sub parse_tables {
                 refSt               => $3,
                 refEn               => $4,
                 referenceSeqLength  => $8,
-                isPos               => $isPos,
+                strand              => $strand,
                 gnSt                => $6,
                 gnEn                => $7,
                 flankingAttDir      => $flankingAttDir,
@@ -213,8 +209,6 @@ sub parse_tables {
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
         my $chartPath = "$chartDir/$genomeName/$hashKey" . "Chart.txt";
-        print($chartPath);
-        print((-e "$chartDir/$genomeName" && -d "$chartDir/$genomeName"));
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
@@ -251,7 +245,7 @@ sub help {
 
     Output options:
         --tsv: Path to .tsv directory. All .tsv file values are tab-delimited
-        --indexcharts: Path to nucleotide index chart directory. Each files in 
+        --index_charts: Path to nucleotide index chart directory. Each files in 
             this directory will be the length of its respective viral genome + 1
             (because the first line is a header line). Each line therefore
             corresponds to a position in the viral genome, with its int value
