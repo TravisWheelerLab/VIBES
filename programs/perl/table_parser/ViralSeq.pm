@@ -246,7 +246,7 @@ sub tableLine {
     my $genomeName;
 
     # extract genome name from .fasta file path
-    $self->genomePath =~ /([^\/]+)\./;
+    $self->genomePath =~ /.+\/([^\/]+)\./;
     $genomeName = $1;
 
     my $returnString =           $self->name
