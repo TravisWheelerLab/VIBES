@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import re
 from os import walk
-from annotation_methods import genAnnotationDict
+from annotation_methods import annotateGenome, Genome
 import sys
 import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
@@ -15,9 +15,10 @@ from matplotlib import lines, cm
 # plot as line graph
 def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval):
     # Minimum length a line should be to be added to 'long-line' dictionary
-    LONG_LINE_CONST = .04
+    LONG_ANNO_CONST = .04
     genomeLength = len(countList)
-    longLineLength = LONG_LINE_CONST * genomeLength
+    longAnnoLength = LONG_ANNO_CONST * genomeLength
+    annotationGenome = Genome(prophageName)
 
     print(prophageName)
 
@@ -26,32 +27,32 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
     ax.set(xlabel='Position', ylabel='Occurrences', title=prophageName)
     ax.plot(countList)
 
-    annotationDict = genAnnotationDict(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
-    longLineDict = {}
-    shortLineDict = {}
+    annotationGenome = annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
+    longAnnoDict = {}
+    shortAnnoDict = {}
 
     # Below, we generate our long annotation list and short annotation list. We create two lists because we want longer lines to be
     # drawn closer to the x-axis, but we also want lines drawn in order of start position as a secondary priority. To accomplish this,
     # we first plot lines we consider long enough to be especially interesting in order of start pos, then shorter ones in order of start pos
-    for key in annotationDict:
-        for lineList in annotationDict[key]:
-            annoLineLength = lineList[6] - lineList[5] + 1
+    for key in annotationGenome.matches:
+        for match in annotationGenome.matches[key]:
+            annoLineLength = abs(match.aliSt - match.aliEn) + 1
 
             # if long enough to be considered a long line, we add to long line dictionary (for which each key is the start position and each value is a list of line lists)
-            if(annoLineLength >= longLineLength):
-                if key in longLineDict:
-                    longLineDict[key].append(lineList)
+            if(annoLineLength >= longAnnoLength):
+                if key in longAnnoDict:
+                    longAnnoDict[key].append(match)
                 else:
                     valueList = []
-                    valueList.append(lineList)
-                    longLineDict[key] = valueList
+                    valueList.append(match)
+                    longAnnoDict[key] = valueList
             else:
-                if key in shortLineDict:
-                    shortLineDict[key].append(lineList)
+                if key in shortAnnoDict:
+                    shortAnnoDict[key].append(match)
                 else:
                     valueList = []
-                    valueList.append(lineList)
-                    shortLineDict[key] = valueList
+                    valueList.append(match)
+                    shortAnnoDict[key] = valueList
 
 
     # find max height of chart. Used in plotting lines and labels
@@ -62,8 +63,8 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
     colorCount = 0
 
     # sort keys of dictionary containing lists of line information. Keys correspond to starting index. Put all keys into one list and sort to make coloring easier
-    sortedLongKeys = sorted(longLineDict)
-    sortedShortKeys = sorted(shortLineDict)
+    sortedLongKeys = sorted(longAnnoDict)
+    sortedShortKeys = sorted(shortAnnoDict)
 
     # depthList is intended to determine when annotations overlap and must be vertically staggered. To accomplish this, we populate depthList
     # with inner lists, which are each the length of the x-axis and filled with False. There should be one inner list per annotation, to account
@@ -74,8 +75,8 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
     line2DList = []
 
     # draw lines
-    plotAnnotationDict(fig, ax, longLineDict, sortedLongKeys, depthList, YMAX, line2DList)
-    plotAnnotationDict(fig, ax, shortLineDict, sortedShortKeys, depthList, YMAX, line2DList)
+    plotAnnotationDict(fig, ax, longAnnoDict, sortedLongKeys, depthList, YMAX, line2DList)
+    plotAnnotationDict(fig, ax, shortAnnoDict, sortedShortKeys, depthList, YMAX, line2DList)
 
     # sort lines by xStart
     line2DList = sorted(line2DList, key=lambda line: line.get_xdata()[0])
@@ -112,13 +113,13 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
     for key in keyList:
         valueList = lineListDict[key]
 
-        for lineList in valueList:
+        for match in valueList:
             # grab x and y data from alicoords and line depth stuff respectively.
             # subtract 1 from x-coords to adjust for 0-indexed graph
-            xStart = lineList[5] - 1
-            xEnd = lineList[6] - 1
-            accID = lineList[7]
-            genomeLength = lineList[1]
+            xStart = match.aliSt - 1
+            xEnd = match.aliEn - 1
+            accID = match.accID
+            genomeLength = match.genomeLength
 
             # To determine width of annotation text label, we place the label on the plot and draw it, generating its size. We then get its coordinates and
             # convert them into data units rather than display units. We use this to determine whether or not a line is long enough to prevent label overlap,

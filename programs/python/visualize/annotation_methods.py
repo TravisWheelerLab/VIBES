@@ -1,10 +1,86 @@
 import re
 
 
-def genAnnotationDict(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval):
-    genomeLength = None
+class Genome:
+    '''
+    Describes a genome containing some matchs that we care about.
 
-    # first, ensure that either protDomtblDir or pfamDomtblDir points to a directory (this will allow us to find genome length)
+    Attributes:
+    -----
+    name: String
+        Name of the genome.
+
+    matches: List of Match objects
+        A dictionary of matches to some sequence in the genome. Keys are the start position of the match in the genome, values are lists of Match objects
+        (to cover the case of two matches having the same start position)
+        '''
+    def __init__(self, name):
+        self.name = name
+        self.matches = {}
+
+
+class Match:
+    '''
+    Describes a match between some target sequence and some query sequence.
+
+    Attributes:
+    -----
+    name: String
+        Name of the target sequence.
+
+    eVal: float
+        E-value of match, >= 0. Lower is better.
+
+    hmmSt: int
+        Where the match begins on the HMM. Because backwards matches occur, hmmSt is not necessarily smaller than hmmEn.
+
+    hmmEn: int
+        Where the match ends on the HMM. Because backwards matches occur, hmmSt is not necessarily smaller than hmmEn.
+
+    aliSt: int
+        Where the match begins on the query genome. Because backwards matches occur, aliSt is not necessarily smaller than aliEn.
+
+    accID: String
+        Unique identifier of the target sequence.
+
+    description: String
+        Brief description of the target sequence.
+
+    genomeLength: int
+        Length of the query genome.
+    '''
+
+    def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, description, genomeLength=None):
+        self.name = name
+        self.eVal = eVal
+        self.hmmSt = hmmSt
+        self.hmmEn = hmmEn
+        self.aliSt = aliSt
+        self.aliEn = aliEn
+        self.accID = accID
+        self.description = description
+        self.genomeLength = genomeLength
+
+
+def detectOverlap(reg1St, reg1En, reg2St, reg2En):
+    overlap = False
+
+    # if reg1 starts before reg2 ends, and reg1 ends after reg2 starts, they overlap
+    if reg1St < reg2En and reg1En > reg2St:
+        overlap = True
+
+    return overlap
+
+
+def annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength=None):
+    '''
+    Returns Genome object with its matches dictionary populated start location keys and lists of Match objects starting at that location. The contents of 
+    matches are the annotation of the genome, ordered by a combination of start position relative to the genome and size (matches passing a length threshold
+    occur before shorter, overlapping matches)
+    '''
+
+    # first, ensure that either protDomtblDir or pfamDomtblDir has been specified by user (this will allow us to provide genome length to Match objects generated
+    # from .dfam files
     if protDomtblDir is None and pfamDomtblDir is None:
         print("At least one of protDomtblDir or pfamDomtblDir must be specified")
         exit()
@@ -12,71 +88,84 @@ def genAnnotationDict(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEv
     # if directory path string isn't empty, then read in information from file in that directory
     if protDomtblDir:
         domTblPath = "%s/%s.domtbl" % (protDomtblDir, prophageName)
-        protDomtblLists = buildDomtblList(domTblPath, minEval, "swissProt")
-
-        # we grab genomeLength from first entry of list of line info lists for use in buildDfamList
-        genomeLength = protDomtblLists[0][1]
+        protDomtblList = buildDomtblList(domTblPath, minEval, "swissProt")
 
     if pfamDomtblDir:
         pfamDomtblPath = "%s/%s.domtbl" % (pfamDomtblDir, prophageName)
-        pfamDomtblLists = buildDomtblList(pfamDomtblPath, minEval, "Pfam A")
-
-        # we grab genomeLength from first entry of list of line info lists for use in buildDfamList
-        genomeLength = pfamDomtblLists[0][1]
+        pfamDomtblList = buildDomtblList(pfamDomtblPath, minEval, "Pfam A")
 
     if dfamDir:
         dfamPath = "%s/%s.dfam" % (dfamDir, prophageName)
-        dfamLists = buildDfamList(dfamPath, minEval, genomeLength)
+        dfamList = buildDfamList(dfamPath, minEval)
+        if genomeLength:
+            setDfamGenomeLength(dfamList, genomeLength)
 
-    annotationDict = {}
-    # list of booleans with a length equivalent to genome being plotted. We want to avoid annotating these images with protein domains
-    # in locations already annotated by proteins, so indexes annotated by protein data will be set to true. If a domain's annotation overlaps
-    # with any of these true values, we don't include it
-    isOccupiedList = [False] * genomeLength
+    annotatedGenome = Genome(prophageName)
+    # list of tuples containing protein start and end coordinates, relative to the viral genome
+    protCoordList = []
 
-    # currently, we expected .dfam format data to be recombinase and pseudogene matches
-    for protLineList in (protDomtblLists + dfamLists):
-        # to determine cases where protein domain annotations overlap with protein annotations
+    # currently, we expected .dfam format data to be recombinase and pseudogene hits. These are both (or were) protein-coding sequence, so we union
+    # the list of .dfam Matchs with the list of protein .domtbl Matches
+    for protMatch in (protDomtblList + dfamList):
+        # to determine cases where protein domain annotations overlap with protein annotations in the prophage genomes,
         # we also set values corresponding to protein annotation coordinates to True in isOccupiedList.
         # Since isOccupiedList is 0-indexed, we subtract 1 from xStart
-        xStart = protLineList[5] - 1
-        xEnd = protLineList[6]
+        xStart = protMatch.aliSt - 1
+        xEnd = protMatch.aliEn
 
-        for index in range(xStart, xEnd):
-            isOccupiedList[index] = True
-
-        if xStart in annotationDict:
-            annotationDict[xStart].append(protLineList)
+        # record protein coordinate tuple in protCoordList. If end coordinate is smaller than start, flip them temporarily
+        if xEnd < xStart:
+            tempXStart = xEnd
+            tempXEnd = xStart
         else:
-            valueList = [protLineList]
-            annotationDict[xStart] = valueList
+            tempXStart = xStart
+            tempXEnd = xEnd
 
-    for pfamLineList in pfamDomtblLists:
-        xStart = pfamLineList[5] - 1
-        xEnd = pfamLineList[6]
+        protCoordList.append((tempXStart, tempXEnd))
+
+        if xStart in annotatedGenome.matches:
+            annotatedGenome.matches[xStart].append(protMatch)
+        else:
+            valueList = [protMatch]
+            annotatedGenome.matches[xStart] = valueList
+
+    for pfamMatch in pfamDomtblList:
+        xStart = pfamMatch.aliSt - 1
+        xEnd = pfamMatch.aliEn
 
         # should be False if no protein annotation lines overlap with domain annotation
         overlapsWithProtein = False
 
-        for index in range(xStart, xEnd):
-            if isOccupiedList[index]:
-                overlapsWithProtein = True
+        for coordTuple in protCoordList:
+            # if xEnd is less than xStart, temporarily flip them
+            if xEnd < xStart:
+                tempXStart = xEnd
+                tempXEnd = xStart
+            else:
+                tempXStart = xStart
+                tempXEnd = xEnd
+
+                if detectOverlap(tempXStart, tempXEnd, coordTuple[0], coordTuple[1]):
+                    overlapsWithProtein = True
 
         # We want to sort annotation lines by length to prioritize drawing longest lines closest to the x-axis, so we use line length as the key.
         # If key already in dictionary, append our list of line info to value (list of lists of line info)
         if not overlapsWithProtein:
-            if xStart in annotationDict:
-                annotationDict[xStart].append(pfamLineList)
+            if xStart in annotatedGenome.matches:
+                annotatedGenome.matches[xStart].append(pfamMatch)
             else:
-                valueList = []
-                valueList.append(pfamLineList)
-                annotationDict[xStart] = valueList
+                valueList = [pfamMatch]
+                annotatedGenome.matches[xStart] = valueList
 
-    return annotationDict
+    return annotatedGenome
+
+def setDfamGenomeLength(dfamList, genomeLength):
+    for match in dfamList:
+        match.genomeLength = genomeLength
 
 
 # read in information from .dfam format files
-def buildDfamList(dfamPath, minEval, genomeLength):
+def buildDfamList(dfamPath, minEval):
     infoList = []
 
     # read in info from .dfam file
@@ -85,7 +174,6 @@ def buildDfamList(dfamPath, minEval, genomeLength):
             # '#' char indicates a line doesn't contain data
             if(line[0] != "#"):
                 # create a list to store this line's data
-                lineList = []
                 dataList = line.split()
                 joinString = " "
 
@@ -103,17 +191,8 @@ def buildDfamList(dfamPath, minEval, genomeLength):
 
                 # we only want entries with e-value <= minimum (default 1e-5)
                 if (iEvalue <= minEval):
-                    lineList.append(matchName)
-                    lineList.append(genomeLength)
-                    lineList.append(iEvalue)
-                    lineList.append(hmmFrom)
-                    lineList.append(hmmTo)
-                    lineList.append(aliFrom)
-                    lineList.append(aliTo)
-                    lineList.append(accID)
-                    lineList.append(description)
-
-                    infoList.append(lineList)
+                    match = Match(matchName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description)
+                    infoList.append(match)
 
     return infoList
 
@@ -128,8 +207,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
         for line in domTblData:
             # '#' char indicates a line doesn't contain data
             if(line[0] != "#"):
-                # create a list to store this line's data
-                lineList = []
+                # create a list to store this line's datallinux terminal is something a fileinux terminal is something a file
                 dataList = line.split()
                 joinString = " "
 
@@ -152,16 +230,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
 
                 # we only want entries with e-value <= minimum (default 1e-5)
                 if (iEvalue <= minEval):
-                    lineList.append(domainName)
-                    lineList.append(tlen)
-                    lineList.append(iEvalue)
-                    lineList.append(hmmFrom)
-                    lineList.append(hmmTo)
-                    lineList.append(aliFrom)
-                    lineList.append(aliTo)
-                    lineList.append(accID)
-                    lineList.append(description)
-
-                    infoList.append(lineList)
+                    match = Match(domainName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description, tlen)
+                    infoList.append(match)
 
     return infoList
