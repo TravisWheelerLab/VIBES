@@ -31,7 +31,8 @@ my @genomes = glob "$inputDir/*";
 # run tRNAscan-SE to search for tRNAs in genome
 foreach my $genome (@genomes) { 
     # run tRNAscan-SE with brief and quiet, which suppress header lines in output
-    my $tRNAscanResults = do_cmd("tRNAscan-SE --brief --quiet $genome");    
+    my $tRNAscanResults = do_cmd("tRNAscan-SE --brief --quiet $genome");
+    do_cmd("esl-sfetch --index $genome");
     foreach my $line (split /\n/, $tRNAscanResults) {
         if ($line =~ /(.+?)\s+\d+\s+(\d+)\s+(\d+)\s+(\w+)\s+([ACTG]+)/) {
             my $seqName = $1;
@@ -40,16 +41,23 @@ foreach my $genome (@genomes) {
             my $aminoAcid = $4;
             my $antiCodon = $5;
 
-            my $fastaHeader = 
+            # match as many characters as possible until we encounter the last '/', then grab everything until we come across a '.' character.
+            # This should capture the name of the genome from its path
+            $genome =~ /.+\/(.+?)\./;
+            my $genomeName = $1;
 
-            do_cmd("esl-sfetch --index $genome");
-            my $seq = do_cmd("esl-sfetch -c $startCoord..$endCoord $genome \"$seqName\"");
+            my $fastaHeader = "$aminoAcid\_$genomeName\_$startCoord\.\.$endCoord $antiCodon";
+
+            my $seq = do_cmd("esl-sfetch -n \"$fastaHeader\" -c $startCoord..$endCoord $genome \"$seqName\"");
 
         }
         else {
             die "Regex failed to parse tRNAscan-SE output line $line\n";
         }
-    } 
+    }
+
+    # delete index file- otherwise, tRNAscan-SE will run on it and be confused
+    do_cmd("rm $genome.ssi");
 }
 
 sub do_cmd {
