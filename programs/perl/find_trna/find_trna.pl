@@ -83,6 +83,12 @@ if ($prefix) {
 foreach my $aminoAcid (keys %trnaSeq) {
     my $outputPath = "$outputDir/$prefix$aminoAcid.fasta";
 
+    if (-e $outputPath) {
+        unless($force) {
+            die "$outputPath already exists. Use --force to automatically overwrite it";
+        }
+    }
+
     open(my $outputHandle, ">", $outputPath) or die "Can't open output file: $!\n";
     print $outputHandle $trnaSeq{$aminoAcid};
     close($outputHandle);
@@ -123,5 +129,5 @@ sub help() {
     Misc:
         --help: Prints this help page.
         --force: Overwrite output files, if they already exist.
-        --verbose: Prints commands run by script and results of those commands.")
+        --verbose: Prints commands run by script and results of those");
 }
