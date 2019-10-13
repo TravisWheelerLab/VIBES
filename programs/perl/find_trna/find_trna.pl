@@ -9,6 +9,7 @@ use Getopt::Long;
 # Command-line options
 my $inputDir = '';
 my $outputDir = '';
+my $prefix = '';
 my $help = '';
 my $verbose = 0;
 my $force = '';
@@ -16,6 +17,7 @@ my $force = '';
 GetOptions (
     "input_dir=s"   => \$inputDir,
     "output_dir=s"  => \$outputDir,
+    "prefix=s"      => \$prefix,
     "help"          => \$help,
     "verbose"       => \$verbose,
     "force"         => \$force
@@ -26,15 +28,21 @@ if ($help) {
     help();
 }
 
+# store all files in input directory in array. We expect that all files in input dir are genomes
 my @genomes = glob "$inputDir/*";
+# create hash table to store tRNAs and their respective sequences
+my %trnaSeq;
 
 # run tRNAscan-SE to search for tRNAs in genome
 foreach my $genome (@genomes) { 
-    # run tRNAscan-SE with brief and quiet, which suppress header lines in output
-    my $tRNAscanResults = do_cmd("tRNAscan-SE --brief --quiet $genome");
+    # run tRNAscan-SE with brief and quiet, which suppress header lines in output. Run with -B flag to specify bacterial tRNA
+    my $tRNAscanResults = do_cmd("tRNAscan-SE -B --brief --quiet $genome");
+    # index genome so esl-sfetch can search it
     do_cmd("esl-sfetch --index $genome");
+
     foreach my $line (split /\n/, $tRNAscanResults) {
-        if ($line =~ /(.+?)\s+\d+\s+(\d+)\s+(\d+)\s+(\w+)\s+([ACTG]+)/) {
+        # use regex to capture info we want from tRNAscan-Se output line
+        if ($line =~ /(.+?)\s+\d+\s+(\d+)\s+(\d+)\s+(\w+)\s+(.+?)\s+/) {
             my $seqName = $1;
             my $startCoord = $2;
             my $endCoord = $3;
@@ -46,18 +54,38 @@ foreach my $genome (@genomes) {
             $genome =~ /.+\/(.+?)\./;
             my $genomeName = $1;
 
+            # esl-sfetch will output a .fasta format entry of the tRNA seq. We provide it with entry header
             my $fastaHeader = "$aminoAcid\_$genomeName\_$startCoord\.\.$endCoord $antiCodon";
+            my $seqFasta = do_cmd("esl-sfetch -n \"$fastaHeader\" -c $startCoord..$endCoord $genome \"$seqName\"");
 
-            my $seq = do_cmd("esl-sfetch -n \"$fastaHeader\" -c $startCoord..$endCoord $genome \"$seqName\"");
+            # check if hash entry for this amino acid already exists. If so, add .fasta entry to it. Else, create entry and populate with .fasta info
+            if (exists $trnaSeq{$aminoAcid}) {
+                $trnaSeq{$aminoAcid} .= "$seqFasta\n";
+            }
+            else {
+                $trnaSeq{$aminoAcid} = "$seqFasta\n";
+            }
 
         }
         else {
             die "Regex failed to parse tRNAscan-SE output line $line\n";
         }
     }
-
-    # delete index file- otherwise, tRNAscan-SE will run on it and be confused
+    # clean up index file once we're done with it
     do_cmd("rm $genome.ssi");
+}
+
+# if prefix has been specified, stick an '_' character on the end
+if ($prefix) {
+    $prefix = "$prefix\_";
+}
+
+foreach my $aminoAcid (keys %trnaSeq) {
+    my $outputPath = "$outputDir/$prefix$aminoAcid.fasta";
+
+    open(my $outputHandle, ">", $outputPath) or die "Can't open output file: $!\n";
+    print $outputHandle $trnaSeq{$aminoAcid};
+    close($outputHandle);
 }
 
 sub do_cmd {
@@ -73,4 +101,27 @@ sub do_cmd {
     }
     
     return $res;
+}
+
+sub help() {
+    print("
+# find_trna.pl: Automatically runs tRNAscan-SE on all genomes in a directory. 
+#The program uses the -B flag to search for bacterial tRNAs.
+    Usage: perl find_trna.pl --input_dir /path/ --output_dir /path/
+
+    Input:
+        --input_dir /path/: Path to directory of target genomes in .fasta
+            format. All files in this directory are expected to be genomes.
+
+    Output:
+        --output_dir /path/: Path to directory where output tRNA sequences
+            will be stored in .fasta format. Since these files are intended
+            to generate a MSA, tRNA sequences are saved in files named after
+            the respective amino acids they encode for.
+        --prefix str: Prefix that will be appended to output file names.
+
+    Misc:
+        --help: Prints this help page.
+        --force: Overwrite output files, if they already exist.
+        --verbose: Prints commands run by script and results of those commands.")
 }
