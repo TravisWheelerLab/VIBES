@@ -163,3 +163,44 @@ perl hmmbuild_mult_seq.pl --amino --hmmpress -input ../seq/viral_protein/uniprot
 
 Ran 2019-08-06_draft_tblzr_3.3d.sh on HPC. Of the ~4500 subjobs, ~20 failed to complete for reasons that aren't yet entirely clear (some are definitely due to running too long, but others may have been killed similar to problems encountered earlier with the job manager). Any individual runs in interactive instances or
 via 1-job (individual) .sh files will be recorded below.
+
+
+
+======
+Generated Plots for Travis (week of Sept 9th 2019)
+
+Prophage Occurrence Plot command:
+python visualize_nucleotide_counts.py ../../../tables/nuc_chart/2019-06-19_complete_combined_test/ test/test_output/ --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/ --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/
+
+Integrase Plot command:
+python integrase_dist_plot.py test/test_output/integrase_dist_plot.pdf --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/  --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/  --swissprot_fasta ../../../sequence_files/viral_proteins/amino/uniprot-reviewed-viral-coat-prot.fasta --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/ --dfam_fasta ../../../sequence_files/viral_proteins/nuc/all_nuc_seqs.fasta --bac_dfams test/bac_dfam/
+
+====
+Ran table_parser.pl on complete Ps genomes (9/30 - 10/5)
+ran msub 2019-09-30_complete_parser.sh on HPC server
+
+=====
+(10/13/2019)
+Ran "perl find_trna.pl --input_dir ../seq/pseudomonas/complete_genomes/ --prefix Ps --output_dir ../fasta/trna/ -v -f" on bioinfo
+Ran  "mafft --auto fasta/trna/Ps_Gly.fasta > afa/trna/Ps_Gly.afa" on bioinfo
+Ran "hmmbuild hmm/trna/Ps_Gly.hmm afa/trna/Ps_Gly.afa" on bioinfo
+Ran "hmmpress hmm/trna/Ps_Gly.hmm" on bioinfo
+Ran "nhmmscan --dfamtblout tables/dfam/trna_test/all_gly_ref_bac.dfam hmm/trna/Ps_Gly.hmm seq/pseudomonas/complete_genomes/Pseudomonas_aeruginosa_PAO1_107.fna" on bioinfo
+
+# I wasn't happy with the quality of the MSAs, so I decided to try just the aeruginosa species:
+Ran "perl find_trna.pl --input_dir ../seq/pseudomonas/complete_aeruginosa/ --prefix Ps_aeruginosa --output_dir ../fasta/aeruginosa_trna/ -v -f" on bioinfo
+Ran "mafft --auto fasta/aeruginosa_trna/Ps_aeruginosa_Gly.fasta > afa/aeruginosa_trna/Ps_aeruginosa_Gly.afa" on bioinfo
+Ran "hmmbuild hmm/trna/Ps_aeruginosa_Gly.hmm afa/aeruginosa_trna/Ps_aeruginosa_Gly.afa" on bioinfo
+Ran "hmmpress hmm/trna/Ps_aeruginosa_Gly.hmm" on bioinfo
+Ran "nhmmscan --dfamtblout tables/dfam/trna_test/aeruginosa_gly_ref_bac.dfam hmm/trna/Ps_aeruginosa_Gly.hmm seq/pseudomonas/complete_genomes/Pseudomonas_aeruginosa_PAO1_107.fna" on bioinfo
+
+(10/17/2019)
+Ran "perl perl/align_seqs.pl --input_dir fasta/aeruginosa_trna/ --output_dir afa/aeruginosa_trna/ -v --thread 6" on bioinfo
+Ran "perl perl/align_seqs.pl --input_dir fasta/trna/ --output_dir afa/trna/ -v --thread 6" on bioinfo
+
+=====
+(10/24/2019)
+Created TravisWheelerLab GitHub repo for code and pushed to it:
+git remote add origin https://github.com/TravisWheelerLab/pseudomonas_pipeline.git
+git push -u origin master
+git push -u origin development

@@ -137,7 +137,9 @@ sub help {
     Input:
         --input_dir /path/: Path to directory of target genomes in .fasta
             format. All files in this directory are expected to be genomes.
-            This option is mutually exclusion with --input_fasta.
+            This option is mutually exclusive with --input_fasta.
+        --input_fasta /path.fasta: Path to single input .fasta file. This option
+            is mutually exclusive with --input_dir.
 
     Output:
         --output_dir /path/: Path to directory where output tRNA sequences
@@ -149,5 +151,5 @@ sub help {
     Misc:
         --help: Prints this help page.
         --force: Overwrite output files, if they already exist.
-        --verbose: Prints commands run by script and results of those");
+        --verbose: Prints commands run by script and their results.");
 }

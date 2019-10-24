@@ -91,6 +91,8 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
             colorCount = 0
 
     plt.tight_layout()
+    plt.xlim(0, genomeLength)
+    plt.ylim(bottom=0)
     pp = PdfPages("%s/%s.pdf" % (outputDir, prophageName))
     pp.savefig(bbox_inches='tight')
     pp.close()
@@ -131,7 +133,9 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
 
             dataInv = ax.transData.inverted()  # convert from display units (pixels?) to data units
 
-            box = mpl.text.Text.get_window_extent(ann)
+            # cerdit to jklymak at https://stackoverflow.com/questions/18405652/savefig-pgf-runtimeerror-cannot-get-window-extent-w-o-renderer for
+            # workaround to 'Cannot get window extent w/o renderer' error
+            box = mpl.text.Text.get_window_extent(ann, renderer=fig.canvas.get_renderer())
             textAxCoords = dataInv.transform(box.extents)
             textWidth = textAxCoords[2] - textAxCoords[0]
 

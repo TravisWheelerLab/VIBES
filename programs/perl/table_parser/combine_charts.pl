@@ -45,7 +45,7 @@ sub scan_index_file {
     my $prophage = '';
     my $file = $_;
 
-    #unless the 'file' we're examining is a directory, 
+    #unless the 'file' we're examining is a direc1tory, 
     unless (-d) {
         #grab the prophage name from file name
         if ($file =~ /(.+?)Chart.txt/) {
@@ -55,7 +55,7 @@ sub scan_index_file {
             die "Unable to parse file name: $file\n";
         }
 
-        my $arrayRef = '';
+        my $arrayRef = undef;
 
         #if the hash doesn't have an entry for this prophage, create one
         unless (exists $phageHash{$prophage}) {
@@ -85,7 +85,7 @@ sub scan_index_file {
         #print scalar @{$arrayRef} . "\n\n";
     }
     else {
-        print "Entering dir: $file\n" if $verbose;
+        print "\nEntering dir: $file\n" if $verbose;
     }
 }
 

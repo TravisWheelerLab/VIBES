@@ -137,7 +137,7 @@ sub do_cmd {
         print "$res\n";
     }
     
-    return ;
+    return $res;
 }
 
 # checks if a .dfam file has no matches. Returns 1 if no matches are found, 0 if matches are present

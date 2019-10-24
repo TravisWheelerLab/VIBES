@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
-
+# Simple script that, when given a directory populated with genomes, aligns each genome against itself and stores results in output dir.
+# Uses nhmmer to align with the --noali flag to suppress alignment output. Intended to help find flanking tRNA seq
 use strict;
 use warnings;
 use Getopt::Long;
