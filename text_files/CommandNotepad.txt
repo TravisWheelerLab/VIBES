@@ -198,9 +198,130 @@ Ran "nhmmscan --dfamtblout tables/dfam/trna_test/aeruginosa_gly_ref_bac.dfam hmm
 Ran "perl perl/align_seqs.pl --input_dir fasta/aeruginosa_trna/ --output_dir afa/aeruginosa_trna/ -v --thread 6" on bioinfo
 Ran "perl perl/align_seqs.pl --input_dir fasta/trna/ --output_dir afa/trna/ -v --thread 6" on bioinfo
 
+(10/28/2019)
+perl perl/hmmbuild_mult_fasta.pl --input_dir afa/aeruginosa_trna/ --output_dir hmm/aeruginosa_trna/ --cpu 6 -v
+rm *.hmm.* # I realized that I probably wanted all of these in the same .hmm folder...
+cat *.hmm > test_aer_trna.hmm
+hmmpress test_aer_trna.hmm
+
 =====
 (10/24/2019)
 Created TravisWheelerLab GitHub repo for code and pushed to it:
 git remote add origin https://github.com/TravisWheelerLab/pseudomonas_pipeline.git
 git push -u origin master
 git push -u origin development
+
+=====
+(10/31/2019)
+Removed dashes from Pat's prophage alignment
+perl remove_dashes.pl --input "all Pf prophage alingment.fasta" --output all_Pf_prophage.fasta
+(on bioinfo) mafft --reorder --thread 6 fasta/all_Pf_prophage.fasta > afa/all_Pf_prophage_ali_mafft.afa
+perl fetch_ali_column.pl --coords 13982..30241 --input all_Pf_prophage_ali_mafft.afa --output all_Pf_prophage_ali_mafft_13982-30241.afa
+esl-reformat -d afa all_Pf_prophage_ali_mafft.afa > pf_prophage_mafft_dna.afa # exactly one phage was from RNA and used U's instead of T's, so we convert to DNA to make # FastTree happy 
+FastTree -nt pf_prophage_mafft_dna.afa > ../newick/pf_prophage_mafft_dna_full.newick
+esl-reformat -d afa all_Pf_prophage_ali_mafft_13982-30241.afa > pf_prophage_mafft_dna_13982-30241.afa
+FastTree -nt pf_prophage_mafft_dna_13982-30241.afa > ../newick/pf_prophage_mafft_dna_core.newick
+
+# after extending core genome region:
+perl fetch_ali_column.pl --coords 13982..33333 --input all_Pf_prophage_ali_mafft.afa --output all_Pf_prophage_ali_mafft_13982-33333.afa
+esl-reformat -d afa all_Pf_prophage_ali_mafft_13982-33333.afa > pf_prophage_mafft_dna_13982-33333.afa
+FastTree -nt pf_prophage_mafft_dna_13982-33333.afa > ../newick/pf_prophage_mafft_dna_core_33333.newick
+
+# downloaded bactieral seq in .fasta format
+All Swissprot bacterial protein sequence: https://www.uniprot.org/uniprot/?query=reviewed%3Ayes+taxonomy%3A%22Bacteria+%5B2%5D%22&sort=score
+All Pseudomonas Swissprot protein sequence: https://www.uniprot.org/uniprot/?query=organism:pseudomonas&fil=reviewed%3Ayes&sort=score
+
+gunzip uniprot-organism%3Apseudomonas-filtered-reviewed%3Ayes.fasta.gz
+mv uniprot-organism%3Apseudomonas-filtered-reviewed%3Ayes.fasta uniprot_ps_prot.fasta
+
+# used regex statement to capture accession IDs, replace with accID_bac
+\|(.+?)\|
+\|$1_bac\|
+perl hmmbuild_mult_seq.pl --input ../seq/fasta/bacterial_protein/uniprot_ps_prot_bac.fasta --output ../hmm/viral_protein/ps_bac_prot.hmm --cpu 16 --verbose --amino
+
+cat ps_bac_prot.hmm > 2019-11-04_viral_bac_prot.hmm
+cat swissprot_viral_prots.hmm >> 2019-11-04_viral_bac_prot.hmm
+
+# created 2019-11-05_prophage_seq.fasta by removing dashes from Pat's .afa
+ perl fasta_split.pl -i  ../../../sequence_files/prophage/2019-11-05_prophage_seq.fasta -o ../../../sequence_filesprophage/2019-11-05_individual_phage/
+
+ # manually moved selected review phages to their own dir
+
+hmmpress Pfam-A.hmm
+hmmpress 2019-11-04_viral_bac_prot.hmm
+
+python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/viral_protein/2019-11-04_viral_bac_prot.hmm ../tables/domtbl/2019-11-05_rev_phage_swissprot/
+python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/Pfam-A.hmm ../tables/domtbl/2019-11-05_rev_phage_pfam/
+
+perl scan_domtbls.pl --input ../../../tables/domtbl/2019-11-05_rev_phage_swissprot --output ../../../tables/domtbl/2019-11-05_rev_phage_swissprot_scanned/ -v
+perl scan_domtbls.pl --input ../../../tables/domtbl/2019-11-05_rev_phage_pfam --output ../../../tables/domtbl/2019-11-05_rev_phage_pfam_scanned/ -v
+
+perl spoof_charts.pl --input_dir ../../../sequence_files/prophage/review_paper_example_phage/ -o spoof_charts/
+python visualize_nucleotide_counts.py spoof_charts/ rev_paper_phage/ --swissprot_domtbl ../../../tables/domtbl/2019-11-05_rev_phage_swissprot_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-11-05_rev_phage_pfam_scanned/
+
+
+#realized that phage seq are included in pseudomonas protein databases- updated search to exclude them
+All Swissprot Ps. seqs w/o phage: https://www.uniprot.org/uniprot/?query=organism%3Apseudomonas+NOT+organism%3Aphage+reviewed%3Ayes&sort=score
+
+perl hmmbuild_mult_seq.pl --input ../seq/fasta/bacterial_protein/swissprot_ps_seq_no_phage_bac.fasta --output ../hmm/viral_protein/2019-11-05_swiss_bac_no_phage.hmm --cpu 16 --verbose --amino
+
+cat swissprot_viral_prots.hmm > 2019-11-05_viral_and_no_phage_bac.hmm
+cat 2019-11-05_swiss_bac_no_phage.hmm >> 2019-11-05_viral_and_no_phage_bac.hmm
+hmmpress 2019-11-05_viral_and_no_phage_bac.hmm
+
+python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/viral_protein/2019-11-05_viral_and_no_phage_bac.hmm ../tables/domtbl/2019-11-05_rev_phage_swissprot/ --force
+
+perl scan_domtbls.pl --input ../../../tables/domtbl/2019-11-05_rev_phage_swissprot --output ../../../tables/domtbl/2019-11-05_rev_phage_swissprot_scanned/ -v --force
+
+python visualize_nucleotide_counts.py spoof_charts/ better_rev_prophage/ --swissprot_domtbl ../../../tables/domtbl/2019-11-05_rev_phage_swissprot_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-11-05_rev_phage_pfam_scanned/
+
+# Added Pf1 and Pf7 seq to 2019-11-05_prophage_seq.fasta
+mafft --reorder --thread 6 fasta/2019-11-05_prophage_seq.fasta > afa/2019-11-05_prophage_seq.afa
+perl fetch_ali_column.pl --coords 13982..33333 --input ../afa/2019-11-05_prophage_seq.afa --output ../afa/2019-11-05_prophage_pf1_pf7_13982-33333.afa
+esl-reformat -d afa ../afa/2019-11-05_prophage_pf1_pf7_13982-33333.afa > 2019-11-05_prophage_pf1_pf7_13982-33333_dna.afa
+FastTree -nt afa/2019-11-05_prophage_pf1_pf7_13982-33333_dna.afa > newick/2019-11-05_prophage_pf1_pf7_13982-33333_dna.newick
+
+# got pf4r seq from pseudomonas.com: http://pseudomonas.com/feature/show/?id=152109732&view=sequence
+hmmbuild ../../hmm/viral_proteins/pf4r.hmm pf4r.fasta
+cp 2019-11-05_viral_and_no_phage_bac.hmm 2019-11-06_viral_bac_pf4r.hmm
+cat ../pf4r.hmm >> 2019-11-06_viral_bac_pf4r.hmm
+hmmpress 2019-11-06_viral_bac_pf4r.hmm
+
+ python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/viral_protein/2019-11-06_viral_bac_pf4r.hmm ../tables/domtbl/2019-11-06_rev_phage_pf4r/
+mv ../tables/domtbl/2019-11-06_rev_phage_pf4r ../tables/domtbl/2019-11-06_rev_phage_pf4r_swissprot
+python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/Pfam-A.hmm ../tables/domtbl/2019-11-06_rev_phage_pf4r_pfam
+
+perl scan_domtbls.pl --input ../../../tables/domtbl/2019-11-06_rev_phage_pf4r_swissprot/ --output ../../../tables/domtbl/2019-11-06_rev_phage_pf4r_swissprot_scanned/ -v
+perl scan_domtbls.pl --input ../../../tables/domtbl/2019-11-06_rev_phage_pf4r_pfam/ --output ../../../tables/domtbl/2019-11-06_rev_phage_pf4r_pfam_scanned/ -v
+
+cd ../visualize/spoof_charts
+rm *
+
+# replaced all instances of pf4r data lines with |pf4r| to work better with swissprot-focused regex
+python visualize_nucleotide_counts.py spoof_charts/ review_paper_phage_plots/ --swissprot_domtbl ../../../tables/domtbl/2019-11-06_rev_phage_pf4r_swissprot_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-11-06_rev_phage_pf4r_pfam_scanned/
+
+# rooted phylogeny timeeee
+cat 2019-11-05_prophage_seq.fasta > 2019-11-05_rooted_phylo_seq.fasta
+mv 2019-11-06_rooted_phylo_seq.fasta
+
+mafft --reorder --thread 6 seq/prophage_seq/2019-11-06_rooted_phylo_seq.fasta > afa/2019-11-06_rooted_phylo_seq.afa
+perl fetch_ali_column.pl -c 13952..33333 -i ../afa/2019-11-06_rooted_phylo_seq.afa -o ../afa/2019-11-06_rooted_phylo_seq_13952-33333.afa
+esl-reformat -d afa ../afa/2019-11-06_rooted_phylo_seq_13952-33333.afa > ../afa/2019-11-06_rooted_phylo_seq_13952-33333_dna.afa
+FastTree -nt afa/2019-11-06_rooted_phylo_seq_13952-33333_dna.afa > newick/2019-11-06_rooted_phylo_13952-33333.newick
+
+cp 2019-08-02_complete_3.3dev_scanned/* 2019-08-02_complete_3.3dev_scanned_non-aer/
+mv 2019-08-02_complete_3.3dev_scanned_non-aer/*aeruginosa* 2019-08-02_complete_3.3dev_scanned_aer/
+
+perl no_cluster_table_parser.pl --dfam ../../../tables/dfam/2019-08-02_complete_3.3dev_scanned_aer/ --bac_genome ../../../sequence_files/pseudomonas/complete_genomes/ --tsv ../../../tables/tsv/2019-08-02_complete_3.3dev_scanned_aer/ --index_chart ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_aer/ --verbose --force
+
+perl no_cluster_table_parser.pl --dfam ../../../tables/dfam/2019-08-02_complete_3.3dev_scanned_non-aer/ --bac_genome ../../../sequence_files/pseudomonas/complete_genomes/ --tsv ../../../tables/tsv/2019-08-02_complete_3.3dev_scanned_non-aer/ --index_chart ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_non-aer/ --verbose --force
+
+perl combine_charts.pl --inputdir ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_aer/ --outputdir ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_aer_combined/ -f
+perl combine_charts.pl --inputdir ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_non-aer/ --outputdir ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_non-aer_combined/ -f
+
+python visualize_nucleotide_counts.py ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_aer_combined/ ../../../pdf/2019-08-02_complete_aer_plots/ --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/ --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/
+python visualize_nucleotide_counts.py ../../../tables/nuc_chart/2019-08-02_complete_3.3dev_scanned_non-aer_combined/ ../../../pdf/2019-08-02_complete_non-aer_plots/ --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/ --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/ --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/
+
+python integrase_dist_plot.py --pdf_output ../../../pdf/aer_int_dist.pdf --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/  --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/  --swissprot_fasta ../../../sequence_files/viral_proteins/amino/uniprot-reviewed-viral-coat-prot.fasta --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/ --dfam_fasta ../../../sequence_files/viral_proteins/nuc/all_nuc_seqs.fasta --bac_dfams ../../../tables/dfam/2019-08-02_complete_3.3dev_scanned_aer/ --csv_output ../../../pdf/aer_int_dist.csv
+
+python integrase_dist_plot.py --pdf_output ../../../pdf/non-aer_int_dist.pdf --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/  --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/  --swissprot_fasta ../../../sequence_files/viral_proteins/amino/uniprot-reviewed-viral-coat-prot.fasta --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/ --dfam_fasta ../../../sequence_files/viral_proteins/nuc/all_nuc_seqs.fasta --bac_dfams ../../../tables/dfam/2019-08-02_complete_3.3dev_scanned_non-aer/ --csv_output ../../../pdf/non-aer_int_dist.csv
