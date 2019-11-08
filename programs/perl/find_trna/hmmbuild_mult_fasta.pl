@@ -8,7 +8,7 @@ use Getopt::Long;
 
 # Command-line options
 my $inputDir = '';
-my $outputDir = '';
+my $outputPath = '';
 my $prefix = '';
 my $cpu = 0;
 my $help = '';
@@ -17,7 +17,7 @@ my $force = '';
 
 GetOptions (
     "input_dir=s"   => \$inputDir,
-    "output_dir=s"  => \$outputDir,
+    "output=s"      => \$outputPath,
     "prefix=s"      => \$prefix,
     "cpu=i"         => \$cpu,
     "help"          => \$help,
@@ -30,8 +30,10 @@ if ($help) {
     help();
 }
 else {
+    die "You haven't finished fixing me yet, dummy\n";
     # store all files in input directory in array. We expect that all files in input dir are .afa alignments
     my @afas = glob "$inputDir/*";
+    my @outputs = [];
 
     foreach my $afa (@afas) {
         # match as many characters as possible until we encounter the last '/', then grab everything until we come across a '.' character.
@@ -44,11 +46,9 @@ else {
             $prefix = "$prefix\_";
         }
 
-        my $outputPath = "$outputDir/$prefix$afaName.hmm";
-
         # run hmmbuild, then hmmpress
-        do_cmd("hmmbuild --cpu $cpu $outputPath $afa");
-        do_cmd("hmmpress $outputPath")
+        
+        print $outputHandle do_cmd("hmmbuild --cpu $cpu $outputPath") . "\n";
     }
 }
 

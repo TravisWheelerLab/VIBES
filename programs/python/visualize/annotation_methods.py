@@ -62,6 +62,29 @@ class Match:
         self.genomeLength = genomeLength
 
 
+# .fasta format is a nightmare, but its header can roughly be divided into 2 parts: the first sequence of characters following >, up to the first space (the name)
+# and everything afterward (the description). Since HMMER discards non-name parts of .fasta headers, we need to recover them from the original .fasta file to
+# determine whether or not a sequnce corresponds to an integrase
+def readFastaDescs(fastaPath):
+    descDict = {}
+
+    with open(fastaPath, 'r') as fastaFile:
+        for line in fastaFile:
+            # if line starts with > when ignoring non-ASCII characters, capture everything before and after the first space character
+            if re.match(r'(?a)>', line):
+                regexMatch = re.search(r'(?a)>(.+?) (.+?)\n', line)
+                #if regexMatch is None:
+                    #print(fastaPath)
+                    #print(line)
+
+                name = regexMatch.group(1)
+                description = regexMatch.group(2)
+
+                descDict[name] = description
+
+    return descDict
+
+
 def detectOverlap(reg1St, reg1En, reg2St, reg2En):
     overlap = False
 
@@ -99,6 +122,8 @@ def annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval,
         dfamList = buildDfamList(dfamPath, minEval)
         if genomeLength:
             setDfamGenomeLength(dfamList, genomeLength)
+    else:
+        dfamList = []
 
     annotatedGenome = Genome(prophageName)
     # list of tuples containing protein start and end coordinates, relative to the viral genome

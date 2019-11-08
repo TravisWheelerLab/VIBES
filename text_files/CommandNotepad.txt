@@ -325,3 +325,8 @@ python visualize_nucleotide_counts.py ../../../tables/nuc_chart/2019-08-02_compl
 python integrase_dist_plot.py --pdf_output ../../../pdf/aer_int_dist.pdf --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/  --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/  --swissprot_fasta ../../../sequence_files/viral_proteins/amino/uniprot-reviewed-viral-coat-prot.fasta --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/ --dfam_fasta ../../../sequence_files/viral_proteins/nuc/all_nuc_seqs.fasta --bac_dfams ../../../tables/dfam/2019-08-02_complete_3.3dev_scanned_aer/ --csv_output ../../../pdf/aer_int_dist.csv
 
 python integrase_dist_plot.py --pdf_output ../../../pdf/non-aer_int_dist.pdf --swissprot_domtbl ../../../tables/domtbl/2019-08-02_swissprot_prophage_code11_scanned/  --pfam_domtbl ../../../tables/domtbl/2019-07-03_Pfam_A_prophage_scanned/  --swissprot_fasta ../../../sequence_files/viral_proteins/amino/uniprot-reviewed-viral-coat-prot.fasta --dfam_dir ../../../tables/dfam/2019-07-25_phage_nuc_annotations_scanned/ --dfam_fasta ../../../sequence_files/viral_proteins/nuc/all_nuc_seqs.fasta --bac_dfams ../../../tables/dfam/2019-08-02_complete_3.3dev_scanned_non-aer/ --csv_output ../../../pdf/non-aer_int_dist.csv
+
+# phylogeny with no pseudophages
+mafft --reorder --thread 6 afa/2019-11-08_rooted_no_pseudo_phage.afa > afa/2019-11-08_rooted_no_pseudo_phage_mafft.afa
+esl-reformat -d afa 2019-11-08_rooted_no_pseudo_phage_mafft.afa > 2019-11-08_rooted_no_pseudo_phage_mafft_dna.afa
+FastTree -nt afa/2019-11-08_rooted_no_pseudo_phage_mafft_dna.afa > newick/2019-11-08_rooted_no_pseudo_phage_mafft_dna.newickcd
