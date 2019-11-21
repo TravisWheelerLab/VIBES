@@ -8,21 +8,23 @@ use Getopt::Long;
 
 # Command-line options
 my $inputDir = '';
-my $outputPath = '';
+my $outputDir = '';
 my $prefix = '';
 my $cpu = 0;
 my $help = '';
 my $verbose = 0;
-my $force = '';
+my $force = 0;
+my $hmmpress = 0;
 
 GetOptions (
     "input_dir=s"   => \$inputDir,
-    "output=s"      => \$outputPath,
+    "output_dir=s"  => \$outputDir,
     "prefix=s"      => \$prefix,
     "cpu=i"         => \$cpu,
     "help"          => \$help,
     "verbose"       => \$verbose,
-    "force"         => \$force
+    "force"         => \$force,
+    "hmmpress"      => \$hmmpress
     )
 or die("Unknown option, try --help\n");
 
@@ -30,10 +32,9 @@ if ($help) {
     help();
 }
 else {
-    die "You haven't finished fixing me yet, dummy\n";
+    #die "You haven't finished fixing me yet, dummy\n";
     # store all files in input directory in array. We expect that all files in input dir are .afa alignments
     my @afas = glob "$inputDir/*";
-    my @outputs = [];
 
     foreach my $afa (@afas) {
         # match as many characters as possible until we encounter the last '/', then grab everything until we come across a '.' character.
@@ -46,9 +47,14 @@ else {
             $prefix = "$prefix\_";
         }
 
+        my $outputPath = "$outputDir/$prefix$afaName.hmm";
+
         # run hmmbuild, then hmmpress
-        
-        print $outputHandle do_cmd("hmmbuild --cpu $cpu $outputPath") . "\n";
+        do_cmd("hmmbuild --cpu $cpu $outputPath $afa");
+
+        if ($hmmpress) {
+            do_cmd("hmmpress $outputPath");
+        }
     }
 }
 
@@ -69,8 +75,7 @@ sub do_cmd {
 
 sub help {
     print("
-# $0: Automatically runs hmmbuild and hmmpress on all .afas in a directory. 
-#The program uses the --auto flag to automatically set MAFFT options.
+# $0: Automatically runs hmmbuild and hmmpress on all .afas in a directory.
     Usage: perl $0 --input_dir /path/ --output_dir /path/
 
     Input:
@@ -78,13 +83,14 @@ sub help {
 
     Output:
         --output_dir /path/: Path to directory where output hmms will be stored.
-        Hmmpress is also run by $0, so related indexing files will be stored in
-        the output dir.
+        If enabled, hmmpress-related indexing files will be stored in the output
+        dir.
         --prefix str: Prefix that will be appended to output file names.
 
     Misc:
         --cpu i: number of parallel workers to use in hmmbuild
         --help: Prints this help page.
         --force: Overwrite output files, if they already exist.
-        --verbose: Prints commands run by script and their results.\n");
+        --verbose: Prints commands run by script and their results.
+        --hmmpress: Runs hmmpress on output .hmms\n");
 }
