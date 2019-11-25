@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# runs hmmbuild on all .afa files in a directory, outputing resultant hmms in output dir 
+# removes all dash characters from MSA file sequence, recapitulating original .fasta seq
 use strict;
 use warnings;
 

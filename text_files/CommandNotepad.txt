@@ -287,7 +287,7 @@ cp 2019-11-05_viral_and_no_phage_bac.hmm 2019-11-06_viral_bac_pf4r.hmm
 cat ../pf4r.hmm >> 2019-11-06_viral_bac_pf4r.hmm
 hmmpress 2019-11-06_viral_bac_pf4r.hmm
 
- python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/viral_protein/2019-11-06_viral_bac_pf4r.hmm ../tables/domtbl/2019-11-06_rev_phage_pf4r/
+python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/viral_protein/2019-11-06_viral_bac_pf4r.hmm ../tables/domtbl/2019-11-06_rev_phage_pf4r/
 mv ../tables/domtbl/2019-11-06_rev_phage_pf4r ../tables/domtbl/2019-11-06_rev_phage_pf4r_swissprot
 python3 generate_domtbls.py --g 11 ../seq/fasta/review_paper_phage/ ../hmm/Pfam-A.hmm ../tables/domtbl/2019-11-06_rev_phage_pf4r_pfam
 
@@ -329,4 +329,40 @@ python integrase_dist_plot.py --pdf_output ../../../pdf/non-aer_int_dist.pdf --s
 # phylogeny with no pseudophages
 mafft --reorder --thread 6 afa/2019-11-08_rooted_no_pseudo_phage.afa > afa/2019-11-08_rooted_no_pseudo_phage_mafft.afa
 esl-reformat -d afa 2019-11-08_rooted_no_pseudo_phage_mafft.afa > 2019-11-08_rooted_no_pseudo_phage_mafft_dna.afa
-FastTree -nt afa/2019-11-08_rooted_no_pseudo_phage_mafft_dna.afa > newick/2019-11-08_rooted_no_pseudo_phage_mafft_dna.newickcd
+FastTree -nt afa/2019-11-08_rooted_no_pseudo_phage_mafft_dna.afa > newick/2019-11-08_rooted_no_pseudo_phage_mafft_dna.newick
+
+=====
+# Filter out bad SwissProt, TrEMBL entries (with > occurring mid-header) 11/14/2019
+perl uniprot_header_scan.pl --input ../../../sequence_files/uniprot/uniprot_sprot.fasta -o swissprot_entries.fasta -v
+perl uniprot_header_scan.pl --input ../../../sequence_files/uniprot/uniprot_trembl.fasta -o trembl_entries.fasta -v
+
+=====
+# Work on generating PA0721 phylo 11/20/2019
+perl remove_dashes.pl --input ../../../sequence_files/prophage/2019-11-08_no_pseudo_phage.afa --output ../../../sequence_files/prophage/2019-11-08_no_pseudo_phage.fasta
+
+perl hmmbuild_mult_fasta.pl -i ../../../sequence_files/afa/phage_resistance_seq/ -o ../../../hmm/phage_resistance_seq/ --hmmpress -v -f
+
+hmmsearcht -A sequence_files/afa/PA0720_ps_aer_no_pseudo_code11.afa -c 11 -o tables/hmmout/phage_resist/PA0720_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0720_ps_aer.hmm sequence_files/prophage/2019-11-08_no_pseudo_phage.fasta
+
+hmmsearcht -A sequence_files/afa/PA0721_ps_aer_no_pseudo_code11.afa -c 11 -o tables/hmmout/phage_resist/PA0721_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0721_ps_aer.hmm sequence_files/prophage/2019-11-08_no_pseudo_phage.fasta
+
+hmmsearcht -A sequence_files/afa/PA0722_ps_aer_no_pseudo_code11.afa -c 11 -o tables/hmmout/phage_resist/PA0722_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0722_ps_aer.hmm sequence_files/prophage/2019-11-08_no_pseudo_phage.fasta
+
+hmmsearcht -A sequence_files/afa/PA0723_ps_aer_no_pseudo_code11.afa -c 11 -o tables/hmmout/phage_resist/PA0723_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0723_ps_aer.hmm sequence_files/prophage/2019-11-08_no_pseudo_phage.fasta
+
+perl concatenate_afas.pl --afa_dir ../../../sequence_files/afa/phage_resist_hmmsearcht_code11/ --seq_db ../../../sequence_files/prophage/2019-11-08_no_pseudo_phage.fasta -o ../../../sequence_files/afa/concatenated_PA072X.afa
+Hey, put redundant code in a method and call it!
+Warning: Omitting Pf_prophage_strain_X13273_1374860_-_1380892 from output because no entries were found matching this species
+Warning: Omitting Pf_prophage_estimate_414927-419731_strain_w60856 from output because no entries were found matching this species
+Warning: Omitting Pf_prophage_estimate_2002373-2007389_strain_NCGM1900 from output because no entries were found matching this species
+
+=====
+# Creating vis chart with protein annotation 11/23/2019:
+python generate_domtbls.py --g 11 pf1_fasta/ ../../../hmm/viral_proteins/swissprot_viral_prots.hmm pf1_domtbl/
+mv pf1_domtbl/ pf1_domtbl_swissprot
+hmmpress ../../../hmm/Pfam_A/Pfam-A.hmm
+python generate_domtbls.py --g 11 pf1_fasta/ ../../../hmm/Pfam_A/Pfam-A.hmm pf1_domtbl_pfam/
+perl spoof_charts.pl --input ../viral_annotation/pf1_fasta/pf1.fasta --output pf1_chart/
+perl scan_domtbls.pl --input pf1_domtbl_swissprot --output pf1_domtbl_swissprot_scanned/
+perl scan_domtbls.pl --input pf1_domtbl_pfam --output pf1_domtbl_pfam_scanned/
+python visualize_nucleotide_counts.py --swissprot_domtbl ../viral_annotation/pf1_domtbl_swissprot_scanned/ --pfam_domtbl ../viral_annotation/pf1_domtbl_pfam_scanned/ pf1_chart/ pf1_pdf/
