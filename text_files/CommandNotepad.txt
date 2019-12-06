@@ -366,3 +366,19 @@ perl spoof_charts.pl --input ../viral_annotation/pf1_fasta/pf1.fasta --output pf
 perl scan_domtbls.pl --input pf1_domtbl_swissprot --output pf1_domtbl_swissprot_scanned/
 perl scan_domtbls.pl --input pf1_domtbl_pfam --output pf1_domtbl_pfam_scanned/
 python visualize_nucleotide_counts.py --swissprot_domtbl ../viral_annotation/pf1_domtbl_swissprot_scanned/ --pfam_domtbl ../viral_annotation/pf1_domtbl_pfam_scanned/ pf1_chart/ pf1_pdf/
+
+=====
+# Trying again to make phylogeny after correcting for duplicated seq and overlapping matches 11/27/2019
+hmmsearcht -A sequence_files/afa/phage_resist_hmmsearcht_code11/PA0720_ps_aer_no_pseudo_code11.afa -c 11 -E 1e-10 -o tables/hmmout/phage_resist/PA0720_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0720_ps_aer.hmm sequence_files/prophage/2019-11-27_no_pseudo_phage_pf1_corrected.fasta
+hmmsearcht -A sequence_files/afa/phage_resist_hmmsearcht_code11/PA0721_ps_aer_no_pseudo_code11.afa -c 11 -E 1e-10 -o tables/hmmout/phage_resist/PA0721_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0721_ps_aer.hmm sequence_files/prophage/2019-11-27_no_pseudo_phage_pf1_corrected.fasta
+hmmsearcht -A sequence_files/afa/phage_resist_hmmsearcht_code11/PA0722_ps_aer_no_pseudo_code11.afa -c 11 -E 1e-10 -o tables/hmmout/phage_resist/PA0722_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0722_ps_aer.hmm sequence_files/prophage/2019-11-27_no_pseudo_phage_pf1_corrected.fasta
+hmmsearcht -A sequence_files/afa/phage_resist_hmmsearcht_code11/PA0723_ps_aer_no_pseudo_code11.afa -c 11 -E 1e-10 -o tables/hmmout/phage_resist/PA0723_ps_aer_no_pseudo_code11.hmmout hmm/phage_resistance_seq/PA0723_ps_aer.hmm sequence_files/prophage/2019-11-27_no_pseudo_phage_pf1_corrected.fasta
+
+perl concatenate_afas.pl --afa_dir ../../../sequence_files/afa/phage_resist_hmmsearcht_code11/ --seq_db ../../../sequence_files/prophage/2019-11-27_no_pseudo_phage_pf1_corrected.fasta -o ../../../sequence_files/afa/concatenated_PA072X.afa
+Hey, put redundant code in a method and call it!
+Warning: Omitting Pf_prophage_estimate_414927-419731_strain_w60856 from output because no entries were found matching this species
+Warning: Omitting Pf_prophage_strain_X13273_1374860_-_1380892 from output because no entries were found matching this species
+Warning: Omitting Pf_prophage_estimate_2002373-2007389_strain_NCGM1900 from output because no entries were found matching this species
+
+# FastTree Version 2.1.10 Double precision (No SSE3) on laptop
+fasttree  sequence_files/afa/concatenated_PA072X.afa > newick/2019-11-27_concatenated_PA072X.newick
