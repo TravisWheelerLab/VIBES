@@ -12,11 +12,13 @@ my $inputPath = '';
 my $outputDir = '';
 my $help = 0;
 my $verbose = 0;
+my $force = 0;
 
 GetOptions (
     "input=s"       => \$inputPath,
     "output=s"      => \$outputDir,
     "help"          => \$help,
+    "force"         => \$force,
     "verbose"       => \$verbose
     )
 or die("Unknown option, try --help\n");
@@ -32,7 +34,13 @@ else {
         # strip whitespace characters such as \n from accession number. 'g' flag instructs regex to keep going after first match
         $accession =~ s/\s//g;
 
-        do_cmd("fastq-dump -O $outputDir $accession");
+        # unless an entry already exists for acession or --force was enabled
+        unless(-e "$outputDir/$accession.fastq" || $force) {
+            do_cmd("fastq-dump -O $outputDir $accession");
+        }
+        else {
+            print("File already found for $accession\n");
+        }
     }
 }
 
