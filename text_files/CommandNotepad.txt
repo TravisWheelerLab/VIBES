@@ -382,3 +382,8 @@ Warning: Omitting Pf_prophage_estimate_2002373-2007389_strain_NCGM1900 from outp
 
 # FastTree Version 2.1.10 Double precision (No SSE3) on laptop
 fasttree  sequence_files/afa/concatenated_PA072X.afa > newick/2019-11-27_concatenated_PA072X.newick
+
+=====
+# Working on running new Ps.com database w/ ~530 complete genomes through pipeline, using new phage seq
+# After manually fiddling with seq files to use Pf1, Pf4, Pf5, Pf6, Pf7 names and including pseudo phages, convert one RNA entry to DNA
+esl-reformat -d fasta 2019-12-09_all_phage_pf1_corrected.fasta > 2019-12-09_all_phage_pf1_corrected_dna.fasta

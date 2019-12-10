@@ -55,7 +55,8 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
         $entry =~ s/^([^\w]+?>|>)//;
         # capture header, sequence data separately
         $entry =~ m/(.+?)\n(.+)/s;
-        my $header = $1;
+        # we add a newline to the header to ensure it ends with a whitespace character, which makes a line of Regex complain less
+        my $header = "$1\n";
         my $seq = $2;
         # remove any non-word characters in sequence data
         $seq =~ s/[^\w]//g;
@@ -66,8 +67,9 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 
 
         open(my $fastaFile, ">", $tempFastaFile) or die "Can't create temporary .fasta file at $tempFastaFile: $!";
-        {
-            print $fastaFile ">$header\n$seq";
+        {   
+            # no additional newline required- we added one above
+            print $fastaFile ">$header$seq";
         }
 
         close $fastaFile;
@@ -93,9 +95,15 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
             $hmmbuildCmd .= "--cpu $cpuCount ";
         }
 
+        my $name = "";
+
         # grab header line up to first whitespace character
-        $header =~ m/(.+?)\s/;
-        my $name = $1;
+        if ($header =~ m/(.+?)\s/) {
+            $name = $1;
+        }
+        else {
+            die "Can't parse $header\n";
+        }
 
         # set name of sequence to header line
         $hmmbuildCmd .= "-n \"$name\" ";
