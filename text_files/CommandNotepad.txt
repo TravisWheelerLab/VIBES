@@ -387,3 +387,7 @@ fasttree  sequence_files/afa/concatenated_PA072X.afa > newick/2019-11-27_concate
 # Working on running new Ps.com database w/ ~530 complete genomes through pipeline, using new phage seq
 # After manually fiddling with seq files to use Pf1, Pf4, Pf5, Pf6, Pf7 names and including pseudo phages, convert one RNA entry to DNA
 esl-reformat -d fasta 2019-12-09_all_phage_pf1_corrected.fasta > 2019-12-09_all_phage_pf1_corrected_dna.fasta
+
+# build hmm database with newer 56 phage sequence Pat has provided us with
+perl hmmbuild_mult_seq.pl --input ../seq/prophage_seq/2019-12-09_all_phage_pf1_corrected_dna.fasta --output ../hmm/2019-12-10_56_phage.hmm --hmmpress --verbose --cpu 12 --dna
+

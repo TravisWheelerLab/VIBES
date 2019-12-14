@@ -99,8 +99,9 @@ sub be_verbose {
 
 sub help {
     print "
-#tableizer.pl: Use nhmmscan to search gen_dir genomes for hmm_db sequences or 
-#genomes. Outputs results in DFAM tabular format and automatically scans with 
+# $0:
+#Use nhmmscan to search gen_dir genomes for hmm_db sequences or genomes. 
+#Outputs results in DFAM tabular format and automatically scans with 
 #dfamscan.pl, removing redundant hits. Intended to be run on a server cluster
 #with a job manager assigning a number to each instance.
 -------------------------------------------------------------------------------

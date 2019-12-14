@@ -88,8 +88,8 @@ sub do_cmd {
 }
 
 sub help {
-    print("
-# $0: Automatically runs MAFFT on all .fastas in a directory. 
+    print("#$0
+#Automatically runs MAFFT on all .fastas in a directory. 
 #The program uses the --auto flag to automatically set MAFFT options.
     Usage: perl $0 --input_dir /path/ --output_dir /path/
 
