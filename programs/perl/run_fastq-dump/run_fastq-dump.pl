@@ -34,36 +34,36 @@ else {
     my $log;
     if ($logPath) {
         open $log, ">>$logPath";
-        print $log "=====\n";
         my $date = do_cmd("date");
-        print $log "$date\n";
-        print $log "
+        logPrint("=====
+$date
 Input path: $inputPath
 Output dir: $outputDir
 Help: $help
 Verbose: $verbose
 Force: $force
-";
-    }
 
-    while (my $accession = <$accessionFile>) {
-        # strip whitespace characters such as \n from accession number. 'g' flag instructs regex to keep going after first match
-        $accession =~ s/\s//g;
+", $log);
+}
 
-        # unless an entry already exists for accession and --force wasn't enabled
-        unless(-e "$outputDir/$accession.fastq" && !$force) {
-            do_cmd("fastq-dump -O $outputDir $accession", $log);
-        }
-        else {
-            my $string = "File already found for $accession\n";
-            print($string);
-            if ($logPath) {
-              print $log $string;
-            }
+while (my $accession = <$accessionFile>) {
+    # strip whitespace characters such as \n from accession number. 'g' flag instructs regex to keep going after first match
+    $accession =~ s/\s//g;
+
+    # unless an entry already exists for accession and --force wasn't enabled
+    unless(-e "$outputDir/$accession.fastq" && !$force) {
+        do_cmd("fastq-dump -O $outputDir $accession", $log);
+    }
+    else {
+        my $string = "File already found for $accession\n";
+        print($string);
+        if ($logPath) {
+          print $log $string;
         }
     }
-    close $accessionFile;
-    close $log;
+}
+close $accessionFile;
+close $log;
 }
 
 sub do_cmd {
@@ -73,17 +73,15 @@ sub do_cmd {
     if ($verbose > 0) {
         print "$cmd\n";
     }
+    logPrint("$cmd\n", $log);
+
     my $res = `$cmd 2>&1`;
 
     if ($verbose > 0) {
         print "$res\n";
     }
 
-    # If logPath set by user
-    if ($log) {
-        print $log "$cmd\n";
-        print $log "$res\n\n";
-    }
+    logPrint("$res\n", $log);
 
     
     return $res;
@@ -110,5 +108,15 @@ Misc:
     --force         Automatically overwrite output .fastq files, if they already
                     exist
     --verbose       Print all commands run to commandline output
-"
+";
+}
+
+# Print string to log
+sub logPrint {
+    my $string = $_[0];
+    my $log = $_[1];
+
+    if ($log) {
+        print $log "$string";
+    }
 }

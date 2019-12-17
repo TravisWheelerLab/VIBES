@@ -43,3 +43,19 @@ else {
     close($input);
     close($output);
 }
+
+sub help {
+    print "#$0:
+#Takes in an MSA .afa file and removes all gap characters, yielding the
+#original .fasta file as output
+--------------------------------------------------------------------------------
+Input:
+    --input <s>     Path to input .afa file
+
+Output:
+    --output <s>    Desired path to output .fasta file
+
+Misc:
+    --help          Displays this help pane
+";
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# runs hmmbuild on all .afa files in a directory, outputing resultant hmms in output dir 
+# capture columns from MSA
 use strict;
 use warnings;
 
@@ -68,4 +68,23 @@ else {
 
     close($input);
     close($output);
+}
+
+sub help {
+    print "#$0:
+#Capture specified columns from MSA .afa file and save to output .afa file
+--------------------------------------------------------------------------------
+Input:
+    --input <s>     Path to input .afa file
+    --columns <s>   Columns to be retrieved (from..to)
+
+Output:
+    --output <s>    Path to desired output .afa file
+
+Misc:
+    --help          Displays this help pane
+    --force         Automatically overwrite output file, if it already exists
+                    (Not yet implemented- this is currently default behaviour,
+                    rather than an option)
+";
 }
