@@ -386,8 +386,24 @@ fasttree  sequence_files/afa/concatenated_PA072X.afa > newick/2019-11-27_concate
 =====
 # Working on running new Ps.com database w/ ~530 complete genomes through pipeline, using new phage seq
 # After manually fiddling with seq files to use Pf1, Pf4, Pf5, Pf6, Pf7 names and including pseudo phages, convert one RNA entry to DNA
-esl-reformat -d fasta 2019-12-09_all_phage_pf1_corrected.fasta > 2019-12-09_all_phage_pf1_corrected_dna.fasta
+esl-reformat -d -o 2019-12-17_prophage_seq_name_change_dna.fasta fasta 2019-12-17_prophage_seq_name_change.fasta
 
 # build hmm database with newer 56 phage sequence Pat has provided us with
-perl hmmbuild_mult_seq.pl --input ../seq/prophage_seq/2019-12-09_all_phage_pf1_corrected_dna.fasta --output ../hmm/2019-12-10_56_phage.hmm --hmmpress --verbose --cpu 12 --dna
+perl hmmbuild_mult_seq.pl --input ../seq/prophage/2019-12-17_prophage_seq_name_change_dna.fasta --dna --verbose --cpu 6 --hmmpress --output ../hmm/2019-12-17_56_phage_name_change.hmm
 
+
+=====
+# Sending Travis coat protein clade seq
+esl-reformat stockholm aligned_fastas/Major_coat_Paeruginosa_align.fasta > stockholm/Major_coat_Paeruginosa_align.stockholm
+
+ esl-alimanip --seq-k text/dark_blue_clade.txt stockholm/Major_coat_Paeruginosa_align.stockholm > stockholm/dark_blue_clade.stockholm
+ esl-alimanip --seq-k text/green_clade.txt stockholm/Major_coat_Paeruginosa_align.stockholm > stockholm/green_clade.stockholm
+ esl-alimanip --seq-k text/pink_clade.txt stockholm/Major_coat_Paeruginosa_align.stockholm > stockholm/pink_clade.stockholm
+ esl-alimanip --seq-k text/purple_clade.txt stockholm/Major_coat_Paeruginosa_align.stockholm > stockholm/purple_clade.stockholm
+ esl-alimanip --seq-k text/red_clade.txt stockholm/Major_coat_Paeruginosa_align.stockholm > stockholm/red_clade.stockholm
+
+ esl-reformat afa stockholm/dark_blue_clade.stockholm > aligned_fastas/dark_blue_clade.afa
+ esl-reformat afa stockholm/green_clade.stockholm > aligned_fastas/green_clade.afa
+ esl-reformat afa stockholm/pink_clade.stockholm > aligned_fastas/pink_clade.afa
+ esl-reformat afa stockholm/purple_clade.stockholm > aligned_fastas/purple_clade.afa
+ esl-reformat afa stockholm/red_clade.stockholm > aligned_fastas/red_clade.afa

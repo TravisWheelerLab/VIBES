@@ -226,34 +226,34 @@ sub parse_tables {
 
 sub help {
     print "
-    #table_parser.pl: Extract information about viral sequences from DFAM tables
+#table_parser.pl: Extract information about viral sequences from DFAM tables
 
-    Basic options:
-        --help: Displays this page
-        --verbose: Print additional information about values held in
-            variables and commands used by table_parser
-        --force: Overwrite pre-existing directories in the index chart directory
-            if they already exist. This will erase all files in these
-            directories
-        --max_eval: Maximum allowable match evalue for match to be used
+Basic options:
+    --help: Displays this page
+    --verbose: Print additional information about values held in
+        variables and commands used by table_parser
+    --force: Overwrite pre-existing directories in the index chart directory
+        if they already exist. This will erase all files in these
+        directories
+    --max_eval: Maximum allowable match evalue for match to be used
 
-    Input options:
-        --dfam: Path to DFAM table directory
-        --bac_genomes: Path to directory with bacterial genomes
-        --jobnumber: Integer provided by the cluster job manager that tells
-            table_parser which dfam file it should use
+Input options:
+    --dfam: Path to DFAM table directory
+    --bac_genomes: Path to directory with bacterial genomes
+    --jobnumber: Integer provided by the cluster job manager that tells
+        table_parser which dfam file it should use
 
-    Output options:
-        --tsv: Path to .tsv directory. All .tsv file values are tab-delimited
-        --index_charts: Path to nucleotide index chart directory. Each files in 
-            this directory will be the length of its respective viral genome + 1
-            (because the first line is a header line). Each line therefore
-            corresponds to a position in the viral genome, with its int value
-            being the number of times that position was found to have a match
-            in the bacterial genome
-        --attsites: Path to flanking att side directory. Att site detection is
-            spotty at best in its current implementation- use of this feature
-            is not currently recommended.
+Output options:
+    --tsv: Path to .tsv directory. All .tsv file values are tab-delimited
+    --index_charts: Path to nucleotide index chart directory. Each files in 
+        this directory will be the length of its respective viral genome + 1
+        (because the first line is a header line). Each line therefore
+        corresponds to a position in the viral genome, with its int value
+        being the number of times that position was found to have a match
+        in the bacterial genome
+    --attsites: Path to flanking att side directory. Att site detection is
+        spotty at best in its current implementation- use of this feature
+        is not currently recommended.
 
 ";
 }
