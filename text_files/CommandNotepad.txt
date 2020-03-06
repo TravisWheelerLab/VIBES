@@ -407,3 +407,8 @@ esl-reformat stockholm aligned_fastas/Major_coat_Paeruginosa_align.fasta > stock
  esl-reformat afa stockholm/pink_clade.stockholm > aligned_fastas/pink_clade.afa
  esl-reformat afa stockholm/purple_clade.stockholm > aligned_fastas/purple_clade.afa
  esl-reformat afa stockholm/red_clade.stockholm > aligned_fastas/red_clade.afa
+
+ ====
+ # Acquiring longitudinal isolate seq...
+ perl run_fastq-dump_parallel.pl --input ../seq/fastq/conv_evo/Convergent_evolution_and_adaptation_of_Pseudomonas_aeruginosa_within_patients_with_cystic_fibrosis.txt --output ../seq/fastq/conv_evo/reads/ --jobs 24 --verbose
+ 
