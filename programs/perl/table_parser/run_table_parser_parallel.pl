@@ -30,7 +30,6 @@ GetOptions (
     "index_charts=s"=> \$chartDir,
     "att_sites=s"   => \$flankingAttDir,
     "jobs=i"        => \$jobs,
-    "suffix=s"      => \$suffix,
     "max_eval"      => \$maxEval,
     "force"         => \$force,
     "verbose"       => \$verbose,
@@ -43,13 +42,17 @@ if ($help) {
     exit;
 }
 
-#we assume every entry in the directory is a genome we're interested in
+#we assume every entry in the directory is a table we want
 my @tables = glob "tableDir/*";
+print("$tableDir\n");
+foreach my $path (@tables){
+    print("Path: $path\n");
+}
 # should give us length of @tables minus 1 (zero-indexed last index)
-my $seqLast = @tables - 1;
+my $seqLast = length @tables - 1;
 
 # set first part of command string, which should always be the same: we use seq to generate all numbers from 0 to len(@tables) - 1, 
-my $cmdString = "seq 0 $seqLast | parallel --dryrun -j $jobs perl table_parser.pl";
+my $cmdString = "seq 0 $seqLast | parallel -j $jobs perl table_parser.pl";
 
 # depending on set flags, concatenate same flags to cmdString
 if (defined $verbose) {
@@ -60,13 +63,9 @@ if (defined $force) {
     $cmdString .= " --force";
 }
 
-if (defined $suffix) {
-    $cmdString .= "--suffix $suffix";
-}
-
 #perl table_parser.pl --verbose --force --jobNumber $MOAB_JOBARRAYINDEX --prophage ../seq/prophage_seq/ --tables ../tables/dfam/2019-06-14_complete_scanned/ 
 #--genomes ../seq/pseudomonas/ --tsv ../tables/tsv/2019-06-19_complete --indexcharts ../nuc_chart/2019-06-19_complete --suffix _scanned
-$cmdString .= "--prophage $refProphageDir --tables $tableDir --bac_genomes $genomeDir --tsv $tsvDir --index_charts";
+$cmdString .= " --prophage $refProphageDir --dfam $tableDir --job_number {.} --bac_genomes $genomeDir --tsv $tsvDir --index_charts $chartDir";
 
 do_cmd($cmdString);
 
@@ -84,7 +83,6 @@ sub be_verbose {
     print "GenDir: $genomeDir\n";
     print "Table dir: $tableDir\n";
     print "Verbose: $verbose\n";
-    print "Table dir: $tableDir\n";
     print "Time to complete nhmmscan: $elapsed seconds\n";
     print "Current directory: $path";
 }
@@ -126,7 +124,8 @@ sub do_cmd {
     my $res = `$cmd 2>&1`;
 
     if ($verbose) {
-        print "$res\n";
+        print "$res";
+        print("\n");
     }
     
     return $res;

@@ -31,7 +31,6 @@ GetOptions (
     "index_charts=s"=> \$chartDir,
     "att_sites=s"   => \$flankingAttDir,
     "job_number=i"  => \$jobNumber,
-    "suffix=s"      => \$suffix,
     "max_eval"      => \$maxEval,
     "force"         => \$force,
     "verbose"       => \$verbose,
@@ -48,7 +47,7 @@ my @tables = glob "$tableDir/*" or die "Can't find $tableDir: $!";
 my $table = $tables[$jobNumber];
 
 #extract genome name from table name
-if ($table =~ /([^\/]+)$suffix\.dfam/) {
+if ($table =~ /([^\/]+)\.dfam/) {
     $genomeName = $1;
 }
 else {
