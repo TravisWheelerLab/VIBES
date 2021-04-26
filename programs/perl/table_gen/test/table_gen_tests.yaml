@@ -1,0 +1,6 @@
+config:
+  dir: ../
+
+tests:
+  pwd:
+    stdout: /home/conner/Documents/pseudomonas_workspace/programs/perl/table_gen

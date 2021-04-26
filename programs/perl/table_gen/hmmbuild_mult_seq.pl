@@ -37,6 +37,10 @@ if (($dna + $rna + $amino) > 1) {
     exit;
 }
 
+unless (-f $inputPath){
+    die "Input $inputPath is not a plain file: $!"
+}
+
 my $pathToFolder = $inputPath;
 $pathToFolder =~ s/[\w-]+\.fasta//; # remove file name from path to .fasta file, giving you the path to its folder
 
@@ -109,6 +113,12 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
         $hmmbuildCmd .= "-n \"$name\" ";
 
         $hmmbuildCmd .= "$tempHmmFile $tempFastaFile";
+
+        # temporary bugfixing print
+       # my $path = $ENV{'PATH'};
+       # print "PATH: $path\n";
+       # my $result = `type hmmbuild`;
+       # print "HMMBUILD: $result\n";
 
         do_cmd($hmmbuildCmd);
 

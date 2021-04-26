@@ -1,3 +1,0 @@
-tests:
-  it should work:
-    command: perl table_gen

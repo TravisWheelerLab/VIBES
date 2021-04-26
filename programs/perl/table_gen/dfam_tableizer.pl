@@ -4,7 +4,7 @@
 #and a boolean that sets the value of verbose.
 #Returns a .dfam table for each genome in the directory.
 
-#Credit to Kaitlin Carey for help in understanding how to run things on the cluster!
+#Thanks to Kaitlin Carey for help in understanding how to run things on the cluster!
 
 use strict;
 use warnings;
@@ -39,6 +39,28 @@ if($help) {
     exit
 }
 
+unless(-f $hmmPath) {
+    die "--hmm_db is not a file: $!";
+}
+
+unless(-d $tableDir) {
+    die "--dfam_dir input is not a directory: $!";
+}
+
+unless(-d $genomeDir) {
+    die "--gen_dir input is not a directory: $!";
+}
+
+unless(-d $scannedTableDir) {
+    die "--scan_dir input is not a directory: $!";
+}
+
+unless($genomeNumber >= 0) {
+    die "--job_number must be 0 or positive: $!";
+}
+
+
+
 if ($cpu < 0) {
     die("--cpu must be at least 0\n")
 }
@@ -48,6 +70,12 @@ my @genomes = glob "$genomeDir/*";
 
 #Extract file name from path, then run nhmmscan and dfamscan
 my $genome = $genomes[$genomeNumber];
+
+# make sure $genome exists before we go further
+unless(-f $genome) {
+    die "No genome corresponding to index $genomeNumber: $!";
+}
+
 my @splitLine = split('/', $genome);
 my $fileName;
 my $tablePath;
@@ -133,6 +161,11 @@ sub do_cmd {
         print "$cmd\n";
     }
     my $res = `$cmd 2>&1`;
+
+    # catch error thrown by backticks command
+    if ($? != 0) {
+        die "command returned error: $res";
+    }
 
     if ($verbose > 0) {
         print "$res\n";
