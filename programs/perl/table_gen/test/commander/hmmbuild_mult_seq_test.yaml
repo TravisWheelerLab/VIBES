@@ -1,0 +1,80 @@
+config:
+  inherit-env: true
+
+# tests have letter prefix to ensure execution in correct order (execution seems to be alphabetical for commander)
+tests:
+  # test that broken .fasta entries are caught
+  any it should flag input fasta with empty entry:
+    command: perl hmmbuild_mult_seq.pl -i test/hmmbuild/test_fasta_empty_entry.fasta --output test/hmmbuild/test_hmm_invalid_input.hmm
+    stderr: |
+      Use of uninitialized value $1 in concatenation (.) or string at hmmbuild_mult_seq.pl line 63, <$fileHandle> chunk 4.
+      Use of uninitialized value $seq in substitution (s///) at hmmbuild_mult_seq.pl line 66, <$fileHandle> chunk 4.
+      Use of uninitialized value $seq in concatenation (.) or string at hmmbuild_mult_seq.pl line 76, <$fileHandle> chunk 4.
+      Can't parse
+
+    exit-code: 25
+
+
+
+  b it should flag input that doesn't exist:
+    command: perl hmmbuild_mult_seq.pl -i test/hmmbuild/test_fasta_not_real.fasta --output test/hmmbuild/test_hmm_invalid_input.hmm
+    stderr: |
+      Input test/hmmbuild/test_fasta_not_real.fasta is not a plain file: No such file or directory at hmmbuild_mult_seq.pl line 41.
+    exit-code: 2
+
+  c it should flag that input is dir, not file:
+    command: perl hmmbuild_mult_seq.pl -i test/hmmbuild/ --output test/hmmbuild/test_hmm_invalid_input.hmm
+    stderr: "Input test/hmmbuild/ is not a plain file:  at hmmbuild_mult_seq.pl line 41."
+    exit-code: 255
+
+  d it shouldn't run if entry is composed of wrong data type (numbers):
+    command: perl hmmbuild_mult_seq.pl -i test/hmmbuild/test_fasta_number_entry.fasta --output test/hmmbuild/test_hmm_invalid_input.hmm
+    stderr: |
+      Alignment input open failed.
+         couldn't guess alphabet (maybe try --dna/--rna/--amino if available)
+         while reading file test/hmmbuild//temp4.fasta
+         while parsing for aligned FASTA format
+    exit-code: 0
+
+  e it shouldn't run with no input listed:
+    command: perl hmmbuild_mult_seq.pl -i  -o test/hmmbuild/test_hmm_invalid_input.hmm
+    stderr: |
+      Input -o is not a plain file: No such file or directory at hmmbuild_mult_seq.pl line 41.
+    exit-code: 2
+
+
+  f it should execute without error:
+    command: perl hmmbuild_mult_seq.pl --input test/hmmbuild/test_fasta_correct.fasta --output test/hmmbuild/test_hmm_correct.hmm
+    stdout:
+    exit-code: 0
+
+  g verify output .hmm exists:
+    command: |
+      test -f test/hmmbuild/test_hmm_correct.hmm && echo "file exists"
+    stdout: file exists
+
+
+  # use diff to verify output file contains correct output
+  h check output contents:
+    # -I '^DATE' excludes any lines starting from DATE from diff output, because we don't want to fail the test
+    # because the reference file was generated at a different time
+    command: diff -I '^DATE' test/hmmbuild/test_hmm_correct.hmm test/commander/references/hmmbuild_mult_seq/test_hmm.hmm
+    stdout:
+    exit-code: 0
+
+  i remove output file:
+    command: rm test/hmmbuild/*.hmm
+    stdout:
+
+  j it should execute with --hmmpress:
+    command: perl hmmbuild_mult_seq.pl --input test/hmmbuild/test_fasta_correct.fasta --output test/hmmbuild/test_hmm_correct.hmm --hmmpress
+    stdout:
+    exit-code: 0
+
+  k it should verify pressed .hmms exist:
+    command: test -f test/hmmbuild/test_hmm_correct.hmm.h3f && test -f test/hmmbuild/test_hmm_correct.hmm.h3i && test -f test/hmmbuild/test_hmm_correct.hmm.h3m && test -f test/hmmbuild/test_hmm_correct.hmm.h3p && echo "files exist"
+    stdout: files exist
+
+  l remove output files to prevent contaiminating future testing:
+    command: rm test/hmmbuild/*.hmm*
+    stdout:
