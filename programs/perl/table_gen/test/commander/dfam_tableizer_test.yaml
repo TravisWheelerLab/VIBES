@@ -116,7 +116,7 @@ tests:
     skip: true
 
   cd it should fail (gen_dir is empty):
-    command: perl dfam_tableizer.pl --hmm_db test/test_hmm/test_hmm.hmm -j 1 -d test/dfam/ -g test/genomes/empty -s test/scanned_dfam
+    command: perl dfam_tableizer.pl --hmm_db test/test_hmm/test_hmm.hmm -j 1 -d test/dfam/ -g test/commander/dummy/empty -s test/scanned_dfam
     stderr: 
       contains:
         - No genome corresponding to index 1
@@ -147,7 +147,7 @@ tests:
 
   # this test can't be fully executed (yet) due to HMMER not liking its own hmm format. this will be updated later to include stderr matching
   db it should fail (not a genome in provided gen_dir):
-    command: perl dfam_tableizer.pl --hmm_db test/test_hmm/test_hmm.hmm test/test_hmm/test_hmm.hmm -j 0 -d test/dfam/ -g test/genomes/wrong_format/ -s test/scanned_dfam/
+    command: perl dfam_tableizer.pl --hmm_db test/test_hmm/test_hmm.hmm test/test_hmm/test_hmm.hmm -j 0 -d test/dfam/ -g test/commander/dummy/wrong_format/ -s test/scanned_dfam/
     stderr:
     exit-code: 1
 

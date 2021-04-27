@@ -1,11 +1,16 @@
 # Pseudomonas Pipeline
 
 TODO: Describe what it is, who should care, and why those people should care (1-5 sentences)
+This is a pipeline that annotates viral insertions in bacterial genomes, given a set of
+reference viruses and bacterial genomes. Useful to bioinformaticians and computational biologists
+because it can allow you to search for a large number of viruses in a large amount of bacterial
+genomes with relatively little effort.
 
 ## Pipeline
 
 TODO: What does the pipeline look like? Can reference scripts described later,
 bonus points if you include a diagram
+The pipeline is a collection of scripts written in Python and Perl. Intended to be run as follows:
 
 ## Using
 
@@ -17,9 +22,26 @@ TODO: Answer the following questions in this section
      descriptions
   4. What format will the ultimate output be in?
 
+  Input Data: 	- single .fasta file of reference viral genomes
+  				- directory of reference bacterial genomes, one per .fasta file
+  				- if annotation is desired: file of reference viral proteins, .hmm or .fasta format
+  				- if annotation is desired: file of reference viral domains, .hmm or .fasta format
+
+  Python/Perl Supported:
+  				- Python 3
+  				- Perl 5
+
+  Output:
+  				- .tsv (tab separated value) files for each bacterial genome describing detected
+  				viral insertions
+  				- .png plots showing which areas of viral genomes are most often found inserted
+  				- if desired, a .pdf plot showing how integrases are distributed among bacterial
+  				genomes
+
 ## Programs and Scripts
 
 hmmbuild_mult_seq.pl
+Dependencies: hmmbuild, hmmpress, Getopt::Long, strict, warnings
 =====
 This program accepts an input .fasta file and converts its entries into HMMs
 using hmmbuild, storing them in the user-provided output .hmm file. User can
@@ -28,6 +50,7 @@ not hmmpress should automatically be run on output .hmm file. Users can specify
 input sequence type: dna, rna, or amino acid.
 
 dfam_tableizer.pl
+Dependencies: nhmmscan, mv, dfamscan.pl, Time::HiRes, Getopt::Long, strict, warnings
 =====
 This program searches for viral genomes in input bacterial genomes using
 nhmmscan, saving results in DFAM table format (nhmmscan's --dfamtblout option).
@@ -101,7 +124,7 @@ the headers of Uniprot protein .fasta files, looking for entries with keywords
 fasta entries (both headers and sequence). This program was used to generate a
 Uniprot viral protein database for viral annotation.
 
-genereate_domtbls.p
+generate_domtbls.py
 =====
 This program uses hmmscant to search for viral proteins/domains contained in a
 HMM database against .fasta format viral genomes, outputting results in .domtbl

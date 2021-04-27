@@ -43,8 +43,37 @@ if ($help) {
     exit;
 }
 
+unless (-d $tableDir) {
+    die "--dfam input is not a directory: $!";
+}
+
+unless (-d $genomeDir) {
+    die "--bac_genomes input is not a directory: $!";
+}
+
+unless (-d $tsvDir) {
+    die "--tsv input is not a directory: $!";
+}
+
+unless (-d $chartDir) {
+    die "--index_charts input is not a directory: $!";
+}
+
+unless (-d $flankingAttDir || not $flankingAttDir) {
+    die "--att_sites input is not a directory: $!";
+}
+
+unless($jobNumber >= 0) {
+    die "--job_number must be 0 or positive: $!";
+}
+
 my @tables = glob "$tableDir/*" or die "Can't find $tableDir: $!";
 my $table = $tables[$jobNumber];
+
+# make sure $genome exists before we go further
+unless(-f $table) {
+    die "No DFAM table corresponding to index $jobNumber: $!";
+}
 
 #extract genome name from table name
 if ($table =~ /([^\/]+)\.dfam/) {
@@ -239,7 +268,7 @@ Basic options:
 Input options:
     --dfam: Path to DFAM table directory
     --bac_genomes: Path to directory with bacterial genomes
-    --jobnumber: Integer provided by the cluster job manager that tells
+    --job_number: Integer provided by the cluster job manager that tells
         table_parser which dfam file it should use
 
 Output options:

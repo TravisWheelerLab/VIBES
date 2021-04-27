@@ -83,6 +83,7 @@ tests:
       contains:
         - "input .dfam file empty"
     exit-code: 255
+    skip: true
 
   cb it should fail (input genome empty):
     command: perl table_parser.pl --dfam tparse_test/dfam --bac_genomes tparse_test/commander/dummy/nonsense_genome --job_number 0 --tsv tparse_test/commander/dummy/nonsense_output --index_charts tparse_test/commander/dummy/nonsense_output
@@ -90,6 +91,7 @@ tests:
       contains:
         - "input bacterial genome file empty"
     exit-code: 255
+    skip: true
 
   cc-1 it should fail (job_number is negative):
     command: perl table_parser.pl --dfam tparse_test/dfam/ --bac_genomes tparse_test/bac_genomes/ --job_number -1 --tsv tparse_test/tsv/ --index_charts tparse_test/indexcharts/
@@ -132,7 +134,16 @@ tests:
         - No such file tparse_test/commander/dummy/wrong_format//Pseudomonas_aeruginosa_12-4-4_59__3618.fna
     exit-code: 1
 
-  fa it should succeed (correct inputs across the board, 0 for job_number):
+  fa-1 it should succeed (correct inputs across the board, 0 for job_number):
     command: perl table_parser.pl --dfam tparse_test/dfam --bac_genomes tparse_test/bac_genomes/ --job_number 0 --tsv tparse_test/tsv --index_charts tparse_test/indexcharts --force
-    stdout:
+    stdout: |
+      Number of passing prophage matches in tparse_test/dfam/Pseudomonas_aeruginosa_12-4-4_59__3618.dfam: 27
+      17 strains had hits in tparse_test/dfam/Pseudomonas_aeruginosa_12-4-4_59__3618.dfam
+    exit-code: 0
+
+  fa-2 it should succeed (correct inputs across the board, 1 for job_number):
+    command: perl table_parser.pl --dfam tparse_test/dfam --bac_genomes tparse_test/bac_genomes/ --job_number 1 --tsv tparse_test/tsv --index_charts tparse_test/indexcharts --force
+    stdout: |
+      Number of passing prophage matches in tparse_test/dfam/Pseudomonas_aeruginosa_19BR_362.dfam: 45
+      17 strains had hits in tparse_test/dfam/Pseudomonas_aeruginosa_19BR_362.dfam
     exit-code: 0
