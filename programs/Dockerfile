@@ -16,4 +16,4 @@ ENV PATH "$PATH:/tool_bins/bin"
 ADD perl/ .
 ADD python/ .
 
-ENTRYPOINT cd table_gen && commander test test/commander/hmmbuild_mult_seq_test.yaml && commander test test/commander/dfam_tableizer_test.yaml && cd /table_parser && commander test tparse_test/commander/test_table_parser.yaml
+ENTRYPOINT cd table_gen && commander test test/commander/hmmbuild_mult_seq_test.yaml && commander test test/commander/dfam_tableizer_test.yaml && cd /table_parser && commander test tparse_test/commander/test_table_parser.yaml && commander test tparse_test/commander/combine_charts_test.yaml

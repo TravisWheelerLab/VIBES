@@ -28,6 +28,14 @@ if ($help) {
     help();
 }
 else {
+    # check that input/output dirs exist
+    unless (-d $inputDir) {
+    die "--inputdir value is not a directory: $!";
+    }
+    unless (-d $outputDir) {
+    die "--outputdir value is not a directory: $!";
+    }
+
     #iterate through all files and directories in dir, giving them as input to scan_index_file()
     find(\&scan_index_file, $inputDir);
 
