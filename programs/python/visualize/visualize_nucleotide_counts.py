@@ -8,6 +8,33 @@ import sys
 import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import lines, cm
+import json
+
+# creates json file with necessary information to draw graph in SODA rather than matplotlib. This .json
+# will contain the prophage name, length, index occurence counts, and protein annotation information
+def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval):
+    genomeLength = countList
+    # returns Genome object, containing dictionary populated with Match objects
+    annotationGenome = annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
+
+    # begin populating json entries
+    jsonDict = {"prophageName": prophageName, "genomeLength": genomeLength, "occurences": countList}
+
+    # list that will hold protein annotation information
+    protAnnoList = {}
+    # the starting index 
+    for startIndex in protAnnoDict:
+        for match in protAnnoDict[startIndex]:
+            matchDict = {"name": match.name, "ID": match.accID, "start": match.aliSt, "end": match.aliEn, "e-value": match.eVal, "desc:" match.desc}
+            protAnnoList.append(matchDict)
+
+    jsonDict["annotations"] = protAnnoList
+
+    jsonFilePath = "%s/%s.json" % (jsonDir, prophageName)
+
+    with open(jsonFilePath, 'w') as jsonFile:
+        jsonFile.write(json.dumps(jsonDict))
+        jsonFile.close()
 
 
 # read in all files in total counts dir via walk
