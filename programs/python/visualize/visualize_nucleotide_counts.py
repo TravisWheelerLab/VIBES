@@ -14,13 +14,12 @@ import json
 # will contain the prophage name, length, index occurence counts, and protein annotation information
 def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval):
     INDENT_VALUE = 4
-    genomeLength = countList
+    genomeLength = len(countList)
     # returns Genome object, containing dictionary populated with Match objects
     annotationGenome = annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
 
     # begin populating json entries
     jsonDict = {"prophageName": prophageName,
-                "genomeLength": genomeLength,
                 "occurences": countList}
 
     # list that will hold protein annotation information
