@@ -43,7 +43,7 @@ TODO: Answer the following questions in this section
 
 ## Programs and Scripts
 
-hmmbuild_mult_seq.pl
+### hmmbuild_mult_seq.pl
 Dependencies: hmmbuild, hmmpress, Getopt::Long, strict, warnings
 
 This program accepts an input .fasta file and converts its entries into HMMs
@@ -52,7 +52,7 @@ specify program verbosity, how many threads hmmbuild will use, and whether or
 not hmmpress should automatically be run on output .hmm file. Users can specify
 input sequence type: dna, rna, or amino acid.
 
-dfam_tableizer.pl
+### dfam_tableizer.pl
 Dependencies: nhmmscan, mv, dfamscan.pl, Time::HiRes, Getopt::Long, strict, warnings
 
 This program searches for viral genomes in input bacterial genomes using
@@ -68,7 +68,7 @@ specify program verbosity, the number of worker threads, and which directory to
 store tables containing no matches to (unspecified leaves these tables with the
 others).
 
-run_dfam_tableizer.pl
+### run_dfam_tableizer.pl
 Dependencies: seq, parallel, dfam_tableizer.pl, Time::HiRes, Getopt::Long, strict, warnings
 
 This program uses GNU Parallel to run dfam_tableizer.pl, allowing for its use
@@ -77,7 +77,7 @@ dfam_tableizer.pl with one exception: rather than a --job_number option, there's
 a --jobs option, which specifies the maximum number of instances of
 dfam_tableizer.pl we want to run simultaneously.
 
-table_parser.pl
+### table_parser.pl
 Dependencies: rm, mkdir, ViralSeq.pm, FindBin::Bin, Getopt::Long, strict, warnings
 
 This program parses scanned .dfam tables, producing .tsv files and "index chart
@@ -88,7 +88,7 @@ genome. Accepts a directory of reference viral genomes (--prophage), a dir of
 assigned by a server cluster job manager (--job_number), and a maximum
 acceptable evalue (--max_eval). This program depends on ViralSeq.pm.
 
-ViralSeq.pm
+### ViralSeq.pm
 Dependencies: rm, Moose, esl-sfetch, nhmmer, strict, warnings
 
 This script describes a class using Perl's Moose module. Making a class in Perl
@@ -98,12 +98,12 @@ genome it was found in, and its coordinates in that genome. A fair amount of
 this file's content is devoted to trying to detect flanking att sites, which
 works very poorly and probably should not be used.
 
-run_parser.pl
+### run_parser.pl
 Dependencies: table_parser.pl, strict, warnings
 
 This script helps run table_parser.pl on a server cluster with a job manager. 
 
-run_table_parser_parallel.pl
+### run_table_parser_parallel.pl
 Dependencies: seq, parallel, table_parser.pl, Time::HiRes, Getopt::Long, strict, warnings
 
 This program runs table_parser.pl using GNU parallel, allowing for its use when
@@ -112,7 +112,7 @@ table_parser.pl with one exception: rather than a --job_number option, there's a
 --jobs option, which specifies the maximum number of instances of
 table_parser.pl we want to run simultaneously.
 
-combine_charts.pl
+### combine_charts.pl
 Dependencies: File::Find, Getopt::Long, strict, warnings
 
 This program accepts an input index chart directory and an output chart dir. In
@@ -125,7 +125,7 @@ in the bacterial genome. This program iterates through all of the bacterial
 directories, creating an output file for each viral genome containing the found
 insertion counts across all of the bacteria.
 
-grab_viral_proteins.py
+### grab_viral_proteins.py
 Dependencies: re, argparse, sys
 
 This program is only sort of part of the pipeline: it's designed to scan through
@@ -134,7 +134,7 @@ the headers of Uniprot protein .fasta files, looking for entries with keywords
 fasta entries (both headers and sequence). This program was used to generate a
 Uniprot viral protein database for viral annotation.
 
-generate_domtbls.py
+### generate_domtbls.py
 Dependencies: hmmscant, subprocess, argparse, os, re, sys
 
 This program uses hmmscant to search for viral proteins/domains contained in a
@@ -142,13 +142,13 @@ HMM database against .fasta format viral genomes, outputting results in .domtbl
 format. Accepts directory of .fasta reference viral genomes, a file containing
 viral sequence HMMs, an output dir, and a NCBI genetic code #.
 
-domtblscan.pl
+### domtblscan.pl
 Dependencies: nhmmscan, trf, Getopt::Long, File::Temp, Cwd, File::Basename, strict, warnings
 
 Modified dfamscan.pl, changed to work on .domtbl format files. Adjudicates
 between competing annotations at the same location in a genome
 
-annotation_methods.py
+### annotation_methods.py
 Dependencies: re
 
 Describes Match and Genome objects, as well as a number of methods used to
@@ -157,7 +157,7 @@ methods is annotateGenomes, which returns a Genome object containing a
 dictionary populated with Matches representing proteins/domains that matched to
 the viral genome.
 
-visualize_nucleotide_counts.py
+### visualize_nucleotide_counts.py
 Dependencies: matplotlib, numpy, argparse, re, os.walk, sys, json, annotation_methods.py
 
 Uses nucleotide index chart files and the annotateGenomes() method from
@@ -171,7 +171,7 @@ directory of domain match .domtbl files, a directory of .dfam files describing
 matches to viral genes of particular interest to the virologists, and an ouput
 directory where output .png plots are saved. Plots are drawn with matplotlib.
 
-integrase_dist_plot.py
+### integrase_dist_plot.py
 Dependencies: re, argparse, os.walk, matplotlib, annotation_methods.py
 
 Integrases seemed more likely to end up in bacterial genomes, so this program
