@@ -22,6 +22,8 @@ TODO: Answer the following questions in this section
      descriptions
   4. What format will the ultimate output be in?
 
+  ![Pipeline Diagram](pipeline_diagram-1-3.png)
+
   Input Data: 	- single .fasta file of reference viral genomes
   				- directory of reference bacterial genomes, one per .fasta file
   				- if annotation is desired: file of reference viral proteins, .hmm or .fasta format
@@ -155,6 +157,7 @@ dictionary populated with Matches representing proteins/domains that matched to
 the viral genome.
 
 visualize_nucleotide_counts.py
+Dependencies: matplotlib, numpy, argparse, re, os.walk, sys, json, annotation_methods.py
 =====
 Uses nucleotide index chart files and the annotateGenomes() method from
 annotation_methods.py to draw a plot displaying the number of detected
@@ -168,6 +171,7 @@ matches to viral genes of particular interest to the virologists, and an ouput
 directory where output .png plots are saved. Plots are drawn with matplotlib.
 
 integrase_dist_plot.py
+Dependencies: re, argparse, os.walk, matplotlib, annotation_methods.py
 =====
 Integrases seemed more likely to end up in bacterial genomes, so this program
 goes counts how many integrase matches were detected per bacterial genome. It
