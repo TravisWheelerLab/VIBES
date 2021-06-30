@@ -8,6 +8,43 @@ import sys
 import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import lines, cm
+import json
+
+# creates json file with necessary information to draw graph in SODA rather than matplotlib. This .json
+# will contain the prophage name, length, index occurence counts, and protein annotation information
+def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval):
+    INDENT_VALUE = 4
+    genomeLength = len(countList)
+    # returns Genome object, containing dictionary populated with Match objects
+    annotationGenome = annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
+
+    # begin populating json entries
+    jsonDict = {"prophageName": prophageName,
+                "occurences": countList}
+
+    # list that will hold protein annotation information
+    protAnnoList = []
+    # the starting index serves as the key for the matches dict, which has a
+    # value made up of a list of Match objects whose annotation starts at that
+    # index
+    for startIndex in annotationGenome.matches:
+        for match in annotationGenome.matches[startIndex]:
+            matchDict =    {"name": match.name,
+                            "ID": match.accID, 
+                            "start": match.aliSt,
+                            "end": match.aliEn,
+                            "e-value": match.eVal,
+                            "desc": match.description}
+
+            protAnnoList.append(matchDict)
+
+    jsonDict["annotations"] = protAnnoList
+
+    jsonFilePath = "%s/%s.json" % (jsonDir, prophageName)
+
+    with open(jsonFilePath, 'w') as jsonFile:
+        jsonFile.write(json.dumps(jsonDict, indent=INDENT_VALUE))
+        jsonFile.close()
 
 
 # read in all files in total counts dir via walk
@@ -257,11 +294,12 @@ def buildHmmStatDict(hmmStatPath):
 def parseArgs(sysArgs):
     parser = argparse.ArgumentParser(sysArgs)
     parser.add_argument("count_dir", help="Path to directory of nucleotide count files. Expected format is [prophageName]Chart.txt")
-    parser.add_argument("output_dir", help="Path to directory to store output .png files")
+    parser.add_argument("output_dir", help="Path to directory to store output .png or .json files")
     parser.add_argument("--swissprot_domtbl", help="Path to directory of .domtbl files resulting from a search against a database of Swissprot proteins. Expects Swissprot entries to begin with '>sp|[AccID]|', and for file names to be [prophageName].domtbl.")
     parser.add_argument("--pfam_domtbl", help="Path to directory of .domtbl files resulting from a search against a Pfam A database. AccIDs should be in the 'accession' column, and file names are expected to be [prophageName].domtbl. ")
     parser.add_argument("--dfam_dir", help="Path to directory of .dfam files annotating viral genomes. Expects .dfam files to contain matches of protein DNA sequences to viral genomes. Expects file names to be [prophageName].dfam")
     parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
+    parser.add_argument("--json", help="Output .json files with necessary information to create plots, rather than .pngs", action="store_true")
     parser.add_argument("--min_eval", type=float, default=1e-5, help="Minimum e-value required for a .domtbl entry to be included. Default is 1e-5")
 
     return parser.parse_args()
@@ -275,6 +313,7 @@ if __name__ == "__main__":
     pfamDomtblDir = args.pfam_domtbl
     dfamDir = args.dfam_dir
     outputDir = args.output_dir
+    jsonBool = args.json
 
     # credit to pycruft in https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory for code for grabbing file paths
     filePaths = []
@@ -303,4 +342,7 @@ if __name__ == "__main__":
         print(len(nucleotideList))
         print("Hey, fix that you commented out plotList()\n")'''
 
-        drawPlot(nucleotideList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval)
+        if jsonBool:
+            to_json(nucleotideList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval)
+        else:
+            drawPlot(nucleotideList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, dfamDir, minEval)
