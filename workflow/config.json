@@ -1,0 +1,8 @@
+{
+    "Pseudomonas.phage_file": "../fixtures/phage_database.fasta",
+    "Pseudomonas.bacteria_files": [
+        "../fixtures/bacteria_1.fna",
+        "../fixtures/bacteria_2.fna"
+    ]
+}
+
