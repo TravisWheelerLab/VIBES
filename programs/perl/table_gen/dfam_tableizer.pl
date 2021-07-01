@@ -11,8 +11,7 @@ use warnings;
 use Time::HiRes;
 use Getopt::Long;
 
-my $genomeNumber;
-my $genomeDir = '';
+my $genomePath = '';
 my $hmmPath = '';
 my $tableDir = '';
 my $scannedTableDir = '';
@@ -23,10 +22,9 @@ my $help = 0;
 
 GetOptions (
     "hmm_db=s"          => \$hmmPath,
-    "job_number=i"      => \$genomeNumber,
     "dfam_dir=s"        => \$tableDir,
     "scan_dir=s"        => \$scannedTableDir,
-    "gen_dir=s"         => \$genomeDir,
+    "genome=s"          => \$genomePath,
     "mv_matchless=s"    => \$mvMatchless,
     "cpu=i"             => \$cpu,
     "verbose"           => \$verbose,
@@ -47,16 +45,8 @@ unless(-d $tableDir) {
     die "--dfam_dir input is not a directory: $!";
 }
 
-unless(-d $genomeDir) {
-    die "--gen_dir input is not a directory: $!";
-}
-
 unless(-d $scannedTableDir) {
     die "--scan_dir input is not a directory: $!";
-}
-
-unless($genomeNumber >= 0) {
-    die "--job_number must be 0 or positive: $!";
 }
 
 
@@ -65,18 +55,12 @@ if ($cpu < 0) {
     die("--cpu must be at least 0\n")
 }
 
-#we assume every entry in the directory is a genome we're interested in
-my @genomes = glob "$genomeDir/*";
-
-#Extract file name from path, then run nhmmscan and dfamscan
-my $genome = $genomes[$genomeNumber];
-
-# make sure $genome exists before we go further
-unless(-f $genome) {
-    die "No genome corresponding to index $genomeNumber: $!";
+# make sure $genomePath exists before we go further
+unless(-f $genomePath) {
+    die "$genomePath is not a file: $!";
 }
 
-my @splitLine = split('/', $genome);
+my @splitLine = split('/', $genomePath);
 my $fileName;
 my $tablePath;
 my $scannedPath;
@@ -88,7 +72,7 @@ else {
     if ($verbose) {
         be_verbose();
     }
-    die "Unable to extract file name from path: $genome\n";
+    die "Unable to extract file name from path: $genomePath\n";
 }
 
 $tablePath = "$tableDir/$fileName.dfam";
@@ -96,7 +80,7 @@ $scannedPath = "$scannedTableDir/$fileName.dfam";
 
 
 my $stTime = [Time::HiRes::gettimeofday()];
-do_cmd("nhmmscan --cpu $cpu --dfamtblout $tablePath $hmmPath $genome");
+do_cmd("nhmmscan --cpu $cpu --dfamtblout $tablePath $hmmPath $genomePath");
 my $elapsed = Time::HiRes::tv_interval($stTime);
 
 if (has_no_matches($tablePath) and $mvMatchless) {
@@ -113,12 +97,10 @@ if ($verbose) {
 sub be_verbose {
     my $path = `pwd`;
 
-    print "Number: $genomeNumber\n";
-    print "GenDir: $genomeDir\n";
     print "Ref: $hmmPath\n";
     print "Table dir: $tableDir\n";
     print "Verbose: $verbose\n";
-    print "Genome: $genome\n";
+    print "Genome: $genomePath\n";
     print "Table Path: $tablePath\n";
     print "Scanned table path: $scannedPath\n";
     print "Time to complete nhmmscan: $elapsed seconds\n";
@@ -128,7 +110,7 @@ sub be_verbose {
 sub help {
     print "
 # $0:
-#Use nhmmscan to search gen_dir genomes for hmm_db sequences or genomes. 
+#Use nhmmscan to search input genome for hmm_db sequences/genomes. 
 #Outputs results in DFAM tabular format and automatically scans with 
 #dfamscan.pl, removing redundant hits. Intended to be run on a server cluster
 #with a job manager assigning a number to each instance.
@@ -137,12 +119,11 @@ sub help {
 
 Required:
  --hmm_db <s>       Path to hmm db to search against genomes
- --job_number <i>   For n genomes, 0 <= i <= n-1
  --dfam_dir <s>     Path to directory of unscanned .dfam tables, which will
                     retain redundant hits
  --scan_dir <s>     Path to directory of scanned .dfam tables, which have 
                     redundant hits removed
- --gen_dir <s>      Path to directory of baterial genomes in .fasta format
+ --genome   <s>      Path to bacterial genome to search against
 
 Optional:
  --verbose          Prints debugging information

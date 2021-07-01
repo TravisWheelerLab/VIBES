@@ -8,29 +8,26 @@ use ViralSeq;
 use Getopt::Long;
 
 my $refProphageDir = "";
-my $tableDir = "";
-my $genomeDir = "";
+my $tablePath = "";
+my $genomePath = "";
 my $tsvDir = "";
 my $chartDir = "";
 my $flankingAttDir = "";
-my $jobNumber = 0;
 my $suffix = '';
 my $verbose = ''; #default false value
 my $help = ''; #^^
 my $force = 0; #^^
-my $genomeName;
-my $genomePath;
+my $dfamName;
 my $tsvPath;
 my $maxEval = 1e-5;
 
 GetOptions (
     "prophage=s"    => \$refProphageDir,
-    "dfam=s"        => \$tableDir,
-    "bac_genomes=s" => \$genomeDir,
+    "dfam=s"        => \$tablePath,
+    "genome=s"      => \$genomePath,
     "tsv=s"         => \$tsvDir,
     "index_charts=s"=> \$chartDir,
     "att_sites=s"   => \$flankingAttDir,
-    "job_number=i"  => \$jobNumber,
     "max_eval"      => \$maxEval,
     "force"         => \$force,
     "verbose"       => \$verbose,
@@ -43,12 +40,12 @@ if ($help) {
     exit;
 }
 
-unless (-d $tableDir) {
-    die "--dfam input is not a directory: $!";
+unless (-f $tablePath) {
+    die "--dfam input is not a file: $!";
 }
 
-unless (-d $genomeDir) {
-    die "--bac_genomes input is not a directory: $!";
+unless (-f $genomePath) {
+    die "--genome input is not a file: $!";
 }
 
 unless (-d $tsvDir) {
@@ -63,28 +60,16 @@ unless (-d $flankingAttDir || not $flankingAttDir) {
     die "--att_sites input is not a directory: $!";
 }
 
-unless($jobNumber >= 0) {
-    die "--job_number must be 0 or positive: $!";
-}
-
-my @tables = glob "$tableDir/*" or die "Can't find $tableDir: $!";
-my $table = $tables[$jobNumber];
-
-# make sure $genome exists before we go further
-unless(-f $table) {
-    die "No DFAM table corresponding to index $jobNumber: $!";
-}
-
-#extract genome name from table name
-if ($table =~ /([^\/]+)\.dfam/) {
-    $genomeName = $1;
+#extract bacteria name from table name
+if ($tablePath =~ /([^\/]+)\.dfam/) {
+    $dfamName = $1;
 }
 else {
-    die "Can't extract genome name from table path $table: $!";
+    die "Can't extract .dfam name from table path $tablePath: $!";
 }
 
 #create directory that will contain index charts, unless it already exists
-my $dir = "$chartDir/$genomeName";
+my $dir = "$chartDir/$dfamName";
 #if directory already exists, throw fatal error unless --force was specified
 if (-e $dir && -d $dir) {
     unless ($force) {
@@ -99,10 +84,9 @@ else {
     do_cmd("mkdir $dir");
 }
 
-$tsvPath = "$tsvDir/$genomeName.tsv";
-$genomePath = "$genomeDir/$genomeName.fna";
+$tsvPath = "$tsvDir/$dfamName.tsv";
 
-parse_tables($table, $genomePath, $tsvPath, $maxEval);
+parse_tables($tablePath, $genomePath, $tsvPath, $maxEval);
 
 if ($verbose) {
     be_verbose();
@@ -178,7 +162,7 @@ sub parse_tables {
 
                 print $outputTSF $seq->tableLine() . "\n";
 
-                $chartPath = "$chartDir/$genomeName/$name" . ".txt";
+                $chartPath = "$chartDir/$dfamName/$name" . ".txt";
 
                 #unless an entry for this prophage already exists in hash, generate
                 #a new array for this sequence by putting each line into an array
@@ -236,7 +220,7 @@ sub parse_tables {
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
-        my $chartPath = "$chartDir/$genomeName/$hashKey" . "Chart.txt";
+        my $chartPath = "$chartDir/$dfamName/$hashKey" . "Chart.txt";
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
@@ -299,10 +283,9 @@ sub do_cmd {
 sub be_verbose {
     my $path = `pwd`;
 
-    print "\nTable directoy: $tableDir\n";
-    print "Genome directory: $genomeDir\n";
-    print "Genome path: $genomePath\n";
-    print "Genome Name: $genomeName\n";
+    print "\nTable: $tablePath\n";
+    print "Genome: $genomePath\n";
+    print "Bacteria Name: $dfamName\n";
     print "TSV Path: $tsvPath\n";
     print "Chart directory: $chartDir\n";
     print "Flanking att site directory: $flankingAttDir\n";
