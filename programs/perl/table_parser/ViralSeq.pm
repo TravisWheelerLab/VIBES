@@ -116,7 +116,7 @@ has isFullLength => (
 has isFlanked => (
     is      => 'ro',
     writer  => '_set_isFlanked',
-    default => 'Att Scan not run',
+    default => 'att_scan_not_run',
 );
 
 sub findFlankingAtts {
