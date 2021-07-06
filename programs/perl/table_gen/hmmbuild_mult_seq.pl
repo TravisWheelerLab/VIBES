@@ -42,7 +42,7 @@ unless (-f $inputPath){
 }
 
 my $pathToFolder = $inputPath;
-$pathToFolder =~ s/[\w-]+\.fasta//; # remove file name from path to .fasta file, giving you the path to its folder
+$pathToFolder =~ s/[\w-]+\..+?$//; # remove file name from path to .fasta file, giving you the path to its folder
 
 # open .fasta file, demarcate lines with > rather than /n
 open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
