@@ -8,8 +8,8 @@ workflow Pseudomonas {
 
   call hmmbuild { input: seq_file=phage_file }
   scatter (bacteria in bacteria_files) {
-    call tableize { input: hmm_file=hmmbuild.hmm_file, genome_file=bacteria }
-    call format_table { input: dfam_file=tableize.dfam_file, genome_file=bacteria }
+    call create_table { input: hmm_file=hmmbuild.hmm_file, hmm_f_file=hmmbuild.hmm_f_file, hmm_i_file=hmmbuild.hmm_i_file, hmm_m_file=hmmbuild.hmm_m_file, hmm_p_file=hmmbuild.hmm_p_file, genome_file=bacteria }
+    call format_table { input: dfam_file=create_table.scanned_dfam_file, genome_file=bacteria }
   }
 
   output {
@@ -27,11 +27,18 @@ task hmmbuild {
 
   output {
     File hmm_file = "${seq_file}.hmm"
+    File hmm_f_file = "${seq_file}.hmm.h3f"
+    File hmm_i_file = "${seq_file}.hmm.h3i"
+    File hmm_m_file = "${seq_file}.hmm.h3m"
+    File hmm_p_file = "${seq_file}.hmm.h3p"
   }
 
   command {
     perl /programs/perl/table_gen/hmmbuild_mult_seq.pl \
-        --input "${seq_file}" --output "${seq_file}.hmm"
+        --input "${seq_file}" \
+        --output "${seq_file}.hmm" \
+        --hmmpress \
+        --cpu 11
   }
 
   runtime {
@@ -39,20 +46,29 @@ task hmmbuild {
   }
 }
 
-task tableize {
+task create_table {
   input {
     File hmm_file
+    File hmm_f_file
+    File hmm_i_file
+    File hmm_m_file
+    File hmm_p_file
     File genome_file
     String runner_name = "traviswheelerlab/pseudomonas_pipeline_runner"
     String runner_version = "latest"
   }
 
   output {
-    File dfam_file = "${genome_file}.hmm"
+    File scanned_dfam_file = "${genome_file}.scanned.dfam"
   }
 
   command {
-    cp "${genome_file}" "${genome_file}.hmm"
+    cp "${genome_file}" "${genome_file}.dfam"
+    perl /programs/perl/table_gen/dfam_tableizer.pl \
+        --hmm_db "${hmm_file}" \
+        --genome "${genome_file}" \
+        --dfam "${genome_file}.dfam" \
+        --scanned_dfam "${genome_file}.scanned.dfam"
   }
 
   runtime {
