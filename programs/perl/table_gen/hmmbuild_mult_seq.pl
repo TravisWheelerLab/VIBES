@@ -7,7 +7,6 @@ use Getopt::Long;
 my $inputPath = '';
 my $outputPath = '';
 my $cpuCount = 0;
-my $hmmPress = 0;
 my $amino = 0;
 my $dna = 0;
 my $rna = 0;
@@ -18,7 +17,6 @@ GetOptions (
     "input=s"   => \$inputPath,
     "output=s"  => \$outputPath,
     "cpu=i"     => \$cpuCount,
-    "hmmpress"  => \$hmmPress,
     "amino"     => \$amino,
     "dna"       => \$dna,
     "rna"       => \$rna,
@@ -147,7 +145,6 @@ Optional:
  --verbose          Prints information about commands used, how many .fasta
                     entries have been hmmbuilt
  --cpu <i>          How many threads hmmbuild will use (i > 0)
- --hmmpress         Automatically runs hmmpress on output .hmm file
 
  Only one of the following 3 optional flags can be used at a time:
   --amino           Specifies that .fasta entries contain amino acid seq
@@ -160,12 +157,9 @@ Optional:
 close $fileHandle;
 
 do_cmd("cat $pathToFolder/temp*.hmm > $outputPath");
-
-if ($hmmPress) {
-    do_cmd("hmmpress $outputPath")
-}
-
 do_cmd("rm $pathToFolder/temp*");
+
+do_cmd("hmmpress $outputPath")
 
 sub do_cmd {
     my $cmd = $_[0];

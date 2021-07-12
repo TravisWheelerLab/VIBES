@@ -11,20 +11,25 @@ use warnings;
 use Time::HiRes;
 use Getopt::Long;
 
-my $genomePath = '';
 my $hmmPath = '';
-my $tableDir = '';
-my $scannedTableDir = '';
+my $genomePath = '';
+my $tablePath = '';
+my $scannedPath = '';
 my $mvMatchless = '';
 my $cpu = 0;
 my $verbose = 0;
 my $help = 0;
 
 GetOptions (
+    # Inputs
     "hmm_db=s"          => \$hmmPath,
-    "dfam_dir=s"        => \$tableDir,
-    "scan_dir=s"        => \$scannedTableDir,
     "genome=s"          => \$genomePath,
+
+    # Outputs
+    "dfam=s"            => \$tablePath,
+    "scanned_dfam=s"    => \$scannedPath,
+
+    # Options
     "mv_matchless=s"    => \$mvMatchless,
     "cpu=i"             => \$cpu,
     "verbose"           => \$verbose,
@@ -41,16 +46,6 @@ unless(-f $hmmPath) {
     die "--hmm_db is not a file: $!";
 }
 
-unless(-d $tableDir) {
-    die "--dfam_dir input is not a directory: $!";
-}
-
-unless(-d $scannedTableDir) {
-    die "--scan_dir input is not a directory: $!";
-}
-
-
-
 if ($cpu < 0) {
     die("--cpu must be at least 0\n")
 }
@@ -60,25 +55,6 @@ unless(-f $genomePath) {
     die "$genomePath is not a file: $!";
 }
 
-my @splitLine = split('/', $genomePath);
-my $fileName;
-my $tablePath;
-my $scannedPath;
-
-if ($splitLine[-1] =~ /(.+)\./) {
-    $fileName = $1;
-}
-else {
-    if ($verbose) {
-        be_verbose();
-    }
-    die "Unable to extract file name from path: $genomePath\n";
-}
-
-$tablePath = "$tableDir/$fileName.dfam";
-$scannedPath = "$scannedTableDir/$fileName.dfam";
-
-
 my $stTime = [Time::HiRes::gettimeofday()];
 do_cmd("nhmmscan --cpu $cpu --dfamtblout $tablePath $hmmPath $genomePath");
 my $elapsed = Time::HiRes::tv_interval($stTime);
@@ -87,7 +63,9 @@ if (has_no_matches($tablePath) and $mvMatchless) {
     do_cmd("mv $tablePath $mvMatchless");
 }
 else {
-    do_cmd("perl dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath");
+    use File::Basename;
+    my $dirname = dirname(__FILE__);
+    do_cmd("perl $dirname/dfamscan.pl --dfam_infile  $tablePath --dfam_outfile $scannedPath");
 }
 
 if ($verbose) {
@@ -98,11 +76,10 @@ sub be_verbose {
     my $path = `pwd`;
 
     print "Ref: $hmmPath\n";
-    print "Table dir: $tableDir\n";
-    print "Verbose: $verbose\n";
     print "Genome: $genomePath\n";
-    print "Table Path: $tablePath\n";
-    print "Scanned table path: $scannedPath\n";
+    print "Dfam: $tablePath\n";
+    print "Scanned Dfam: $scannedPath\n";
+    print "Verbose: $verbose\n";
     print "Time to complete nhmmscan: $elapsed seconds\n";
     print "Current directory: $path";
 }
@@ -145,7 +122,7 @@ sub do_cmd {
 
     # catch error thrown by backticks command
     if ($? != 0) {
-        die "command returned error: $res";
+        die "command `$cmd` returned error: $res";
     }
 
     if ($verbose > 0) {
