@@ -66,8 +66,11 @@ else {
     die "Can't extract .dfam name from table path $tablePath: $!";
 }
 
+print("dfam name: $dfamName\n");
+
 #create directory that will contain index charts, unless it already exists
 my $dir = "$chartDir/$dfamName";
+print("new dir: $dir\n");
 #if directory already exists, throw fatal error unless --force was specified
 if (-e $dir && -d $dir) {
     unless ($force) {
@@ -218,7 +221,12 @@ sub parse_tables {
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
+        my $chartDir = "$chartDir/$dfamName/$hashKey";
         my $chartPath = "$chartDir/$dfamName/$hashKey" . "Chart.txt";
+        # create output dir
+        mkdir $chartDir or die "Can't create output chart dir: $!\n";
+        # use quotemeta to escape any non-word characters in path (pipe delimiters are fairly common, but don't play nice with unix)
+        $chartPath = quotemeta($chartPath);
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
