@@ -7,7 +7,6 @@ use lib $FindBin::Bin;
 use ViralSeq;
 use Getopt::Long;
 
-my $refProphageDir = "";
 my $tablePath = "";
 my $genomePath = "";
 my $tsvDir = "";
@@ -22,7 +21,6 @@ my $tsvPath;
 my $maxEval = 1e-5;
 
 GetOptions (
-    "prophage=s"    => \$refProphageDir,
     "dfam=s"        => \$tablePath,
     "genome=s"      => \$genomePath,
     "tsv=s"         => \$tsvDir,
@@ -250,10 +248,9 @@ Basic options:
     --max_eval: Maximum allowable match evalue for match to be used
 
 Input options:
-    --dfam: Path to DFAM table directory
-    --bac_genomes: Path to directory with bacterial genomes
-    --job_number: Integer provided by the cluster job manager that tells
-        table_parser which dfam file it should use
+    --dfam: Path to input .dfam table
+    --genome: Path to .fasta format bacterial genome corresponding to input
+        .dfam file
 
 Output options:
     --tsv: Path to .tsv directory. All .tsv file values are tab-delimited
