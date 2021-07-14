@@ -20,7 +20,7 @@ def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfam
 
     # begin populating json entries
     jsonDict = {"prophageName": prophageName,
-                "occurences": countList}
+                "occurrences": countList}
 
     # list that will hold protein annotation information
     protAnnoList = []
@@ -33,7 +33,7 @@ def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfam
                             "ID": match.accID, 
                             "start": match.aliSt,
                             "end": match.aliEn,
-                            "e-value": match.eVal,
+                            "evalue": match.eVal,
                             "desc": match.description}
 
             protAnnoList.append(matchDict)
