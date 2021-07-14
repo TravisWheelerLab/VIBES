@@ -7,7 +7,6 @@ use lib $FindBin::Bin;
 use ViralSeq;
 use Getopt::Long;
 
-my $refProphageDir = "";
 my $tablePath = "";
 my $genomePath = "";
 my $tsvDir = "";
@@ -22,7 +21,6 @@ my $tsvPath;
 my $maxEval = 1e-5;
 
 GetOptions (
-    "prophage=s"    => \$refProphageDir,
     "dfam=s"        => \$tablePath,
     "genome=s"      => \$genomePath,
     "tsv=s"         => \$tsvDir,
@@ -68,8 +66,11 @@ else {
     die "Can't extract .dfam name from table path $tablePath: $!";
 }
 
+print("dfam name: $dfamName\n");
+
 #create directory that will contain index charts, unless it already exists
 my $dir = "$chartDir/$dfamName";
+print("new dir: $dir\n");
 #if directory already exists, throw fatal error unless --force was specified
 if (-e $dir && -d $dir) {
     unless ($force) {
@@ -220,7 +221,12 @@ sub parse_tables {
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
+        my $chartDir = "$chartDir/$dfamName/$hashKey";
         my $chartPath = "$chartDir/$dfamName/$hashKey" . "Chart.txt";
+        # create output dir
+        mkdir $chartDir or die "Can't create output chart dir: $!\n";
+        # use quotemeta to escape any non-word characters in path (pipe delimiters are fairly common, but don't play nice with unix)
+        $chartPath = quotemeta($chartPath);
         open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
@@ -250,10 +256,9 @@ Basic options:
     --max_eval: Maximum allowable match evalue for match to be used
 
 Input options:
-    --dfam: Path to DFAM table directory
-    --bac_genomes: Path to directory with bacterial genomes
-    --job_number: Integer provided by the cluster job manager that tells
-        table_parser which dfam file it should use
+    --dfam: Path to input .dfam table
+    --genome: Path to .fasta format bacterial genome corresponding to input
+        .dfam file
 
 Output options:
     --tsv: Path to .tsv directory. All .tsv file values are tab-delimited

@@ -42,7 +42,9 @@ unless (-f $inputPath){
 }
 
 my $pathToFolder = $inputPath;
-$pathToFolder =~ s/[\w-]+\.fasta//; # remove file name from path to .fasta file, giving you the path to its folder
+# grabs everything before the last / characater in the file path, replacing it with everything preceding that character
+# with a / appended to the end. So in my/file/path.file, it grabs my/file, then jams a / onto the end
+$pathToFolder =~ s/(.+)\/.+?\..+?$/$1\//;
 
 # open .fasta file, demarcate lines with > rather than /n
 open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
