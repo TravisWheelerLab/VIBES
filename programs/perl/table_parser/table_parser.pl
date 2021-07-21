@@ -70,7 +70,6 @@ print("dfam name: $dfamName\n");
 
 #create directory that will contain index charts, unless it already exists
 my $dir = "$chartDir/$dfamName";
-print("new dir: $dir\n");
 #if directory already exists, throw fatal error unless --force was specified
 if (-e $dir && -d $dir) {
     unless ($force) {
