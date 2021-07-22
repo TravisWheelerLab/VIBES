@@ -161,7 +161,7 @@ close $fileHandle;
 do_cmd("cat $pathToFolder/temp*.hmm > $outputPath");
 do_cmd("rm $pathToFolder/temp*");
 
-do_cmd("hmmpress $outputPath")
+do_cmd("hmmpress $outputPath");
 
 sub do_cmd {
     my $cmd = $_[0];

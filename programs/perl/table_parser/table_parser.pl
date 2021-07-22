@@ -9,22 +9,22 @@ use Getopt::Long;
 
 my $tablePath = "";
 my $genomePath = "";
-my $tsvDir = "";
-my $chartDir = "";
+my $tsvPath;
+my $chartPath;
+
 my $flankingAttDir = "";
 my $suffix = '';
 my $verbose = ''; #default false value
 my $help = ''; #^^
 my $force = 0; #^^
 my $dfamName;
-my $tsvPath;
 my $maxEval = 1e-5;
 
 GetOptions (
     "dfam=s"        => \$tablePath,
     "genome=s"      => \$genomePath,
-    "tsv=s"         => \$tsvDir,
-    "index_charts=s"=> \$chartDir,
+    "tsv=s"         => \$tsvPath,
+    "chart=s"       => \$chartPath,
     "att_sites=s"   => \$flankingAttDir,
     "max_eval"      => \$maxEval,
     "force"         => \$force,
@@ -46,14 +46,6 @@ unless (-f $genomePath) {
     die "--genome input is not a file: $!";
 }
 
-unless (-d $tsvDir) {
-    die "--tsv input is not a directory: $!";
-}
-
-unless (-d $chartDir) {
-    die "--index_charts input is not a directory: $!";
-}
-
 unless (-d $flankingAttDir || not $flankingAttDir) {
     die "--att_sites input is not a directory: $!";
 }
@@ -67,24 +59,6 @@ else {
 }
 
 print("dfam name: $dfamName\n");
-
-#create directory that will contain index charts, unless it already exists
-my $dir = "$chartDir/$dfamName";
-#if directory already exists, throw fatal error unless --force was specified
-if (-e $dir && -d $dir) {
-    unless ($force) {
-        die "$dir already exists. Use --force to automatically overwrite it";
-    }
-    else {
-        do_cmd("rm -r $dir");
-        do_cmd("mkdir $dir");
-    }
-}
-else {
-    do_cmd("mkdir $dir");
-}
-
-$tsvPath = "$tsvDir/$dfamName.tsv";
 
 parse_tables($tablePath, $genomePath, $tsvPath, $maxEval);
 
@@ -110,7 +84,6 @@ sub parse_tables {
     my $maxEval = $_[3];
     my $count = 1;
     my %chartHash;
-    my $chartPath;
 
     open(my $tableFile, "<", $tablePath) or die "Can't open $tablePath: $!";
     open(my $outputTSF, ">", $outputTSV) or die "Can't open $outputTSV: $!";
@@ -161,8 +134,6 @@ sub parse_tables {
                 }
 
                 print $outputTSF $seq->tableLine() . "\n";
-
-                $chartPath = "$chartDir/$dfamName/$name" . ".txt";
 
                 #unless an entry for this prophage already exists in hash, generate
                 #a new array for this sequence by putting each line into an array
@@ -220,13 +191,7 @@ sub parse_tables {
 
     #Print out index-based 'charts' where each index corresponds to a line
     foreach my $hashKey (@hashKeys) {
-        my $chartDir = "$chartDir/$dfamName/$hashKey";
-        my $chartPath = "$chartDir/$dfamName/$hashKey" . "Chart.txt";
-        # create output dir
-        mkdir $chartDir or die "Can't create output chart dir: $!\n";
-        # use quotemeta to escape any non-word characters in path (pipe delimiters are fairly common, but don't play nice with unix)
-        $chartPath = quotemeta($chartPath);
-        open(my $chartOutput, ">", $chartPath) or die "Can't open $chartPath: $!";
+        open(my $chartOutput, ">>", $chartPath) or die "Can't open $chartPath: $!";
 
         my @chartArray = @{$chartHash{$hashKey}};
         my $arraySize = @chartArray;
@@ -236,6 +201,7 @@ sub parse_tables {
             $chartLine .= "$entry\n";
         }
 
+        print $chartOutput "Hash Key: $hashKey\n";
         print $chartOutput "$chartLine";
         close $chartOutput or die "Can't close $chartPath: $!";
     }
@@ -291,7 +257,6 @@ sub be_verbose {
     print "Genome: $genomePath\n";
     print "Bacteria Name: $dfamName\n";
     print "TSV Path: $tsvPath\n";
-    print "Chart directory: $chartDir\n";
     print "Flanking att site directory: $flankingAttDir\n";
     print "Current directory: $path\n";
 }
