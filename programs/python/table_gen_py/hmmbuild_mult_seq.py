@@ -2,30 +2,21 @@ import re
 import sys
 import argparse
 import subprocess
-from io import TextIOWrapper
+from typing import TextIO
 from typing import *
 from os import path
 from os import remove
 
 
 def hmmpress_output(output_path, verbose):
-    do_cmd(f"hmmpress {output_path}", verbose)
-
-
-def remove_file(file_path: str):
-    remove(file_path)
-
-
-def remove_listed_files(path_list: List[str]):
-    for path in path_list:
-        remove_file(path)
+    do_cmd(["hmmpress", output_path], verbose)
 
 
 def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
     if path.exists(output_hmm_path):
         if force:
-            # add star so that we catch any pressed auxiliary files as well
-            remove(f"{output_hmm_path}*")
+            # TODO: this doesn't clean up hmmpress aux files
+            remove(f"{output_hmm_path}")
         else:
             raise FileExistsError(f"Output file {output_hmm_path} already exists- either move or delete this file or enable --force")
 
@@ -37,18 +28,18 @@ def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
 
 
 def generate_hmmbuild_cmd(temp_fasta_path: str, temp_hmm_path: str, dna: bool, rna: bool, amino: bool, cpu_count: int, seq_name: str) -> str:
-    cmd = "hmmbuild"
+    seq_type = ""
 
     if dna:
-        cmd = f"{cmd} --dna"
+        seq_type = "--dna"
     elif rna:
-        cmd = f"{cmd} --rna"
+        seq_type = "--rna"
     elif amino:
-        cmd = f"{cmd} --amino"
+        seq_type = "--amino"
     else:
         pass
 
-    cmd = f"{cmd} --cpu {cpu_count} -n {seq_name} {temp_hmm_path} {temp_fasta_path}"
+    cmd = ["hmmbuild", "--cpu", cpu_count, "-n",  seq_name, seq_type, temp_hmm_path, temp_fasta_path]
 
     return cmd
 
@@ -56,11 +47,8 @@ def generate_hmmbuild_cmd(temp_fasta_path: str, temp_hmm_path: str, dna: bool, r
 def generate_hmm(temp_fasta_dict: Dict[str, str], dna: bool, rna: bool, amino: bool, cpu_count: int, verbose) -> List[str]:
     temp_hmm_list = []
 
-    for temp_fasta_path in temp_fasta_dict:
-        # this regex statement should grab whatever comes after the last . character in the input fasta path (the file extension)
-        # and replace it with .hmm
-        temp_hmm_path = re.sub(r"\..+?$", ".hmm", temp_fasta_path)
-        seq_name = temp_fasta_dict[temp_fasta_path]
+    for temp_fasta_path, seq_name in temp_fasta_dict.items():
+        temp_hmm_path = f"{path.splitext(temp_fasta_path)[0]}.hmm"
         temp_hmm_list.append(temp_hmm_path)
         cmd = generate_hmmbuild_cmd(temp_fasta_path, temp_hmm_path, dna, rna, amino, cpu_count, seq_name)
         do_cmd(cmd, verbose)
@@ -68,19 +56,19 @@ def generate_hmm(temp_fasta_dict: Dict[str, str], dna: bool, rna: bool, amino: b
     return temp_hmm_list
 
 
-def generate_temp_fastas(fasta_file: TextIOWrapper, temp_folder: str) -> Dict[str, str]:
+def generate_temp_fastas(fasta_file: TextIO, temp_folder: str) -> Dict[str, str]:
     temp_fasta_dict = {}
     fasta_list = re.split('\n>', fasta_file.read())
     increment = 1
 
     for entry in fasta_list:
         # remove leading and trailing > character, if present
-        entry = re.sub(r"^>|>$", "", entry, re.M)
+        entry = entry.strip(">")
         # first line is header, while the rest is the sequence body. uses capture groups before and after the first
         # newline to capture both
-        header, sequence = re.match(r"(.+?)\n(.+)", entry, re.S).groups()
+        header, sequence = entry.split("\n", 1)
         # grab the 'name,' or fasta header line up to the first whitespace character
-        seq_name = re.match(r"(.+?)\s", header, re.S).groups()
+        seq_name = re.escape(header.split()[0])
 
         temp_file_path = f"{temp_folder}temp{increment}.fasta"
         temp_fasta_dict[temp_file_path] = seq_name
@@ -100,10 +88,16 @@ def generate_temp_fastas_from_path(fasta_path: str, temp_folder: str) -> Dict[st
     return temp_fasta_dict
 
 
-def do_cmd(cmd: str, verbose: bool):
+def do_cmd(cmd: List[str], verbose: bool):
+    # double check that all elements are strings
+    for i, element in enumerate(cmd):
+        cmd[i] = str(element)
+    print(cmd)
     if verbose:
-        print(f"Running command: {cmd}")
-    subprocess.run(cmd.split())
+        verbose_cmd = " ".join(cmd)
+        print(f"Running command: {verbose_cmd}")
+
+    subprocess.run(cmd)
 
 
 def parse_args(sys_args: list) -> argparse.Namespace:
@@ -149,9 +143,12 @@ def _main():
 
     combine_hmms(temp_hmm_list, hmm_path, force)
     hmmpress_output(hmm_path, verbose)
-    remove_listed_files(temp_fasta_dict.keys())
-    remove_listed_files(temp_hmm_list)
 
+    for file_path in temp_fasta_dict.keys():
+        remove(file_path)
+
+    for file_path in temp_hmm_list:
+        remove(file_path)
 
 if __name__ == "__main__":
     _main()
