@@ -1,0 +1,3 @@
+params:
+  phage_file: $baseDir/../fixtures/phage_database.fasta
+  genome_files: $baseDir/../fixtures/bacteria_*.fasta
