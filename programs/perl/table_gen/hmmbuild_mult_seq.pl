@@ -39,11 +39,6 @@ unless (-f $inputPath){
     die "Input $inputPath is not a plain file: $!"
 }
 
-my $pathToFolder = $inputPath;
-# grabs everything before the last / characater in the file path, replacing it with everything preceding that character
-# with a / appended to the end. So in my/file/path.file, it grabs my/file, then jams a / onto the end
-$pathToFolder =~ s/(.+)\/.+?\..+?$/$1\//;
-
 # open .fasta file, demarcate lines with > rather than /n
 open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 {
@@ -65,10 +60,7 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
         # remove any non-word characters in sequence data
         $seq =~ s/[^\w]//g;
 
-        my $tempFastaFile = "temp$inc";
-        
-        $tempFastaFile = "$pathToFolder/$tempFastaFile.fasta"; #create file path to temporary .fasta file
-
+        my $tempFastaFile = "$inputPath.temp.$inc";
 
         open(my $fastaFile, ">", $tempFastaFile) or die "Can't create temporary .fasta file at $tempFastaFile: $!";
         {   
@@ -78,8 +70,7 @@ open(my $fileHandle, "<", $inputPath) or die "Can't open .fasta file $: $!";
 
         close $fastaFile;
 
-        my $tempHmmFile = $tempFastaFile;
-        $tempHmmFile =~ s/\.fasta/.hmm/; # replace .fasta with .hmm in file path, to create temporary .hmm file with same name
+        my $tempHmmFile = "$inputPath.hmm.temp.$inc";
 
         # create command, depending on options specified at command line
         my $hmmbuildCmd = "hmmbuild ";
@@ -158,8 +149,9 @@ Optional:
 
 close $fileHandle;
 
-do_cmd("cat $pathToFolder/temp*.hmm > $outputPath");
-do_cmd("rm $pathToFolder/temp*");
+do_cmd("cat $inputPath.hmm.temp.* > $outputPath");
+do_cmd("rm $inputPath.temp.*");
+do_cmd("rm $inputPath.hmm.temp.*");
 
 do_cmd("hmmpress $outputPath");
 

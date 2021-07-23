@@ -205,6 +205,8 @@ sub parse_tables {
         print $chartOutput "$chartLine";
         close $chartOutput or die "Can't close $chartPath: $!";
     }
+
+    do_cmd("touch $chartPath");
 }
 
 sub help {
