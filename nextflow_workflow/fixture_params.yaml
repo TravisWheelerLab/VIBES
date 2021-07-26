@@ -1,3 +1,2 @@
-params:
-  phage_file: $baseDir/../fixtures/phage_database.fasta
-  genome_files: $baseDir/../fixtures/bacteria_*.fasta
+phage_file: ${projectDir}/../fixtures/phage_database.fasta
+genome_files: ${projectDir}/../fixtures/bacteria_*.fasta

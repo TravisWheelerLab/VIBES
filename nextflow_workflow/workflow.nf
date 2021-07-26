@@ -1,8 +1,5 @@
 #!/usr/bin/env nextflow
 
-params.phage_file = "$baseDir/../fixtures/phage_database.fasta"
-params.genome_files = "$baseDir/../fixtures/bacteria_*.fasta"
-
 genome_files = Channel.fromPath( params.genome_files )
 
 process hmm_build {
@@ -21,7 +18,7 @@ process hmm_build {
     path "*.h3p" into h3p_file
 
     """
-    perl ../../../../programs/perl/table_gen/hmmbuild_mult_seq.pl \
+    perl ${projectDir}/../programs/perl/table_gen/hmmbuild_mult_seq.pl \
         --input "${seq_file}" \
         --output "${seq_file}.hmm" \
         --cpu ${task.cpus}
@@ -46,7 +43,7 @@ process create_table {
     path "*.scanned.dfam" into scanned_dfam_file
 
     """
-    perl ../../../../programs/perl/table_gen/dfam_tableizer.pl \
+    perl ${projectDir}/../programs/perl/table_gen/dfam_tableizer.pl \
         --hmm_db "${hmm_file}" \
         --genome "${genome_file}" \
         --dfam "${genome_file}.dfam" \
@@ -70,7 +67,7 @@ process format_table {
     path "${genome_file}.txt" into counts_file
 
     """
-    perl ../../../../programs/perl/table_parser/table_parser.pl \
+    perl ${projectDir}/../programs/perl/table_parser/table_parser.pl \
         --dfam "${scanned_dfam_file}" \
         --genome "${genome_file}" \
         --tsv "${genome_file}.tsv" \
