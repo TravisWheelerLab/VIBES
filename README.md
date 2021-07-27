@@ -41,6 +41,12 @@ TODO: Answer the following questions in this section
   				- if desired, a .pdf plot showing how integrases are distributed among bacterial
   				genomes
 
+### Docker Image
+
+There is a [Docker image](https://hub.docker.com/repository/docker/traviswheelerlab/pseudomonas_pipeline_runner)
+capable of running the software, including all dependencies. As a convenience,
+it can also be built using the `build-container.sh` script in the project root.
+
 ## Programs and Scripts
 
 ### hmmbuild_mult_seq.pl
