@@ -7,6 +7,16 @@ from typing import *
 from os import path
 from os import remove
 
+SEQ_TYPES = Literal["dna", "rna", "amino"]
+
+
+def remove_output(output_path: str):
+    remove(output_path)
+    remove(f"{output_path}.h3f")
+    remove(f"{output_path}.h3i")
+    remove(f"{output_path}.h3m")
+    remove(f"{output_path}.h3p")
+
 
 def hmmpress_output(output_path, verbose):
     do_cmd(["hmmpress", output_path], verbose)
@@ -16,7 +26,7 @@ def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
     if path.exists(output_hmm_path):
         if force:
             # TODO: this doesn't clean up hmmpress aux files
-            remove(f"{output_hmm_path}")
+            remove_output(output_hmm_path)
         else:
             raise FileExistsError(f"Output file {output_hmm_path} already exists- either move or delete this file or enable --force")
 
@@ -27,30 +37,13 @@ def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
                 output_file.write(f"{temp_contests}\n")
 
 
-def generate_hmmbuild_cmd(temp_fasta_path: str, temp_hmm_path: str, dna: bool, rna: bool, amino: bool, cpu_count: int, seq_name: str) -> str:
-    seq_type = ""
-
-    if dna:
-        seq_type = "--dna"
-    elif rna:
-        seq_type = "--rna"
-    elif amino:
-        seq_type = "--amino"
-    else:
-        pass
-
-    cmd = ["hmmbuild", "--cpu", cpu_count, "-n",  seq_name, seq_type, temp_hmm_path, temp_fasta_path]
-
-    return cmd
-
-
-def generate_hmm(temp_fasta_dict: Dict[str, str], dna: bool, rna: bool, amino: bool, cpu_count: int, verbose) -> List[str]:
+def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: SEQ_TYPES, cpu_count: int, verbose) -> List[str]:
     temp_hmm_list = []
 
     for temp_fasta_path, seq_name in temp_fasta_dict.items():
         temp_hmm_path = f"{path.splitext(temp_fasta_path)[0]}.hmm"
         temp_hmm_list.append(temp_hmm_path)
-        cmd = generate_hmmbuild_cmd(temp_fasta_path, temp_hmm_path, dna, rna, amino, cpu_count, seq_name)
+        cmd = ["hmmbuild", "--cpu", cpu_count, "-n",  seq_name, f"--{seq_type}", temp_hmm_path, temp_fasta_path]
         do_cmd(cmd, verbose)
 
     return temp_hmm_list
@@ -104,15 +97,12 @@ def parse_args(sys_args: list) -> argparse.Namespace:
     parser = argparse.ArgumentParser(sys_args, description="Accepts input .fasta file and generates HMM for each entry. Automatically runs hmmpress on output .hmm file")
     parser.add_argument("input_fasta", type=str, help="Input .fasta format file containing dna/rna/amino acid sequences")
     parser.add_argument("output_hmm", type=str, help="Path to output .hmm file. Output.hmm will be accompanied by auxiliary 'pressed' files")
+    parser.add_argument("seq_type", type=str, help="Type of sequence in input .fasta file: dna, rna, or amino. Must be one of: dna, rna, amino")
     parser.add_argument("--temp_folder", type=str, default=None, help="Path to folder where temporary .fasta files will be created. These are automatically deleted before the program ends."
                                                                       "If no folder is specified, temporary files are stored in the directory that the output file will live in")
     parser.add_argument("--verbose", help="Prints information about commands used, how many .fasta entries have been hmmbuilt", action="store_true")
     parser.add_argument("--force", help="If output file already exists, overwrite it", action="store_true")
     parser.add_argument("--cpu", type=int, default=1, help="How many threads hmmbuild will use (i > 0)")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("--dna", default=False, help="Specifies that .fasta entries are DNA seq. Mutually exclusive with --rna, --amino", action="store_true")
-    group.add_argument("--rna", default=False, help="Specifies that .fasta entries are RNA seq. Mutually exclusive with --dna, --amino", action="store_true")
-    group.add_argument("--amino", default=False, help="Specifies that .fasta entries are amino seq. Mutually exclusive with --dna, --rna", action="store_true")
 
     return parser.parse_args()
 
@@ -121,13 +111,11 @@ def _main():
     args = parse_args(sys.argv[1:])
     fasta_path = args.input_fasta
     hmm_path = args.output_hmm
+    seq_type = args.seq_type
     temp_folder = args.temp_folder
     verbose = args.verbose
     force = args.force
     cpu_count = args.cpu
-    dna = args.dna
-    rna = args.rna
-    amino = args.amino
 
     if cpu_count < 0:
         raise ValueError("--cpu must be used with an argument greater than or equal to 0")
@@ -139,7 +127,7 @@ def _main():
         temp_folder = re.sub(r"(.+)\/.+?\..+?$", "\g<1>/", fasta_path)
 
     temp_fasta_dict = generate_temp_fastas_from_path(fasta_path, temp_folder)
-    temp_hmm_list = generate_hmm(temp_fasta_dict, dna, rna, amino, cpu_count, verbose)
+    temp_hmm_list = generate_hmm(temp_fasta_dict, seq_type, cpu_count, verbose)
 
     combine_hmms(temp_hmm_list, hmm_path, force)
     hmmpress_output(hmm_path, verbose)
