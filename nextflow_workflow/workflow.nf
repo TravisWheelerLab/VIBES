@@ -2,6 +2,13 @@
 
 genome_files = Channel.fromPath( params.genome_files )
 
+// TODO: Is there are canonical way to handle default values?
+if (params.programs_path == "") {
+    programs_path = "${projectDir}/.."
+} else {
+    programs_path = params.programs_path
+}
+
 process hmm_build {
     cpus 4
     memory '4 GB'
@@ -18,7 +25,7 @@ process hmm_build {
     path "*.h3p" into h3p_file
 
     """
-    perl ${projectDir}/../programs/perl/table_gen/hmmbuild_mult_seq.pl \
+    perl ${programs_path}/perl/table_gen/hmmbuild_mult_seq.pl \
         --input "${seq_file}" \
         --output "${seq_file}.hmm" \
         --cpu ${task.cpus}
@@ -43,7 +50,7 @@ process create_table {
     path "*.scanned.dfam" into scanned_dfam_file
 
     """
-    perl ${projectDir}/../programs/perl/table_gen/dfam_tableizer.pl \
+    perl ${programs_path}/perl/table_gen/dfam_tableizer.pl \
         --hmm_db "${hmm_file}" \
         --genome "${genome_file}" \
         --dfam "${genome_file}.dfam" \
@@ -67,7 +74,7 @@ process format_table {
     path "${genome_file}.txt" into counts_file
 
     """
-    perl ${projectDir}/../programs/perl/table_parser/table_parser.pl \
+    perl ${programs_path}/perl/table_parser/table_parser.pl \
         --dfam "${scanned_dfam_file}" \
         --genome "${genome_file}" \
         --tsv "${genome_file}.tsv" \

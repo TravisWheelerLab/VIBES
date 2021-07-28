@@ -30,8 +30,15 @@ RUN wget http://eddylab.org/software/hmmer/hmmer.tar.gz && \
 
 ENV PATH "$PATH:/tool_bins/bin"
 
+# Install AWS command line tools
+RUN apt-get update && apt-get -y install unzip
+WORKDIR /opt
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
+RUN aws --version
+
 RUN mkdir -p /programs
-ADD . /programs/
+ADD programs /programs/
 
 WORKDIR /
-

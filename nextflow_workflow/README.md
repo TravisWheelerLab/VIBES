@@ -26,6 +26,10 @@ FASTA file
 **genome_files** - the bacterial genomes to search within, this should be glob
 pattern matching a collection of FASTA files
 
+**programs_path** - optional, this is the path to the `programs` directory (at
+the top level of the repo) to allow Nextflow to find the scripts it needs to
+run, the default assumes the user is running locally in the workflow directory
+
 Parameters can be specified as a YAML file. There is a sample parameters file,
 `fixture_params.yaml` that runs the default fixture (a very simple dataset for
 testing purposes). To use it, just pass `-params-file fixture_params.yaml`.
@@ -44,8 +48,43 @@ pre-configured profiles:
 [pseudomonas_pipeline_runner](https://hub.docker.com/repository/docker/traviswheelerlab/pseudomonas_pipeline_runner)
 container image.
 
+**aws_batch** - uses AWS Batch to run the workflow, given appropriate
+credentials, see below for more information
+
 **gscc** - allows the pipeline to run in the
 [Griz Shared Computing Cluster](https://docs.gscc.umt.edu/overview/introduction/)
 at the University of Montana using the Slurm job manager.
 
 The profile can be selected on the command line using the `-profile` option.
+
+## Run on AWS
+
+To run in AWS the following environment variables are required:
+
+  1. `AWS_ACCESS_KEY_ID` - access ID for your AWS user
+  2. `AWS_SECRET_ACCESS_KEY` - secret for your AWS user (or your project), this
+     is the key that the AWS console only shows you once
+  3. `AWS_DEFAULT_REGION` - a good choice is `us-east-1`, which is kind of the
+     "vanilla" of AWS regions
+
+A good way to do this is to create a shell script that contains an `export`
+command for each of these and then `source` it (`source secrets.sh` if you call
+the scripts `secrets.sh`) to add it to the current environment.
+
+Run the workflow using a command similar to this:
+
+```
+nextflow run workflow.nf \
+    -bucket-dir s3://vibes-test-bucket/work \
+    -params-file fixture_params.yaml \
+    -profile aws_batch
+```
+
+The `-bucket-dir` is an S3 bucket that will be used for intermediate results.
+The `-params-file` and `-profile` are the same as above, though if you take a
+look at the `aws_batch` profile you'll see it sets the `programs_path` parameter
+to the location of the `programs` directory in the Docker container.
+
+Note: you need to set up an AWS Batch queue and compute environment for this
+to work. There is a good [tutorial](https://www.nextflow.io/docs/latest/awscloud.html)
+on the Nextflow website.
