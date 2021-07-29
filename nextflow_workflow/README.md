@@ -26,9 +26,9 @@ FASTA file
 **genome_files** - the bacterial genomes to search within, this should be glob
 pattern matching a collection of FASTA files
 
-**programs_path** - optional, this is the path to the `programs` directory (at
-the top level of the repo) to allow Nextflow to find the scripts it needs to
-run, the default assumes the user is running locally in the workflow directory
+**programs_path** - this is the path to the `programs` directory (at the top
+level of the repo) to allow Nextflow to find the scripts it needs to run,
+the default assumes the user is running locally in the workflow directory
 
 Parameters can be specified as a YAML file. There is a sample parameters file,
 `fixture_params.yaml` that runs the default fixture (a very simple dataset for

@@ -1,2 +1,3 @@
+programs_path: ${projectDir}/../programs
 phage_file: ${projectDir}/../fixtures/phage_database.fasta
 genome_files: ${projectDir}/../fixtures/bacteria_*.fasta
