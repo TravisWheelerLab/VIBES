@@ -71,13 +71,17 @@ A good way to do this is to create a shell script that contains an `export`
 command for each of these and then `source` it (`source secrets.sh` if you call
 the scripts `secrets.sh`) to add it to the current environment.
 
+You will also need the AWS command line tool, see the
+[documentation](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+for details.
+
 Run the workflow using a command similar to this:
 
 ```
 nextflow run workflow.nf \
-    -bucket-dir s3://vibes-test-bucket/work \
-    -params-file fixture_params.yaml \
-    -profile aws_batch
+   -bucket-dir s3://vibes-test-bucket/work \
+   -params-file fixture_params.yaml \
+   -profile aws_batch
 ```
 
 The `-bucket-dir` is an S3 bucket that will be used for intermediate results.
@@ -88,3 +92,27 @@ to the location of the `programs` directory in the Docker container.
 Note: you need to set up an AWS Batch queue and compute environment for this
 to work. There is a good [tutorial](https://www.nextflow.io/docs/latest/awscloud.html)
 on the Nextflow website.
+
+## Run on Azure
+
+The following environment variables should be set. These values are all easily
+found in the Azure console. They can be stored in a shell script as suggested
+in the AWS instructions above.
+
+  1. `AZURE_STORAGE_ACCOUNT_NAME` - storage connected to the batch account
+  2. `AZURE_STORAGE_ACCOUNT_KEY` - key for the storage account
+  3. `AZURE_BATCH_ACCOUNT_NAME` - batch account to use
+  4. `AZURE_BATCH_ACCOUNT_KEY` - account key for the batch account
+
+Run the workflow using a command like this:
+
+```
+nextflow run workflow.nf \
+   -w az://vibestest/work \
+   -params-file fixture_params.yaml \
+   -profile azure_batch
+```
+
+The blob storage container provided by `-w` is where intermediate results
+are stored. It should be a container associated with the storage account
+connected to the batch account you intend to use.
