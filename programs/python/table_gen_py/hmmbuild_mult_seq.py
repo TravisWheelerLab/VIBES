@@ -37,7 +37,7 @@ def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
                 output_file.write(f"{temp_contests}\n")
 
 
-def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: SEQ_TYPES, cpu_count: int, verbose) -> List[str]:
+def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: SEQ_TYPES, cpu_count: int, verbose: bool) -> List[str]:
     temp_hmm_list = []
 
     for temp_fasta_path, seq_name in temp_fasta_dict.items():
@@ -52,24 +52,22 @@ def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: SEQ_TYPES, cpu_count
 def generate_temp_fastas(fasta_file: TextIO, temp_folder: str) -> Dict[str, str]:
     temp_fasta_dict = {}
     fasta_list = re.split('\n>', fasta_file.read())
-    increment = 1
+    index = 1
 
     for entry in fasta_list:
         # remove leading and trailing > character, if present
         entry = entry.strip(">")
-        # first line is header, while the rest is the sequence body. uses capture groups before and after the first
-        # newline to capture both
         header, sequence = entry.split("\n", 1)
         # grab the 'name,' or fasta header line up to the first whitespace character
         seq_name = re.escape(header.split()[0])
 
-        temp_file_path = f"{temp_folder}temp{increment}.fasta"
+        temp_file_path = f"{temp_folder}temp{index}.fasta"
         temp_fasta_dict[temp_file_path] = seq_name
         with open(temp_file_path, "w") as temp_file:
             temp_file.write(f">{header.strip()}\n{sequence.strip()}")
             temp_file.close()
 
-        increment += 1
+        index += 1
 
     return temp_fasta_dict
 
@@ -124,7 +122,7 @@ def _main():
         # this regex statement should grab the path of the input file up to its last / character (the path to the input
         # .fasta file's directory). we use this as the temporary file folder unless an alternative has been provided by
         # the user
-        temp_folder = re.sub(r"(.+)\/.+?\..+?$", "\g<1>/", fasta_path)
+        temp_folder = path.dirname(fasta_path)
 
     temp_fasta_dict = generate_temp_fastas_from_path(fasta_path, temp_folder)
     temp_hmm_list = generate_hmm(temp_fasta_dict, seq_type, cpu_count, verbose)
