@@ -11,10 +11,10 @@ def generate_scanned_dfam(hmm_path: str, genome_path: str, dfam_dir: str, cpu_co
     dfam_path = f"{dfam_dir}/{input_name}.dfam"
     unscanned_dfam_path = f"{dfam_dir}/{input_name}_unscanned.dfam"
 
-    nhmmscan_cmd = ["nhmmscan", "--cpu", cpu_count, "--dfam_tblout", unscanned_dfam_path, hmm_path, genome_path]
+    nhmmscan_cmd = ["nhmmscan", "--cpu", cpu_count, "--dfamtblout", unscanned_dfam_path, hmm_path, genome_path]
     do_cmd(nhmmscan_cmd, verbose)
 
-    dfamscan_cmd = ["perl dfamscan.pl", "--dfam_infile", unscanned_dfam_path, "--dfam_outfile", dfam_path]
+    dfamscan_cmd = ["./dfamscan.pl", "--dfam_infile", unscanned_dfam_path, "--dfam_outfile", dfam_path]
     do_cmd(dfamscan_cmd, verbose)
 
     remove(unscanned_dfam_path)
@@ -50,13 +50,23 @@ def _main():
     args = parse_args(sys.argv[1:])
     hmm_path = args.hmm_path
     genome_path = args.genome_path
-    dfam_dir = args.dfam_dir
+    dfam_dir = args.output_table_dir
     cpu_count = args.cpu
     verbose = args.verbose
     force = args.force
 
+    # check that inputs are legal
     if cpu_count < 0:
         raise ValueError("--cpu must be used with an argument greater than or equal to 0")
+
+    if not path.isfile(hmm_path):
+        raise FileNotFoundError(f"No such file: {hmm_path}")
+
+    if not path.isfile(genome_path):
+        raise FileNotFoundError(f"No such file: {genome_path}")
+
+    if not path.isdir(dfam_dir):
+        raise NotADirectoryError(f"No such folder: {dfam_dir}")
 
     generate_scanned_dfam(hmm_path, genome_path, dfam_dir, cpu_count, verbose, force)
 
