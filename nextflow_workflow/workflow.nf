@@ -18,10 +18,10 @@ process hmm_build {
     path "*.h3p" into h3p_file
 
     """
-    perl ${params.programs_path}/perl/table_gen/hmmbuild_mult_seq.pl \
-        --input "${seq_file}" \
-        --output "${seq_file}.hmm" \
-        --cpu ${task.cpus}
+    python3 ${params.programs_path}/python/table_gen_py/hmmbuild_mult_seq.py \
+        --cpu ${task.cpus} \
+        "${seq_file}" \
+        "${seq_file}.hmm"
     """
 }
 
