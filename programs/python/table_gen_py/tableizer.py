@@ -11,6 +11,16 @@ def generate_scanned_dfam(hmm_path: str, genome_path: str, dfam_dir: str, cpu_co
     dfam_path = f"{dfam_dir}/{input_name}.dfam"
     unscanned_dfam_path = f"{dfam_dir}/{input_name}_unscanned.dfam"
 
+    # if user enabled --force, remove old output files before continuing. Always remove unscanned file if it exists
+    if path.exists(unscanned_dfam_path):
+        remove(unscanned_dfam_path)
+
+    if path.exists(dfam_path):
+        if force:
+            remove(dfam_path)
+        else:
+            raise FileExistsError(f"Output file {dfam_path} already exists- either move or delete this file or enable --force")
+
     nhmmscan_cmd = ["nhmmscan", "--cpu", cpu_count, "--dfamtblout", unscanned_dfam_path, hmm_path, genome_path]
     do_cmd(nhmmscan_cmd, verbose)
 
