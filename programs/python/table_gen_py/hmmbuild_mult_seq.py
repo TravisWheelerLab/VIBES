@@ -7,7 +7,7 @@ from typing import *
 from os import path
 from os import remove
 
-SEQ_TYPES = Literal["dna", "rna", "amino"]
+SEQ_TYPES = Literal["dna", "rna", "amino", ""]
 
 
 def remove_output(output_path: str):
@@ -43,7 +43,14 @@ def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: SEQ_TYPES, cpu_count
     for temp_fasta_path, seq_name in temp_fasta_dict.items():
         temp_hmm_path = f"{path.splitext(temp_fasta_path)[0]}.hmm"
         temp_hmm_list.append(temp_hmm_path)
-        cmd = ["hmmbuild", "--cpu", cpu_count, "-n",  seq_name, f"--{seq_type}", temp_hmm_path, temp_fasta_path]
+
+        # if user didn't set specify --seq_type, it should be an empty string and evaluate to False. this stops
+        # subprocess.run() from getting upset about being given an empty string argument
+        if not seq_type:
+            cmd = ["hmmbuild", "--cpu", cpu_count, "-n", seq_name, temp_hmm_path, temp_fasta_path]
+        else:
+            cmd = ["hmmbuild", "--cpu", cpu_count, "-n", seq_name, f"--{seq_type}", temp_hmm_path, temp_fasta_path]
+
         do_cmd(cmd, verbose)
 
     return temp_hmm_list
@@ -95,9 +102,9 @@ def parse_args(sys_args: list) -> argparse.Namespace:
     parser = argparse.ArgumentParser(sys_args, description="Accepts input .fasta file and generates HMM for each entry. Automatically runs hmmpress on output .hmm file")
     parser.add_argument("input_fasta", type=str, help="Input .fasta format file containing dna/rna/amino acid sequences")
     parser.add_argument("output_hmm", type=str, help="Path to output .hmm file. Output.hmm will be accompanied by auxiliary 'pressed' files")
-    parser.add_argument("seq_type", type=str, help="Type of sequence in input .fasta file: dna, rna, or amino. Must be one of: dna, rna, amino")
     parser.add_argument("--temp_folder", type=str, default=None, help="Path to folder where temporary .fasta files will be created. These are automatically deleted before the program ends."
                                                                       "If no folder is specified, temporary files are stored in the directory that the output file will live in")
+    parser.add_argument("--seq_type", type=str, default="", help="Type of sequence in input .fasta file: dna, rna, or amino. Must be one of: dna, rna, amino")
     parser.add_argument("--verbose", help="Prints information about commands used, how many .fasta entries have been hmmbuilt", action="store_true")
     parser.add_argument("--force", help="If output file already exists, overwrite it", action="store_true")
     parser.add_argument("--cpu", type=int, default=1, help="How many threads hmmbuild will use (i > 0)")
