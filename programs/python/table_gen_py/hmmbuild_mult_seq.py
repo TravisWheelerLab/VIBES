@@ -2,7 +2,6 @@ import re
 import sys
 import argparse
 import subprocess
-from typing import TextIO
 from typing import *
 from os import path
 from os import remove
@@ -25,7 +24,6 @@ def hmmpress_output(output_path, verbose):
 def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
     if path.exists(output_hmm_path):
         if force:
-            # TODO: this doesn't clean up hmmpress aux files
             remove_output(output_hmm_path)
         else:
             raise FileExistsError(f"Output file {output_hmm_path} already exists- either move or delete this file or enable --force")
