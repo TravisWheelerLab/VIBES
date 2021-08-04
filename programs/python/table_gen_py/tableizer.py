@@ -34,7 +34,6 @@ def do_cmd(cmd: List[str], verbose: bool):
     # double check that all elements are strings
     for i, element in enumerate(cmd):
         cmd[i] = str(element)
-    print(cmd)
     if verbose:
         verbose_cmd = " ".join(cmd)
         print(f"Running command: {verbose_cmd}")
