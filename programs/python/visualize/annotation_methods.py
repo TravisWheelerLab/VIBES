@@ -48,9 +48,11 @@ class Match:
 
     genomeLength: int
         Length of the query genome.
+
+    geneLength: length of gene being searched for in the genome
     '''
 
-    def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, description, genomeLength=None):
+    def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, description, genomeLength=None, geneLength=None):
         self.name = name
         self.eVal = eVal
         self.hmmSt = hmmSt
@@ -60,6 +62,7 @@ class Match:
         self.accID = accID
         self.description = description
         self.genomeLength = genomeLength
+        self.geneLength = geneLength
 
 
 # .fasta format is a nightmare, but its header can roughly be divided into 2 parts: the first sequence of characters following >, up to the first space (the name)
@@ -239,6 +242,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
                 # since split() gives us strings, we cast to the proper type
                 domainName = dataList[0]
                 tlen = int(dataList[2])
+                orflen = int(dataList[6])  # this seems to be the total protein length
                 iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
                 hmmFrom = int(dataList[15])
                 hmmTo = int(dataList[16])
@@ -255,7 +259,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
 
                 # we only want entries with e-value <= minimum (default 1e-5)
                 if (iEvalue <= minEval):
-                    match = Match(domainName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description, tlen)
+                    match = Match(domainName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description, tlen, orflen)
                     infoList.append(match)
 
     return infoList
