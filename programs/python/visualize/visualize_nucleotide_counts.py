@@ -33,10 +33,11 @@ def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfam
                             "ID": match.accID, 
                             "genome_st": match.aliSt,
                             "genome_en": match.aliEn,
-                            "gene_st" : match.hmmSt,
-                            "gene_en" : match.hmmEn,
-                            "gene_len" : match.geneLength,
+                            "gene_st": match.hmmSt,
+                            "gene_en": match.hmmEn,
+                            "gene_len": match.geneLength,
                             "evalue": match.eVal,
+                            "strand": match.strand,
                             "desc": match.description}
 
             protAnnoList.append(matchDict)
