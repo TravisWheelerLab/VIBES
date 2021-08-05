@@ -31,8 +31,7 @@ def generate_scanned_dfam(hmm_path: str, genome_path: str, dfam_path: str, cpu_c
 
 def do_cmd(cmd: List[str], verbose: bool):
     # double check that all elements are strings
-    for i, element in enumerate(cmd):
-        cmd[i] = str(element)
+    cmd = [str(e) for e in cmd]
     if verbose:
         verbose_cmd = " ".join(cmd)
         print(f"Running command: {verbose_cmd}")
