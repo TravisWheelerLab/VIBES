@@ -8,10 +8,9 @@ from os import remove
 
 def generate_scanned_dfam(hmm_path: str, genome_path: str, dfam_path: str, cpu_count: int, verbose: bool, force: bool):
     input_name = path.basename(hmm_path)
-    dfam_path = f"{dfam_path}/{input_name}.dfam"
-    unscanned_dfam_path = f"{dfam_path}/{input_name}_unscanned.dfam"
+    dfam_path = path.join(dfam_path, f"{input_name}.dfam")
+    unscanned_dfam_path = path.join(dfam_path, f"{input_name}_unscanned.dfam")
 
-    # if user enabled --force, remove old output files before continuing. Always remove unscanned file if it exists
     if path.exists(unscanned_dfam_path):
         remove(unscanned_dfam_path)
 
