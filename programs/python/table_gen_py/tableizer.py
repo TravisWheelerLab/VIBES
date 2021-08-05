@@ -7,9 +7,7 @@ from os import remove
 
 
 def generate_scanned_dfam(hmm_path: str, genome_path: str, dfam_path: str, cpu_count: int, verbose: bool, force: bool):
-    input_name = path.basename(hmm_path)
-    dfam_path = path.join(dfam_path, f"{input_name}.dfam")
-    unscanned_dfam_path = path.join(dfam_path, f"{input_name}_unscanned.dfam")
+    unscanned_dfam_path = path.join(path.dirname(dfam_path), f"{path.basename(dfam_path)}_unscanned.dfam")
 
     if path.exists(unscanned_dfam_path):
         remove(unscanned_dfam_path)
@@ -72,10 +70,10 @@ def _main():
     if not path.isfile(genome_path):
         raise FileNotFoundError(f"No such file: {genome_path}")
 
-    if not path.isdir(dfam_dir):
-        raise NotADirectoryError(f"No such folder: {dfam_dir}")
+    if not path.isdir(path.dirname(dfam_path)):
+        raise NotADirectoryError(f"No such folder: {path.dirname(dfam_path)}")
 
-    generate_scanned_dfam(hmm_path, genome_path, dfam_dir, cpu_count, verbose, force)
+    generate_scanned_dfam(hmm_path, genome_path, dfam_path, cpu_count, verbose, force)
 
 
 if __name__ == "__main__":
