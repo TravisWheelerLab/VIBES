@@ -59,18 +59,18 @@ class Match:
         Length of gene being searched for in the genome
     '''
 
-    def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, strand: STRAND, description, genomeLength=None, geneLength=None):
-        self.name = name
-        self.eVal = eVal
-        self.hmmSt = hmmSt
-        self.hmmEn = hmmEn
-        self.aliSt = aliSt
-        self.aliEn = aliEn
-        self.accID = accID
-        self.strand = strand
-        self.description = description
-        self.genomeLength = genomeLength
-        self.geneLength = geneLength
+def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, strand: STRAND, description, genomeLength=0, geneLength=0):
+    self.name = name
+    self.eVal = eVal
+    self.hmmSt = hmmSt
+    self.hmmEn = hmmEn
+    self.aliSt = aliSt
+    self.aliEn = aliEn
+    self.accID = accID
+    self.strand = strand
+    self.description = description
+    self.genomeLength = genomeLength
+    self.geneLength = geneLength
 
 
 # .fasta format is a nightmare, but its header can roughly be divided into 2 parts: the first sequence of characters following >, up to the first space (the name)
