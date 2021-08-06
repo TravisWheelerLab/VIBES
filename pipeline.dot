@@ -1,0 +1,29 @@
+strict digraph Workflow {
+    // Data
+    node [shape=note fillcolor=red]
+    GD [label="Genome Database"]
+    HMM [label="HMM Files"]
+    BG [label="Bacterial Genome"]
+    SDF [label="Scanned Dfam Files"]
+    VI [label="Viral Insertions"]
+    NOC [label="Nucleotide Occurrence Counts"]
+
+    // Scripts
+    node [shape=box]
+    HMMB [label="hmmbuild_mult_seq.py"]
+    DT [label="Dfam Tableizer"]
+    TP [label="Table Parser"]
+
+    // Pipeline
+    GD -> HMMB
+    HMMB -> HMM
+
+    HMM -> DT
+    BG -> DT
+    DT -> SDF
+
+    BG -> TP
+    SDF -> TP
+    TP -> VI
+    TP -> NOC
+}
