@@ -1,6 +1,7 @@
 import argparse
 import sys
 import subprocess
+from typing import TextIO
 from typing import *
 from os import path
 from os import remove
@@ -10,7 +11,7 @@ STRAND = Literal["+", "-"]
 
 
 class ViralSeq:
-    def __init__(self, name: str, evalue: float, bac_st: int, bac_end: int, bac_genome_path: str, ref_vir_st: int, ref_vir_end: int, ref_vir_len: int, strand: STRAND, full_cutoff: int = 100):
+    def __init__(self, name: str, evalue: float, bac_st: int, bac_end: int, bac_genome_path: str, ref_vir_st: int, ref_vir_end: int, ref_vir_len: int, strand: STRAND, full_cutoff: int = 100, verbose: bool = False):
         self.name = name
         self.evalue = evalue
         self.bac_st = bac_st
@@ -20,16 +21,17 @@ class ViralSeq:
         self.ref_vir_end = ref_vir_end
         self.ref_vir_len = ref_vir_len
         self.strand = strand
+        self.verbose = verbose
         self.full_cutoff = full_cutoff
-        self.len = self.__buildLen__()
-        self.bac_genome_len = self.__fetch_bac_len__()
-        self.flanking_att_site = self.__detect_flanking_atts__()
+        self.bac_genome_len = self.get_bac_len()
+        self.flanking_att_site = self.detect_flanking_atts()
 
     def get_vir_seq_len(self) -> int:
         return abs(self.gn_st - self.gn_end) + 1
 
     def get_bac_len(self) -> int:
-        seqstat_results = do_cmd(f"esl-seqstat {self.bac_genome_path}").stdout
+        seqstat_results = do_cmd(f"esl-seqstat {self.bac_genome_path}", self.verbose)
+        print(seqstat_results)
         for line in seqstat_results:
             if "Total # residues" in line:
                 line_list = line.split()
@@ -45,28 +47,30 @@ class ViralSeq:
         # TODO: use simple smith-waterman alignment to search for off-diagonal hits at the ends of viral genome
         pass
 
-def parse_table(dfam_file: TextIO, genome_path: str) -> List[ViralSeq]:
+def parse_table(dfam_file: TextIO, genome_path: str, verbose) -> List[ViralSeq]:
     seq_list = []
     for line in dfam_file:
-        line_list = line.split()
-        name = line_list[0]
-        evalue = line_list[4]
-        hmm_st = line_list[6]
-        hmm_en = line_list[7]
-        strand = line_list[8]
-        ali_st = line_list[9]
-        ali_en = line_list[10]
-        ref_vir_len = line_list[13]
-        # target name 0, e-value 4, start on target phage (hmmst) 6, end on target phage (hmmen) 7, strand 8, query bacteria start (alist) 9, query bacteria end (alien) 10, phage len (modlen) 13
+        if line[0] == "#":
+            pass
+        else:
+            line_list = line.split()
+            name = line_list[0]
+            evalue = line_list[4]
+            hmm_st = line_list[6]
+            hmm_en = line_list[7]
+            strand = line_list[8]
+            ali_st = line_list[9]
+            ali_en = line_list[10]
+            ref_vir_len = line_list[13]
 
-        seq_list.append(ViralSeq(name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand))
+            seq_list.append(ViralSeq(name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand, verbose))
 
     return seq_list
 
 
-def parse_table_from_path(dfam_path: str, genome_path: str) -> List[ViralSeq]:
+def parse_table_from_path(dfam_path: str, genome_path: str, verbose) -> List[ViralSeq]:
     with open(dfam_path) as dfam_file:
-        parse_table(dfam_file)
+        parse_table(dfam_file, genome_path, verbose)
 
 
 def parse_args(sys_args: list) -> argparse.Namespace:
@@ -83,14 +87,11 @@ def parse_args(sys_args: list) -> argparse.Namespace:
     return parser.parse_args()
 
 
-def do_cmd(cmd: List[str], verbose: bool) -> subprocess.CompletedProcess:
-    # double check that all elements are strings
-    cmd = [str(e) for e in cmd]
+def do_cmd(cmd: str, verbose: bool) -> subprocess.CompletedProcess:
     if verbose:
-        verbose_cmd = " ".join(cmd)
-        print(f"Running command: {verbose_cmd}")
+        print(f"Running command: {cmd}")
 
-    return subprocess.run(cmd)
+    return subprocess.getoutput(cmd)
 
 
 def _main():
@@ -107,7 +108,7 @@ def _main():
     if max_eval < 0:
         raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
-    viral_seqs = parse_table_from_path(dfam_path, genome_path)
+    viral_seqs = parse_table_from_path(dfam_path, genome_path, verbose)
 
 
 if __name__ == "__main__":
