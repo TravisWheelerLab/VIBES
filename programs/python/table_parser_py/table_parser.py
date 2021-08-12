@@ -76,7 +76,7 @@ def parse_args(sys_args: list) -> argparse.Namespace:
     parser.add_argument("genome_path", type=str, help="Path to input genome in .fasta format")
     parser.add_argument("output_tsv_path", type=str, help="Path to output .tsv file")
     parser.add_argument("output_json_path", type=str, help="Path to output .json file containing information on nucleotide occurrence counts")
-    parser.add_argument("--max_evalue", type=float, default=default_eval, help=f"Maximum allowable sequence e-value. Default is {default_eval}")
+    parser.add_argument("--max_evalue", type=float, default=default_eval, help=f"Maximum allowable sequence e-value (must be >= 0). Default is {default_eval}")
     parser.add_argument("--verbose", action="store_true", help="Print additional information useful for debugging")
     parser.add_argument("--force", action="store_true", help="If output file already exists, overwrite it")
 
@@ -95,25 +95,19 @@ def do_cmd(cmd: List[str], verbose: bool) -> subprocess.CompletedProcess:
 
 def _main():
     args = parse_args(sys.argv[1:])
-    hmm_path = args.hmm_path
+    dfam_path = args.dfam_path
     genome_path = args.genome_path
-    dfam_dir = args.output_table_dir
-    cpu_count = args.cpu
+    tsv_path = args.output_tsv_path
+    json_path = args.output_json_path
+    max_eval = args.max_evalue
     verbose = args.verbose
     force = args.force
 
     # check that inputs are legal
-    if cpu_count < 0:
-        raise ValueError("--cpu must be used with an argument greater than or equal to 0")
+    if max_eval < 0:
+        raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
-    if not path.isfile(hmm_path):
-        raise FileNotFoundError(f"No such file: {hmm_path}")
-
-    if not path.isfile(genome_path):
-        raise FileNotFoundError(f"No such file: {genome_path}")
-
-    if not path.isdir(dfam_dir):
-        raise NotADirectoryError(f"No such folder: {dfam_dir}")
+    viral_seqs = parse_table_from_path(dfam_path, genome_path)
 
 
 if __name__ == "__main__":
