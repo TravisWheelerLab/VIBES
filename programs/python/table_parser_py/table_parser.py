@@ -31,8 +31,7 @@ class ViralSeq:
 
     def get_bac_len(self) -> int:
         seqstat_results = do_cmd(f"esl-seqstat {self.bac_genome_path}", self.verbose)
-        print(seqstat_results)
-        for line in seqstat_results:
+        for line in seqstat_results.split("\n"):
             if "Total # residues" in line:
                 line_list = line.split()
                 return line_list[3]
@@ -70,7 +69,7 @@ def parse_table(dfam_file: TextIO, genome_path: str, verbose) -> List[ViralSeq]:
 
 def parse_table_from_path(dfam_path: str, genome_path: str, verbose) -> List[ViralSeq]:
     with open(dfam_path) as dfam_file:
-        parse_table(dfam_file, genome_path, verbose)
+        return parse_table(dfam_file, genome_path, verbose)
 
 
 def parse_args(sys_args: list) -> argparse.Namespace:
@@ -109,6 +108,7 @@ def _main():
         raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
     viral_seqs = parse_table_from_path(dfam_path, genome_path, verbose)
+    print(viral_seqs[0].bac_genome_len)
 
 
 if __name__ == "__main__":
