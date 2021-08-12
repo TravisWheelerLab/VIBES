@@ -44,6 +44,7 @@ class ViralSeq:
 
     def detect_flanking_atts(self) -> Tuple[bool, List[str]]:
         # TODO: use simple smith-waterman alignment to search for off-diagonal hits at the ends of viral genome
+        # in the meantime, simply return as negative
         return False, ["",""]
 
     def to_tsv_line(self) -> str:
@@ -51,7 +52,22 @@ class ViralSeq:
                f"{self.ref_vir_len}\t{self.is_flanked}\t{path.basename(self.bac_genome_path)}\t{self.bac_st}\t" \
                f"{self.bac_end}\t{self.bac_genome_len}\t{self.strand}\n"
 
-def populate_tsv(tsv: TextIO, seq_list: List[ViralSeq], verbose: bool, force: bool):
+
+def populate_occurrence_json(json: TextIO, viral_seqs: List[ViralSeq]):
+    # TODO: use Dict[str, List[int]] to store a list of ints for each virus present across the viral seqs. the list of ints
+    # will be the occurrence count chart. This should easily plug into the json package
+
+
+def populate_occurrence_json_from_path(json_path: str, viral_seqs: List[ViralSeq], force: bool):
+    if path.isfile(json_path) and not force:
+        raise FileExistsError(
+            f"Output file {json_path} already exists- either move or delete this file or enable --force")
+    else:
+        with open(json_path, "w") as json:
+            populate_occurrence_json(json, viral_seqs)
+
+
+def populate_tsv(tsv: TextIO, seq_list: List[ViralSeq]):
     # write header line first
     tsv.write("Name\tE-Value\tIs Full Length Insertion\tMatch Start Position on Viral Genome\tMatch End Position on "
               "Viral Genome\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tMatch Start Position on "
@@ -60,13 +76,13 @@ def populate_tsv(tsv: TextIO, seq_list: List[ViralSeq], verbose: bool, force: bo
         tsv.write(viral_seq.to_tsv_line())
 
 
-def populate_tsv_from_path(tsv_path: str, seq_list: List[ViralSeq], verbose: bool, force: bool):
+def populate_tsv_from_path(tsv_path: str, seq_list: List[ViralSeq], force: bool):
     if path.isfile(tsv_path) and not force:
         raise FileExistsError(
             f"Output file {tsv_path} already exists- either move or delete this file or enable --force")
     else:
         with open(tsv_path, "w") as tsv:
-            populate_tsv(tsv, seq_list, verbose, force)
+            populate_tsv(tsv, seq_list)
 
 
 def parse_table(dfam_file: TextIO, genome_path: str, verbose) -> List[ViralSeq]:
