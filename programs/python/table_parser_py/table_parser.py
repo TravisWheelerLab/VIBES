@@ -5,6 +5,7 @@ from typing import TextIO
 from typing import *
 from os import path
 from os import remove
+import json
 
 
 STRAND = Literal["+", "-"]
@@ -53,9 +54,25 @@ class ViralSeq:
                f"{self.bac_end}\t{self.bac_genome_len}\t{self.strand}\n"
 
 
-def populate_occurrence_json(json: TextIO, viral_seqs: List[ViralSeq]):
+def populate_occurrence_json(json_file: TextIO, viral_seqs: List[ViralSeq]):
     # TODO: use Dict[str, List[int]] to store a list of ints for each virus present across the viral seqs. the list of ints
     # will be the occurrence count chart. This should easily plug into the json package
+    occ_dict = {}
+    INDENT_VAL = 4
+
+    for seq in viral_seqs:
+        # each position in the list corresponds to a position in the reference viral genome. the number at each
+        # position is how many times we've seen that position as part of an identified viral sequence
+        if seq.name not in occ_dict:
+            occ_dict[seq.name] = [0] * seq.ref_vir_len
+
+        ref_start_index = seq.ref_vir_st - 1 # offset by 1 because genomes are 1-indexed, lists are 0-indexed
+        ref_end_index = seq.ref_vir_end # don't offset by 1 because range() excludes end
+
+        for index in range(ref_start_index, ref_end_index):
+            occ_dict[seq.name][index] += 1
+
+        json_file.write(json.dumps(occ_dict, indent=INDENT_VAL))
 
 
 def populate_occurrence_json_from_path(json_path: str, viral_seqs: List[ViralSeq], force: bool):
@@ -63,15 +80,18 @@ def populate_occurrence_json_from_path(json_path: str, viral_seqs: List[ViralSeq
         raise FileExistsError(
             f"Output file {json_path} already exists- either move or delete this file or enable --force")
     else:
-        with open(json_path, "w") as json:
-            populate_occurrence_json(json, viral_seqs)
+        with open(json_path, "w") as json_file:
+            populate_occurrence_json(json_file, viral_seqs)
+            json_file.close()
 
 
 def populate_tsv(tsv: TextIO, seq_list: List[ViralSeq]):
     # write header line first
-    tsv.write("Name\tE-Value\tIs Full Length Insertion\tMatch Start Position on Viral Genome\tMatch End Position on "
-              "Viral Genome\tViral Genome Length\tFlanking Att Sites\tBacterial Genome Name\tMatch Start Position on "
-              "Bacterial Genome\tMatch End Position on Bacterial Genome\tBacterial Genome Length\tStrand\n")
+    headers = ["Name", "E-Value", "Is Full Length Insertion", "Match Start Position on Viral Genome",
+               "Match End Position on Viral Genome", "Viral Genome Length", "Flanking Att Sites",
+               "Bacterial Genome Name", "Match Start Position on Bacterial Genome",
+               "Match End Position on Bacterial Genome", "Bacterial Genome Length", "Strand\n"]
+    tsv.write("\t".join(headers))
     for viral_seq in seq_list:
         tsv.write(viral_seq.to_tsv_line())
 
@@ -148,7 +168,8 @@ def _main():
         raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
     viral_seqs = parse_table_from_path(dfam_path, genome_path, verbose)
-    populate_tsv_from_path(tsv_path, viral_seqs, verbose, force)
+    populate_tsv_from_path(tsv_path, viral_seqs, force)
+    populate_occurrence_json_from_path(json_path, viral_seqs, force)
 
 
 if __name__ == "__main__":

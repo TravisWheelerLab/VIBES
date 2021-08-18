@@ -46,7 +46,7 @@ class Match:
     accID: String
         Unique identifier of the target sequence.
 
-    Strand: String
+    Strand: STRAND
         Which strand the sequence is on (+ or -)
 
     description: String
