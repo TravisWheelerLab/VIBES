@@ -63,7 +63,7 @@ def populate_occurrence_json(json_file: TextIO, viral_seqs: List[ViralSeq]):
     for seq in viral_seqs:
         # each position in the list corresponds to a position in the reference viral genome. the number at each
         # position is how many times we've seen that position as part of an identified viral sequence
-        if seq.name not in occ_dict:
+        if seq.name not in occ_dict.keys():
             occ_dict[seq.name] = [0] * seq.ref_vir_len
 
         ref_start_index = seq.ref_vir_st - 1 # offset by 1 because genomes are 1-indexed, lists are 0-indexed
@@ -72,7 +72,7 @@ def populate_occurrence_json(json_file: TextIO, viral_seqs: List[ViralSeq]):
         for index in range(ref_start_index, ref_end_index):
             occ_dict[seq.name][index] += 1
 
-        json_file.write(json.dumps(occ_dict, indent=INDENT_VAL))
+    json_file.write(json.dumps(occ_dict, indent=INDENT_VAL))
 
 
 def populate_occurrence_json_from_path(json_path: str, viral_seqs: List[ViralSeq], force: bool):
