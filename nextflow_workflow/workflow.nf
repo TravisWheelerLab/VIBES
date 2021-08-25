@@ -43,11 +43,10 @@ process create_table {
     path "*.scanned.dfam" into scanned_dfam_file
 
     """
-    perl ${params.programs_path}/perl/table_gen/dfam_tableizer.pl \
-        --hmm_db "${hmm_file}" \
-        --genome "${genome_file}" \
-        --dfam "${genome_file}.dfam" \
-        --scanned_dfam "${genome_file}.scanned.dfam"
+    python3 ${params.programs_path}/python/table_gen_py/tableizer.py \
+        "${hmm_file}" \
+        "${genome_file}" \
+        "${genome_file}.scanned.dfam"
     """
 }
 
