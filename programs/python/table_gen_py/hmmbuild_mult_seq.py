@@ -89,7 +89,6 @@ def do_cmd(cmd: List[str], verbose: bool):
     # double check that all elements are strings
     for i, element in enumerate(cmd):
         cmd[i] = str(element)
-    print(cmd)
     if verbose:
         verbose_cmd = " ".join(cmd)
         print(f"Running command: {verbose_cmd}")
@@ -103,10 +102,10 @@ def parse_args(sys_args: list) -> argparse.Namespace:
     parser.add_argument("output_hmm", type=str, help="Path to output .hmm file. Output.hmm will be accompanied by auxiliary 'pressed' files")
     parser.add_argument("--temp_folder", type=str, default=None, help="Path to folder where temporary .fasta files will be created. These are automatically deleted before the program ends."
                                                                       "If no folder is specified, temporary files are stored in the directory that the output file will live in")
+    parser.add_argument("--cpu", type=int, default=1, help="How many threads hmmbuild will use (i > 0)")
     parser.add_argument("--seq_type", type=str, choices=VALID_SEQ_TYPES, default=None, help="Type of sequence in input .fasta file: dna, rna, or amino. Must be one of: dna, rna, amino")
     parser.add_argument("--verbose", help="Prints information about commands used, how many .fasta entries have been hmmbuilt", action="store_true")
     parser.add_argument("--force", help="If output file already exists, overwrite it", action="store_true")
-    parser.add_argument("--cpu", type=int, default=1, help="How many threads hmmbuild will use (i > 0)")
 
     return parser.parse_args()
 
