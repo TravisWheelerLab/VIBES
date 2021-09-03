@@ -1,4 +1,7 @@
 import re
+from typing import *
+
+STRAND = Literal["+", "-"]
 
 
 class Genome:
@@ -43,23 +46,31 @@ class Match:
     accID: String
         Unique identifier of the target sequence.
 
+    Strand: STRAND
+        Which strand the sequence is on (+ or -)
+
     description: String
         Brief description of the target sequence.
 
     genomeLength: int
         Length of the query genome.
+
+    geneLength: int
+        Length of gene being searched for in the genome
     '''
 
-    def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, description, genomeLength=None):
-        self.name = name
-        self.eVal = eVal
-        self.hmmSt = hmmSt
-        self.hmmEn = hmmEn
-        self.aliSt = aliSt
-        self.aliEn = aliEn
-        self.accID = accID
-        self.description = description
-        self.genomeLength = genomeLength
+def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, strand: STRAND, description, genomeLength=0, geneLength=0):
+    self.name = name
+    self.eVal = eVal
+    self.hmmSt = hmmSt
+    self.hmmEn = hmmEn
+    self.aliSt = aliSt
+    self.aliEn = aliEn
+    self.accID = accID
+    self.strand = strand
+    self.description = description
+    self.genomeLength = genomeLength
+    self.geneLength = geneLength
 
 
 # .fasta format is a nightmare, but its header can roughly be divided into 2 parts: the first sequence of characters following >, up to the first space (the name)
@@ -207,6 +218,7 @@ def buildDfamList(dfamPath, minEval):
                 iEvalue = float(dataList[4])
                 hmmFrom = int(dataList[6])
                 hmmTo = int(dataList[7])
+                strand = dataList[8]
                 aliFrom = int(dataList[9])
                 aliTo = int(dataList[10])
                 description = joinString.join(dataList[14:])
@@ -216,7 +228,7 @@ def buildDfamList(dfamPath, minEval):
 
                 # we only want entries with e-value <= minimum (default 1e-5)
                 if (iEvalue <= minEval):
-                    match = Match(matchName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description)
+                    match = Match(matchName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, strand, description)
                     infoList.append(match)
 
     return infoList
@@ -239,11 +251,13 @@ def buildDomtblList(domTblPath, minEval, fileSource):
                 # since split() gives us strings, we cast to the proper type
                 domainName = dataList[0]
                 tlen = int(dataList[2])
+                orflen = int(dataList[6])  # this seems to be the total protein length
                 iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
                 hmmFrom = int(dataList[15])
                 hmmTo = int(dataList[16])
                 aliFrom = int(dataList[19])
                 aliTo = int(dataList[20])
+                strand = dataList[25][0]
                 description = joinString.join(dataList[27:])
 
                 if fileSource == "swissProt":
@@ -255,7 +269,7 @@ def buildDomtblList(domTblPath, minEval, fileSource):
 
                 # we only want entries with e-value <= minimum (default 1e-5)
                 if (iEvalue <= minEval):
-                    match = Match(domainName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description, tlen)
+                    match = Match(domainName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, strand, description, tlen, orflen)
                     infoList.append(match)
 
     return infoList
