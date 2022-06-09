@@ -44,6 +44,7 @@ process create_table {
 
     """
     python3 ${params.programs_path}/python/table_gen_py/tableizer.py \
+        --dfamscan_path ${params.dfamscan_path} \
         "${hmm_file}" \
         "${genome_file}" \
         "${genome_file}.scanned.dfam"
@@ -63,13 +64,13 @@ process format_table {
 
     output:
     path "${genome_file}.tsv" into insertion_file
-    path "${genome_file}.txt" into counts_file
+    path "${genome_file}.json" into json_file
 
     """
-    perl ${params.programs_path}/perl/table_parser/table_parser.pl \
-        --dfam "${scanned_dfam_file}" \
-        --genome "${genome_file}" \
-        --tsv "${genome_file}.tsv" \
-        --chart "${genome_file}.txt"
+    python3 ${params.programs_path}/python/table_parser_py/table_parser.py \
+        "${scanned_dfam_file}" \
+        "${genome_file}" \
+        "${genome_file}.tsv" \
+        "${genome_file}.json"
     """
 }
