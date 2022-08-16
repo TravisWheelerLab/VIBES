@@ -4,7 +4,7 @@ import sys
 import subprocess
 from os import path
 from os import remove
-from typing import *
+from typing import Dict, List, Literal, Optional, TextIO
 
 
 VALID_SEQ_TYPES = ("dna", "rna", "amino")
