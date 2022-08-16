@@ -4,7 +4,7 @@ genome_files = Channel.fromPath( params.genome_files )
 
 process hmm_build {
     cpus 4
-    memory '4 GB'
+    memory =  '4gb'
     time '1h'
 
     input:
@@ -26,8 +26,8 @@ process hmm_build {
 }
 
 process create_table {
-    cpus 1
-    memory '2 GB'
+    cpus 4
+    memory '4 GB'
     time '1h'
 
     input:
@@ -59,7 +59,7 @@ process format_table {
     publishDir 'output'
 
     input:
-    path genome_file from genome_file
+    path genome_file from genome_files
     path scanned_dfam_file from scanned_dfam_file
 
     output:

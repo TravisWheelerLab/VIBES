@@ -1,11 +1,11 @@
+import argparse
 import re
 import sys
-import argparse
 import subprocess
-from typing import TextIO
-from typing import *
 from os import path
 from os import remove
+from typing import *
+
 
 VALID_SEQ_TYPES = ("dna", "rna", "amino")
 SEQ_TYPE = Literal["dna", "rna", "amino"]
