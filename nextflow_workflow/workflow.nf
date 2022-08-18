@@ -6,8 +6,8 @@ nextflow.enable.dsl=1
 
 process hmm_build {
     cpus 4
-    memory '4 GB'
     time '1h'
+
 
     input:
     path seq_file from params.phage_file
@@ -30,7 +30,6 @@ process hmm_build {
 
 process create_table {
     cpus 4
-    memory '4 GB'
     time '1h'
 
     input:
@@ -56,7 +55,6 @@ process create_table {
 
 process format_table {
     cpus 1
-    memory '2 GB'
     time '1h'
 
     publishDir 'output'
