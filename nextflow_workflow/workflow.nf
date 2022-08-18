@@ -1,10 +1,12 @@
 #!/usr/bin/env nextflow
 
 genome_files = Channel.fromPath( params.genome_files )
+seq_type = params.phage_seq_type
+nextflow.enable.dsl=1
 
 process hmm_build {
     cpus 4
-    memory =  '4gb'
+    memory '4 GB'
     time '1h'
 
     input:
@@ -20,6 +22,7 @@ process hmm_build {
     """
     python3 ${params.programs_path}/python/table_gen_py/hmmbuild_mult_seq.py \
         --cpu ${task.cpus} \
+        --seq_type ${seq_type} \
         "${seq_file}" \
         "${seq_file}.hmm"
     """
@@ -59,7 +62,7 @@ process format_table {
     publishDir 'output'
 
     input:
-    path genome_file from genome_files
+    path genome_file from genome_file
     path scanned_dfam_file from scanned_dfam_file
 
     output:

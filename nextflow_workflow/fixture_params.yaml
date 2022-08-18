@@ -2,3 +2,4 @@ programs_path: ${projectDir}/../programs
 phage_file: ${projectDir}/../fixtures/phage_database.fasta
 genome_files: ${projectDir}/../fixtures/bacteria_*.fasta
 dfamscan_path: ${projectDir}/../programs/python/table_gen_py/dfamscan.pl
+phage_seq_type: dna
