@@ -105,9 +105,9 @@ def populate_tsv_from_path(tsv_path: str, seq_list: List[ViralSeq], force: bool)
             populate_tsv(tsv, seq_list)
 
 
-def parse_table(dfam_file: TextIO, genome_path: str, verbose) -> List[ViralSeq]:
+def parse_table(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -> List[ViralSeq]:
     seq_list = []
-    for line in dfam_file:
+    for line_num, line in enumerate(dfam_file, 0):
         if line[0] == "#":
             pass
         else:
@@ -121,14 +121,20 @@ def parse_table(dfam_file: TextIO, genome_path: str, verbose) -> List[ViralSeq]:
             ali_en = int(line_list[10])
             ref_vir_len = int(line_list[13])
 
-            seq_list.append(ViralSeq(name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand, verbose))
+            if evalue <= max_eval:
+                seq_list.append(ViralSeq(name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand, verbose))
+            else:
+                if verbose:
+                    print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of {max_eval}")
 
     return seq_list
 
 
-def parse_table_from_path(dfam_path: str, genome_path: str, verbose) -> List[ViralSeq]:
+def parse_table_from_path(dfam_path: str, genome_path: str, max_eval: float, verbose) -> List[ViralSeq]:
     with open(dfam_path) as dfam_file:
-        return parse_table(dfam_file, genome_path, verbose)
+        if verbose:
+            print(f"Opening {dfam_path}...")
+        return parse_table(dfam_file, genome_path, max_eval, verbose)
 
 
 def parse_args(sys_args: list) -> argparse.Namespace:
@@ -167,7 +173,7 @@ def _main():
     if max_eval < 0:
         raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
-    viral_seqs = parse_table_from_path(dfam_path, genome_path, verbose)
+    viral_seqs = parse_table_from_path(dfam_path, genome_path, max_eval, verbose)
     populate_tsv_from_path(tsv_path, viral_seqs, force)
     populate_occurrence_json_from_path(json_path, viral_seqs, force)
 

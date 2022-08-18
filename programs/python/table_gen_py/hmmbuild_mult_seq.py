@@ -4,7 +4,7 @@ import sys
 import subprocess
 from os import path
 from os import remove
-from typing import *
+from typing import Dict, List, Literal, Optional, TextIO
 
 
 VALID_SEQ_TYPES = ("dna", "rna", "amino")
@@ -13,10 +13,11 @@ SEQ_TYPE = Literal["dna", "rna", "amino"]
 
 def remove_output(output_path: str):
     remove(output_path)
-    remove(f"{output_path}.h3f")
-    remove(f"{output_path}.h3i")
-    remove(f"{output_path}.h3m")
-    remove(f"{output_path}.h3p")
+    if path.exists(f"{output_path}.h3f"):
+        remove(f"{output_path}.h3f")
+        remove(f"{output_path}.h3i")
+        remove(f"{output_path}.h3m")
+        remove(f"{output_path}.h3p")
 
 
 def hmmpress_output(output_path, verbose):
