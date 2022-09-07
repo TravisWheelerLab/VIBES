@@ -12,8 +12,9 @@ STRAND = Literal["+", "-"]
 
 
 class ViralSeq:
-    def __init__(self, name: str, evalue: float, bac_st: int, bac_end: int, bac_genome_path: str, ref_vir_st: int, ref_vir_end: int, ref_vir_len: int, strand: STRAND, full_cutoff: int = 100, verbose: bool = False):
+    def __init__(self, name: str, query_name: str, evalue: float, bac_st: int, bac_end: int, bac_genome_path: str, ref_vir_st: int, ref_vir_end: int, ref_vir_len: int, strand: STRAND, full_cutoff: int = 100, verbose: bool = False):
         self.name = name
+        self.query_name = query_name
         self.evalue = evalue
         self.bac_st = bac_st
         self.bac_end = bac_end
@@ -49,9 +50,9 @@ class ViralSeq:
         return False, ["",""]
 
     def to_tsv_line(self) -> str:
-        return f"{self.name}\t{self.evalue}\t{self.is_full_len()}\t{self.ref_vir_st}\t{self.ref_vir_end}\t" \
-               f"{self.ref_vir_len}\t{self.is_flanked}\t{path.basename(self.bac_genome_path)}\t{self.bac_st}\t" \
-               f"{self.bac_end}\t{self.bac_genome_len}\t{self.strand}\n"
+        return f"{self.name}\t{self.query_name}\t{self.evalue}\t{self.is_full_len()}\t{self.ref_vir_st}\t" \
+               f"{self.ref_vir_end}\t{self.ref_vir_len}\t{self.is_flanked}\t{path.basename(self.bac_genome_path)}\t" \
+               f"{self.bac_st}\t{self.bac_end}\t{self.bac_genome_len}\t{self.strand}\n"
 
 
 def populate_occurrence_json(json_file: TextIO, viral_seqs: List[ViralSeq]):
@@ -87,9 +88,9 @@ def populate_occurrence_json_from_path(json_path: str, viral_seqs: List[ViralSeq
 
 def populate_tsv(tsv: TextIO, seq_list: List[ViralSeq]):
     # write header line first
-    headers = ["Name", "E-Value", "Is Full Length Insertion", "Match Start Position on Viral Genome",
-               "Match End Position on Viral Genome", "Viral Genome Length", "Flanking Att Sites",
-               "Bacterial Genome Name", "Match Start Position on Bacterial Genome",
+    headers = ["Name", "Query Sequence Name", "E-Value", "Is Full Length Insertion",
+               "Match Start Position on Viral Genome", "Match End Position on Viral Genome", "Viral Genome Length",
+               "Flanking Att Sites", "Bacterial Genome Name", "Match Start Position on Bacterial Genome",
                "Match End Position on Bacterial Genome", "Bacterial Genome Length", "Strand\n"]
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
@@ -112,7 +113,8 @@ def parse_table(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -
             pass
         else:
             line_list = line.split()
-            name = line_list[0]
+            target_name = line_list[0]
+            query_name = line_list[2]
             evalue = float(line_list[4])
             hmm_st = int(line_list[6])
             hmm_en = int(line_list[7])
@@ -122,7 +124,7 @@ def parse_table(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -
             ref_vir_len = int(line_list[13])
 
             if evalue <= max_eval:
-                seq_list.append(ViralSeq(name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand, verbose))
+                seq_list.append(ViralSeq(target_name, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand, verbose))
             else:
                 if verbose:
                     print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of {max_eval}")

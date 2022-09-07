@@ -8,7 +8,6 @@ from typing import Dict, List, Literal, Optional, TextIO
 
 
 VALID_SEQ_TYPES = ("dna", "rna", "amino")
-SEQ_TYPE = Literal["dna", "rna", "amino"]
 
 
 def remove_output(output_path: str):
@@ -39,7 +38,7 @@ def combine_hmms(temp_hmm_list: List[str], output_hmm_path: str, force: bool):
                 output_file.write(f"{temp_contests}\n")
 
 
-def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: Optional[SEQ_TYPE], cpu_count: int, verbose: bool) -> List[str]:
+def generate_hmm(temp_fasta_dict: Dict[str, str], seq_type: Optional[str], cpu_count: int, verbose: bool) -> List[str]:
     temp_hmm_list = []
 
     for temp_fasta_path, seq_name in temp_fasta_dict.items():
