@@ -1,4 +1,4 @@
-# Pseudomonas Pipeline
+# VIBES
 
 This is a pipeline that annotates viral insertions in bacterial genomes, given a set of
 reference viruses and bacterial genomes. Useful to bioinformaticians and computational biologists
