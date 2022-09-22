@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import re
 from os import walk
-from annotation_methods import annotateGenome, Genome
+from annotation_methods import annotate_genome, Genome
 import sys
 import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
@@ -16,7 +16,7 @@ def to_json(countList, prophageName, jsonDir, protDomtblDir, pfamDomtblDir, dfam
     INDENT_VALUE = 4
     genomeLength = len(countList)
     # returns Genome object, containing dictionary populated with Match objects
-    annotationGenome = annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
+    annotationGenome = annotate_genome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
 
     # begin populating json entries
     jsonDict = {"prophageName": prophageName,
@@ -64,7 +64,7 @@ def drawPlot(countList, prophageName, outputDir, protDomtblDir, pfamDomtblDir, d
     ax.set(xlabel='Position', ylabel='Occurrences', title=prophageName)
     ax.plot(countList)
 
-    annotationGenome = annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
+    annotationGenome = annotate_genome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength)
     longAnnoDict = {}
     shortAnnoDict = {}
 
@@ -158,7 +158,7 @@ def plotAnnotationDict(fig, ax, lineListDict, keyList, depthList, YMAX, line2DLi
             xStart = match.aliSt - 1
             xEnd = match.aliEn - 1
             accID = match.accID
-            genomeLength = match.genomeLength
+            genomeLength = match.genome_length
 
             # To determine width of annotation text label, we place the label on the plot and draw it, generating its size. We then get its coordinates and
             # convert them into data units rather than display units. We use this to determine whether or not a line is long enough to prevent label overlap,

@@ -28,74 +28,77 @@ class Match:
     name: String
         Name of the target sequence.
 
-    eVal: float
+    eval: float
         E-value of match, >= 0. Lower is better.
 
-    hmmSt: int
-        Where the match begins on the HMM. Because backwards matches occur, hmmSt is not necessarily smaller than hmmEn.
+    hmm_st: int
+        Where the match begins on the HMM. Because backwards matches occur, hmm_st is not necessarily smaller than hmm_en.
 
-    hmmEn: int
-        Where the match ends on the HMM. Because backwards matches occur, hmmSt is not necessarily smaller than hmmEn.
+    hmm_en: int
+        Where the match ends on the HMM. Because backwards matches occur, hmm_en is not necessarily larger than hmm_st.
 
-    aliSt: int
-        Where the match begins on the query genome. Because backwards matches occur, aliSt is not necessarily smaller than aliEn.
+    ali_st: int
+        Where the match begins on the query genome. Because backwards matches occur, aliSt is not necessarily smaller than ali_en.
 
-    accID: String
+    ali_en: int
+        Where the match ends on the query genome. Because backwards matches occur, ali_en is not necessarily larger than ali_st.
+
+    acc_id: String
         Unique identifier of the target sequence.
 
     description: String
         Brief description of the target sequence.
 
-    genomeLength: int
+    genome_length: int
         Length of the query genome.
     '''
 
-    def __init__(self, name, eVal, hmmSt, hmmEn, aliSt, aliEn, accID, description, genomeLength=None):
+    def __init__(self, name, eval, hmm_st, hmm_en, ali_st, ali_en, acc_id, description, genome_length=None):
         self.name = name
-        self.eVal = eVal
-        self.hmmSt = hmmSt
-        self.hmmEn = hmmEn
-        self.aliSt = aliSt
-        self.aliEn = aliEn
-        self.accID = accID
+        self.eVal = eval
+        self.hmmSt = hmm_st
+        self.hmmEn = hmm_en
+        self.aliSt = ali_st
+        self.aliEn = ali_en
+        self.accID = acc_id
         self.description = description
-        self.genomeLength = genomeLength
+        self.genomeLength = genome_length
 
 
 # .fasta format is a nightmare, but its header can roughly be divided into 2 parts: the first sequence of characters following >, up to the first space (the name)
 # and everything afterward (the description). Since HMMER discards non-name parts of .fasta headers, we need to recover them from the original .fasta file to
 # determine whether or not a sequnce corresponds to an integrase
-def readFastaDescs(fastaPath):
-    descDict = {}
+def read_fasta_descs(fasta_path):
+    desc_dict = {}
 
-    with open(fastaPath, 'r') as fastaFile:
-        for line in fastaFile:
+    with open(fasta_path, 'r') as fasta_file:
+        for line in fasta_file:
             # if line starts with > when ignoring non-ASCII characters, capture everything before and after the first space character
             if re.match(r'(?a)>', line):
-                regexMatch = re.search(r'(?a)>(.+?) (.+?)\n', line)
-                #if regexMatch is None:
+                regex_match = re.search(r'(?a)>(.+?) (.+?)\n', line)
+                #if regex_match is None:
                     #print(fastaPath)
                     #print(line)
 
-                name = regexMatch.group(1)
-                description = regexMatch.group(2)
+                name = regex_match.group(1)
+                description = regex_match.group(2)
 
-                descDict[name] = description
+                desc_dict[name] = description
 
-    return descDict
+    return desc_dict
 
 
-def detectOverlap(reg1St, reg1En, reg2St, reg2En):
+def detect_overlap(reg1_st, reg1_en, reg2_st, reg2_en):
     overlap = False
 
     # if reg1 starts before reg2 ends, and reg1 ends after reg2 starts, they overlap
-    if reg1St < reg2En and reg1En > reg2St:
+    if reg1_st < reg2_en and reg1_en > reg2_st:
         overlap = True
 
     return overlap
 
 
-def annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval, genomeLength=None):
+def annotate_genome(prot_domtbl_dir, pfam_domtbl_dir, dfam_dir, prophage_name, min_eval, genome_length=None):
     '''
     Returns Genome object with its matches dictionary populated start location keys and lists of Match objects starting at that location. The contents of 
     matches are the annotation of the genome, ordered by a combination of start position relative to the genome and size (matches passing a length threshold
@@ -104,158 +107,159 @@ def annotateGenome(protDomtblDir, pfamDomtblDir, dfamDir, prophageName, minEval,
 
     # first, ensure that either protDomtblDir or pfamDomtblDir has been specified by user (this will allow us to provide genome length to Match objects generated
     # from .dfam files
-    if protDomtblDir is None and pfamDomtblDir is None:
-        print("At least one of protDomtblDir or pfamDomtblDir must be specified")
+    if prot_domtbl_dir is None and pfam_domtbl_dir is None:
+        print("At least one of prot_domtbl_dir or pfam_domtbl_dir must be specified")
         exit()
 
     # if directory path string isn't empty, then read in information from file in that directory
-    if protDomtblDir:
-        domTblPath = "%s/%s.domtbl" % (protDomtblDir, prophageName)
-        protDomtblList = buildDomtblList(domTblPath, minEval, "swissProt")
+    if prot_domtbl_dir:
+        dom_tbl_path = "%s/%s.domtbl" % (prot_domtbl_dir, prophage_name)
+        prot_domtbl_list = build_domtbl_list(dom_tbl_path, min_eval, "swissProt")
 
-    if pfamDomtblDir:
-        pfamDomtblPath = "%s/%s.domtbl" % (pfamDomtblDir, prophageName)
-        pfamDomtblList = buildDomtblList(pfamDomtblPath, minEval, "Pfam A")
+    if pfam_domtbl_dir:
+        pfam_domtbl_path = "%s/%s.domtbl" % (pfam_domtbl_dir, prophage_name)
+        pfam_domtbl_list = build_domtbl_list(pfam_domtbl_path, min_eval, "Pfam A")
 
-    if dfamDir:
-        dfamPath = "%s/%s.dfam" % (dfamDir, prophageName)
-        dfamList = buildDfamList(dfamPath, minEval)
-        if genomeLength:
-            setDfamGenomeLength(dfamList, genomeLength)
+    if dfam_dir:
+        dfam_path = "%s/%s.dfam" % (dfam_dir, prophage_name)
+        dfam_list = build_dfam_list(dfam_path, min_eval)
+        if genome_length:
+            set_dfam_genome_length(dfam_list, genome_length)
     else:
-        dfamList = []
+        dfam_list = []
 
-    annotatedGenome = Genome(prophageName)
+    annotated_genome = Genome(prophage_name)
     # list of tuples containing protein start and end coordinates, relative to the viral genome
-    protCoordList = []
+    prot_coord_list = []
 
     # currently, we expected .dfam format data to be recombinase and pseudogene hits. These are both (or were) protein-coding sequence, so we union
     # the list of .dfam Matchs with the list of protein .domtbl Matches
-    for protMatch in (protDomtblList + dfamList):
+    for prot_match in (prot_domtbl_list + dfam_list):
         # to determine cases where protein domain annotations overlap with protein annotations in the prophage genomes,
         # we also set values corresponding to protein annotation coordinates to True in isOccupiedList.
-        # Since isOccupiedList is 0-indexed, we subtract 1 from xStart
-        xStart = protMatch.aliSt - 1
-        xEnd = protMatch.aliEn
+        # Since isOccupiedList is 0-indexed, we subtract 1 from x_start
+        x_start = prot_match.aliSt - 1
+        x_end = prot_match.aliEn
 
-        # record protein coordinate tuple in protCoordList. If end coordinate is smaller than start, flip them temporarily
-        if xEnd < xStart:
-            tempXStart = xEnd
-            tempXEnd = xStart
+        # record protein coordinate tuple in prot_coord_list. If end coordinate is smaller than start, flip them temporarily
+        if x_end < x_start:
+            temp_x_start = x_end
+            temp_x_end = x_start
         else:
-            tempXStart = xStart
-            tempXEnd = xEnd
+            temp_x_start = x_start
+            temp_x_end = x_end
 
-        protCoordList.append((tempXStart, tempXEnd))
+        prot_coord_list.append((temp_x_start, temp_x_end))
 
-        if xStart in annotatedGenome.matches:
-            annotatedGenome.matches[xStart].append(protMatch)
+        if x_start in annotated_genome.matches:
+            annotated_genome.matches[x_start].append(prot_match)
         else:
-            valueList = [protMatch]
-            annotatedGenome.matches[xStart] = valueList
+            value_list = [prot_match]
+            annotated_genome.matches[x_start] = value_list
 
-    for pfamMatch in pfamDomtblList:
-        xStart = pfamMatch.aliSt - 1
-        xEnd = pfamMatch.aliEn
+    for pfam_match in pfam_domtbl_list:
+        x_start = pfam_match.aliSt - 1
+        x_end = pfam_match.aliEn
 
         # should be False if no protein annotation lines overlap with domain annotation
-        overlapsWithProtein = False
+        overlaps_with_protein = False
 
-        for coordTuple in protCoordList:
-            # if xEnd is less than xStart, temporarily flip them
-            if xEnd < xStart:
-                tempXStart = xEnd
-                tempXEnd = xStart
+        for coord_tuple in prot_coord_list:
+            # if x_end is less than x_start, temporarily flip them
+            if x_end < x_start:
+                temp_x_start = x_end
+                temp_x_end = x_start
             else:
-                tempXStart = xStart
-                tempXEnd = xEnd
+                temp_x_start = x_start
+                temp_x_end = x_end
 
-                if detectOverlap(tempXStart, tempXEnd, coordTuple[0], coordTuple[1]):
-                    overlapsWithProtein = True
+                if detect_overlap(temp_x_start, temp_x_end, coord_tuple[0], coord_tuple[1]):
+                    overlaps_with_protein = True
 
         # We want to sort annotation lines by length to prioritize drawing longest lines closest to the x-axis, so we use line length as the key.
         # If key already in dictionary, append our list of line info to value (list of lists of line info)
-        if not overlapsWithProtein:
-            if xStart in annotatedGenome.matches:
-                annotatedGenome.matches[xStart].append(pfamMatch)
+        if not overlaps_with_protein:
+            if x_start in annotated_genome.matches:
+                annotated_genome.matches[x_start].append(pfam_match)
             else:
-                valueList = [pfamMatch]
-                annotatedGenome.matches[xStart] = valueList
+                value_list = [pfam_match]
+                annotated_genome.matches[x_start] = value_list
 
-    return annotatedGenome
+    return annotated_genome
 
-def setDfamGenomeLength(dfamList, genomeLength):
-    for match in dfamList:
-        match.genomeLength = genomeLength
+
+def set_dfam_genome_length(dfam_list, genome_length):
+    for match in dfam_list:
+        match.genome_length = genome_length
 
 
 # read in information from .dfam format files
-def buildDfamList(dfamPath, minEval):
-    infoList = []
+def build_dfam_list(dfam_path, min_eval):
+    info_list = []
 
     # read in info from .dfam file
-    with open(dfamPath, "r") as dfamData:
-        for line in dfamData:
+    with open(dfam_path, "r") as dfam_data:
+        for line in dfam_data:
             # '#' char indicates a line doesn't contain data
-            if(line[0] != "#"):
+            if line[0] != "#":
                 # create a list to store this line's data
-                dataList = line.split()
-                joinString = " "
+                data_list = line.split()
+                join_string = " "
 
                 # since split() gives us strings, we cast to the proper type
-                matchName = dataList[0]
-                iEvalue = float(dataList[4])
-                hmmFrom = int(dataList[6])
-                hmmTo = int(dataList[7])
-                aliFrom = int(dataList[9])
-                aliTo = int(dataList[10])
-                description = joinString.join(dataList[14:])
+                match_name = data_list[0]
+                i_evalue = float(data_list[4])
+                hmm_from = int(data_list[6])
+                hmm_to = int(data_list[7])
+                ali_from = int(data_list[9])
+                ali_to = int(data_list[10])
+                description = join_string.join(data_list[14:])
 
                 # temporary solution, since currently all expected .dfam files have had match names purposefully made short by me
-                accID = matchName
+                acc_id = match_name
 
                 # we only want entries with e-value <= minimum (default 1e-5)
-                if (iEvalue <= minEval):
-                    match = Match(matchName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description)
-                    infoList.append(match)
+                if i_evalue <= min_eval:
+                    match = Match(match_name, i_evalue, hmm_from, hmm_to, ali_from, ali_to, acc_id, description)
+                    info_list.append(match)
 
-    return infoList
+    return info_list
 
 
 # Read in the contents of a .domtbl file. Returns a list of lists of
 # relevant data. Each list in the LoL corresponds to one line of the file
-def buildDomtblList(domTblPath, minEval, fileSource):
-    infoList = []
+def build_domtbl_list(domtbl_path, min_eval, file_source):
+    info_list = []
 
     # read in domTblPath info as read-only
-    with open(domTblPath, "r") as domTblData:
-        for line in domTblData:
+    with open(domtbl_path, "r") as domtbl_data:
+        for line in domtbl_data:
             # '#' char indicates a line doesn't contain data
-            if(line[0] != "#"):
+            if line[0] != "#":
                 # create a list to store this line's datallinux terminal is something a fileinux terminal is something a file
-                dataList = line.split()
-                joinString = " "
+                data_list = line.split()
+                join_string = " "
 
                 # since split() gives us strings, we cast to the proper type
-                domainName = dataList[0]
-                tlen = int(dataList[2])
-                iEvalue = float(dataList[12])  # i-Evalue is domain-specific Evalue
-                hmmFrom = int(dataList[15])
-                hmmTo = int(dataList[16])
-                aliFrom = int(dataList[19])
-                aliTo = int(dataList[20])
-                description = joinString.join(dataList[27:])
+                domain_name = data_list[0]
+                tlen = int(data_list[2])
+                i_evalue = float(data_list[12])  # i-evalue is domain-specific evalue
+                hmm_from = int(data_list[15])
+                hmm_to = int(data_list[16])
+                ali_from = int(data_list[19])
+                ali_to = int(data_list[20])
+                description = join_string.join(data_list[27:])
 
-                if fileSource == "swissProt":
-                    # use regex to extract accession ID from domainName
-                    nameSearch = re.search(r'\|(.+?)\|', domainName)
-                    accID = nameSearch[1]
+                if file_source == "swissProt":
+                    # use regex to extract accession ID from domain_name
+                    name_search = re.search(r'\|(.+?)\|', domain_name)
+                    acc_id = name_search[1]
                 else:
-                    accID = dataList[1]
+                    acc_id = data_list[1]
 
                 # we only want entries with e-value <= minimum (default 1e-5)
-                if (iEvalue <= minEval):
-                    match = Match(domainName, iEvalue, hmmFrom, hmmTo, aliFrom, aliTo, accID, description, tlen)
-                    infoList.append(match)
+                if i_evalue <= min_eval:
+                    match = Match(domain_name, i_evalue, hmm_from, hmm_to, ali_from, ali_to, acc_id, description, tlen)
+                    info_list.append(match)
 
-    return infoList
+    return info_list
