@@ -84,6 +84,13 @@ def write_to_output(output_path: str, subseq_list: List[str], force: bool) -> No
                 output_file.write(entry)
 
 
+def index_cleanup(genome_path: str, verbose: bool) -> None:
+    # this function deletes the index file created by seqkit
+    index_path = genome_path + ".seqkit.fai"
+    cmd = ["rm", index_path]
+    do_cmd(cmd, verbose)
+
+
 def do_cmd(cmd: List[str], verbose: bool) -> subprocess.CompletedProcess:
     # double check that all elements are strings
     cmd = [str(e) for e in cmd]
@@ -108,6 +115,7 @@ def _main():
     element_data = get_element_info(tsv_data, element_name)
     subseqs = get_seq(element_data, flank_len, genome_path, verbose)
     write_to_output(output_path, subseqs, force)
+    index_cleanup(genome_path, verbose)
 
 
 if __name__ == "__main__":
