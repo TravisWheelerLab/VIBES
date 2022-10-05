@@ -90,8 +90,8 @@ def populate_tsv(tsv: TextIO, seq_list: List[ViralSeq]):
     # write header line first
     headers = ["Name", "Query Sequence Name", "E-Value", "Is Full Length Insertion",
                "Match Start Position on Viral Genome", "Match End Position on Viral Genome", "Viral Genome Length",
-               "Flanking Att Sites", "Bacterial Genome Name", "Match Start Position on Bacterial Genome",
-               "Match End Position on Bacterial Genome", "Bacterial Genome Length", "Strand\n"]
+               "Flanking Att Sites", "Bacterial Genome Name", "Match Start on Query Seq",
+               "Match End on Query Seq", "Query Genome Length", "Strand\n"]
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
         tsv.write(viral_seq.to_tsv_line())
