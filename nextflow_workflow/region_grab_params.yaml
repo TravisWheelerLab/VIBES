@@ -1,0 +1,8 @@
+tsv_files: ${projectDir}/../amelia_data/output/marvig/tsv/*.tsv
+genome_dir: ${projectDir}/../amelia_data/MARVIG/
+program_dir: ${projectDir}/../programs/python/extra_scripts
+element: PA0721_pfsE
+run_bakta: true
+bakta_db_path: ${projectDir}/../bakta_db/db/
+region_output_dir: ${projectDir}/output/regions/
+annotation_output_dir: ${projectDir}/output/annotated_regions/
