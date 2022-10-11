@@ -49,7 +49,7 @@ process create_table {
         --dfamscan_path ${params.dfamscan_path} \
         "${hmm_file}" \
         "${genome_file}" \
-        "${genome_file}.scanned.dfam"
+        "${genome_file.simpleName}.scanned.dfam"
     """
 }
 
@@ -64,14 +64,14 @@ process format_table {
     path scanned_dfam_file from scanned_dfam_file
 
     output:
-    path "${genome_file}.tsv" into insertion_file
-    path "${genome_file}.json" into json_file
+    path "${genome_file.simpleName}.tsv" into insertion_file
+    path "${genome_file.simpleName}.json" into json_file
 
     """
     python3 ${params.programs_path}/python/table_parser_py/table_parser.py \
         "${scanned_dfam_file}" \
         "${genome_file}" \
-        "${genome_file}.tsv" \
-        "${genome_file}.json"
+        "${genome_file.simpleName}.tsv" \
+        "${genome_file.simpleName}.json"
     """
 }
