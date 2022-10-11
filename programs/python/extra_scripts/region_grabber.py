@@ -44,30 +44,35 @@ def get_element_info(tsv_data: pd.DataFrame, element_name: str) -> pd.DataFrame:
     return matching_rows
 
 
-def get_seq(element_data: pd.DataFrame, flank_size: int, genome_path: str, verbose: bool) -> List[str]:
+def get_subseq_list(element_data: pd.DataFrame, flank_size: int, genome_path: str, verbose: bool) -> List[str]:
     subseq_list = []
     for row in element_data.itertuples():
+        origin_seq_name = row[2]
+        match_start = row[3]
+        match_end = row[4]
+        genome_total_length = row[5]
+        strand = row[6]
+
         start_pos = None
         end_pos = None
-        # check strand
-        if row[6] == "+":
-            start_pos = row[3] - flank_size
-            end_pos = row[4] + flank_size
+        # check strand: if -, then match start and end should be flipped as the hit is inverted and starts at match_end
+        if strand == "+":
+            start_pos = match_start - flank_size
+            end_pos = match_end + flank_size
         elif row[6] == "-":
-            start_pos = row[4] - flank_size
-            end_pos = row[3] + flank_size
+            start_pos = match_end - flank_size
+            end_pos = match_start + flank_size
         else:
             raise ValueError(f"Unexpected strand type indicator {row[6]: expected + or -}")
 
         if start_pos < 1:
             start_pos = 1
 
-        if end_pos > row[5]: # if greater than genome length
-            end_pos = row[5]
+        if end_pos > genome_total_length: # if greater than genome length
+            end_pos = genome_total_length
 
-        origin_seq = row[2] # name of query sequence hit occurred on
-
-        cmd = ["seqkit", "subseq", genome_path, "--chr", origin_seq, "-r", f"{start_pos}:{end_pos}"]
+        # seqkit subseq retrieves subsequence from genome with seq name origin_seq_name, coordinates start_pos-end_pos
+        cmd = ["seqkit", "subseq", genome_path, "--chr", origin_seq_name, "-r", f"{start_pos}:{end_pos}"]
         subseq_list.append(do_cmd(cmd, verbose).stdout)
 
     return subseq_list
@@ -113,7 +118,7 @@ def _main():
 
     tsv_data = read_tsv(tsv_path)
     element_data = get_element_info(tsv_data, element_name)
-    subseqs = get_seq(element_data, flank_len, genome_path, verbose)
+    subseqs = get_subseq_list(element_data, flank_len, genome_path, verbose)
     write_to_output(output_path, subseqs, force)
     index_cleanup(genome_path, verbose)
 
