@@ -6,3 +6,4 @@ run_bakta: true
 bakta_db_path: ${projectDir}/../bakta_db/db/
 region_output_dir: ${projectDir}/output/regions/
 annotation_output_dir: ${projectDir}/output/annotated_regions/
+bakta_container: true

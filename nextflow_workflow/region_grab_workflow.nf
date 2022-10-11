@@ -8,7 +8,7 @@ nextflow.enable.dsl = 2
 
 
 process get_regions {
-    publishDir('output/regions/')
+    publishDir('output/regions/', mode: "copy")
 
     input:
     path tsv_file
@@ -31,9 +31,11 @@ process get_regions {
 process bakta_annotation {
     publishDir('output/annotated_regions/', mode: "copy")
 
+    if (params.bakta_container)
+        container = "oschwengers/bakta"
+
     cpus 4
     time '1h'
-    memory "10 GB"
 
     input:
     path element_region_file
@@ -49,28 +51,11 @@ process bakta_annotation {
 
 }
 
-process cleanup_empty {
-    input:
-    path empty_fasta
-
-    when:
-    empty_fasta.size() == 0
-
-    """
-    rm ${empty_fasta}
-    """
-
-
-}
-
 workflow {
-    bakta_db_path = params.bakta_db_path
-
     regions_channel = get_regions(tsv_files) | filter {it.size() > 0} // remove any empty files with no element hits
-    cleanup_empty(get_regions.out)
 
-    if (run_bakta) // if true, filter out any files in regions_channel that are empty (have no matches to elements), then annotate
-        regions_channel | bakta_annotation
+    if (run_bakta) // if true, run bakta to annotate
+        bakta_annotation(regions_channel)
 
 
 }
