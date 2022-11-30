@@ -8,7 +8,6 @@ process hmm_build {
     cpus 4
     time '1h'
 
-
     input:
     path seq_file from params.phage_file
 
@@ -57,7 +56,7 @@ process format_table {
     cpus 1
     time '1h'
 
-    publishDir 'output'
+    publishDir 'output', mode: "copy"
 
     input:
     path genome_file from genome_file

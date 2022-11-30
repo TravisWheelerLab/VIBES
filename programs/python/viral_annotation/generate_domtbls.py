@@ -6,28 +6,24 @@ import sys
 from typing import *
 
 
-def dom_tbl_gen(prophage_name: str, input_dir: str, hmm_path:str, gen_code: int, output_dir: str, verbose: bool) -> None:
-
-    output_file = "%s/%s.domtbl" % (output_dir, prophage_name)
-    input_file = "%s/%s.fasta" % (input_dir, prophage_name)
-
+def dom_tbl_gen(prophage_name: str, input_path: str, hmm_db_path:str, gen_code: int, output_path: str, verbose: bool) -> None:
     # if file exists already, and --force wasn't used, print a warning and exit
-    if path.isfile(output_file) and not force:
-        print(f"\nWarning: File {output_file} already exists. If you wish to overwrite files, use --force")
+    if path.isfile(output_path) and not force:
+        print(f"\nWarning: File {output_path} already exists. If you want to overwrite files, use --force")
         exit()
 
     else:
         # run hmmscant to create .domtbl of prophage
-        command = ["hmmscant", "-c", gen_code, "--domtblout", output_file, hmm_path, input_file]
+        # TODO: Replace with FraHMMER
+        command = ["frahmmer", "-c", gen_code, "--tblout", output_path, input_path, hmm_db_path]
         do_cmd(command, verbose)
 
 
-# credit to Viktor Kerkez in: https://stackoverflow.com/questions/18160078/how-do-you-write-tests-for-the-argparse-portion-of-a-python-module
 def parse_args(sys_args: list)-> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("fasta_dir", help="Path to directory of .fasta files. Expected format is [sequenceName].fasta")
     parser.add_argument("hmm_db", help="Path to HMM database to run against .fasta files")
-    parser.add_argument("output_dir", help="Path to directory to store output .domtbl files")
+    parser.add_argument("output_path", help="Path to directory to store output .domtbl files")
     parser.add_argument("--genetic_code", type=int, default=1, help="Instruct hmmscant to use alt genetic code of NCBI translation table. Default is 1 (standard)")
     parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
     parser.add_argument("--verbose", help="Print commands run by generate_domtbls.py", action="store_true")

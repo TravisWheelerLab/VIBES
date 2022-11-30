@@ -22,7 +22,7 @@ process get_regions {
         "${tsv_file}" \
         "${genome_dir}/${tsv_file.baseName}" \
         "${element}" \
-        "${tsv_file.simpleName}_${element}_region.fasta" \
+        "${tsv_file.simpleName}_${element}_regions.fasta" \
         --verbose \
         --force
     """
