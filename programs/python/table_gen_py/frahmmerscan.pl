@@ -440,7 +440,7 @@ sub get_nhmmscan_hits {
 
 sub get_hit_from_hitline {
     # Target, acc, Query, query acc, hmm len, hmm from, hmm to, ali from, ali to, env from, env to, evalue, score, etc
-   my ($model, $acc, $seq, $tmp1, $tmp2, $tmp3, $tmp4, $start, $end, $tmp, $tmp, $eval, $score) = split(/\s+/,$_[0]);
+   my ($model, $acc, $seq, $tmp1, $tmp2, $tmp3, $tmp4, $tmp5, $start, $end, $tmp6, $tmp7, $eval, $score, $tmp8) = split(/\s+/,$_[0]);
    my $orient = "+";
    if ($start > $end) {
       $tmp1 = $start;
@@ -448,6 +448,9 @@ sub get_hit_from_hitline {
       $end = $tmp1;
       $orient = "-";
    }
+
+    # TODO: remove me
+    # printf("$model\n$acc\n$seq\n$start\n$end\n$eval\n$score\n$orient\n\n\n");
 
    return {
       model  => $model,
