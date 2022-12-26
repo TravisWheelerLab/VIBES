@@ -1,4 +1,7 @@
 #!/usr/bin/env perl
+
+#derived from dfamscan.pl
+
 use strict;
 use warnings;
 use Getopt::Long;
@@ -27,10 +30,7 @@ BEGIN {
 
 
 my $e_max = 10000;
-#my $score_dominate_default  = 5;
-#my $rph_trim_default        = 10;
 my $min_cov_frac_default    = 0.75;
-my $default_cpu             = 8;
 
 main();
 
@@ -39,8 +39,8 @@ main();
 sub main {
    my $args = processCommandLineArgs();
 
-   verify_programs($args);
-   my ($hits, $header) = get_nhmmscan_hits($args); #array pointer
+
+   my ($hits, $header) = get_frahmmscan_hits($args); #array pointer
    my $cnt_before = 1 + $#{$hits};
 
 
@@ -64,18 +64,12 @@ sub main {
       $sorted = by_evalue_local($hits);
    }
 
-   open DFOUT, ">$args->{dfam_outfile}" or logdie ("Can't open $args->{dfam_outfile}: $!");
+   open DFOUT, ">$args->{outfile}" or logdie ("Can't open $args->{outfile}: $!");
    print DFOUT $header;
    foreach my $row (@$sorted) {
      print DFOUT $row->{line};
    }
    close DFOUT;
-
-   if ($args->{trf_outfile}) {
-      my $cnt = run_trf($args->{fastafile}, $args->{trf_outfile});
-      logdie("Error running TRF\n") if ($cnt == -1);
-      printf STDERR ("TRF repeat count:                   %7d\n", $cnt);
-   }
 
 }
 
@@ -91,25 +85,18 @@ sub logdie {
 
 sub processCommandLineArgs {
 
-  my %args = ( cpu => $default_cpu, );
+  my %args = ( );
 
   &GetOptions( \%args,
     "help",
     "version",
-    "dfam_infile=s",
-    "fastafile=s",
-    "hmmfile=s",
-    "dfam_outfile=s",
+    "infile=s",
+    "outfile=s",
     "E=f",
     "T=f",
     "masking_thresh|cut_ga",
     "annotation_thresh|cut_tc",
-    "species=s",
-    "trf_outfile=s",
-    "cpu=i",
     "no_rph_removal",
-#    "rph_trim=i",
-#    "score_dominate=f",
     "min_cov_frac=f",
     "sortby_model",
     "sortby_seq",
@@ -133,34 +120,16 @@ sub processCommandLineArgs {
     }
   }
 
-  if ($args{dfam_infile}) { #queries have already been run
-    help("Illegal flags used in addition to --dfam_infile" ) if ($args{fastafile} || $args{hmmfile} || $args{trf_outfile} || $args{masking_thresh} || $args{annotation_thresh} || $args{species});
-    logdie("Unable to open $args{dfam_infile}: $!")  unless -e $args{dfam_infile};
-  }
-  elsif ( $args{fastafile} && $args{hmmfile} ) { #need to run nhmmer
-    help("Flag --dfam_infile may not be used with --hmmfile") if ($args{dfam_infile});
-    logdie("Unable to open $args{fastafile}: $!")  unless -e $args{fastafile};
-    logdie("Unable to open $args{hmmfile}: $!")    unless -e $args{hmmfile};
-  }
-  else {
-    help("Use either (--dfam_infile) or (--fastafile and --hmmfile)");
-  }
+  logdie("Unable to open $args{infile}: $!")  unless -e $args{infile};
 
-  if ( $args{dfam_outfile} ) {
+  if ( $args{outfile} ) {
     # does the containing directory exist?
-    if ( $args{dfam_outfile} =~ m[^(.+)/]) { #some other directory, it better exist
+    if ( $args{outfile} =~ m[^(.+)/]) { #some other directory, it better exist
       logdie("The directory $1 does not exist")  unless (-d $1);
     }
    }
    else {
-     help("Must specify --dfam_outfile");
-   }
-
-   if ( $args{trf_outfile} ) {
-     # does the containing directory exist?
-     if ( $args{trf_outfile} =~ m[^(.+)/]) { #some other directory, it better exist
-       logdie("The directory $1 does not exist")  unless (-d $1);
-     }
+     help("Must specify --outfile");
    }
 
 
@@ -173,13 +142,7 @@ sub processCommandLineArgs {
    } elsif ($args{T}) {
       $thresh_arg_cnt++;
       $args{mask_method} = "T";
-   } elsif ($args{masking_thresh}) {
-      $thresh_arg_cnt++;
-      $args{mask_method} = "GA";
-   } elsif ($args{annotation_thresh}) {
-      $thresh_arg_cnt++;
-      $args{mask_method} = "TC";
-   } 
+   }
 
    if ($thresh_arg_cnt > 1) { #only one should be specified
       help("Only one threshold method should be given");
@@ -202,18 +165,6 @@ sub processCommandLineArgs {
       help("Only one sort method should be specified");
    }
 
-#   if ($args{no_rph_removal}) {
-#     if ($args{rph_trim}) {
-#        help("Don't specify both --no_rph_removal and --rph_trim" );
-#     }
-#   } else {
-#      $args{rph_trim} = $rph_trim_default;
-#   }
-
-
-#   unless ($args{score_dominate}) {
-#      $args{score_dominate} = $score_dominate_default;
-#   }
 
    unless ($args{min_cov_frac}) {
       $args{min_cov_frac} = $min_cov_frac_default;
@@ -228,17 +179,7 @@ sub version {
    my $args = shift;
    printf ("%16s : version %s\n", $0 , $VERSION);
 
-   if (in_path('nhmmscan')) {
-      my $res = `nhmmscan -h`;
-      $res =~ /^# (HMMER .+?);/m;
-      printf ("%16s : version %s\n", "nhmmscan" , $1);
-   }
 
-   if (in_path('trf')) {
-      my $res = `trf`;
-      $res =~ /Tandem Repeats Finder, Version (\S+)/m;
-      printf ("%16s : version %s\n", "trf", $1);
-   }
    exit;
 }
 
@@ -248,40 +189,27 @@ print STDERR <<EOF;
 Command line options for controlling $0
 -------------------------------------------------------------------------------
    --help       : prints this help messeage
-   --version    : prints version information for this program and
-                  both nhmmscan and trf
-   Requires either
-    --dfam_infile <s>    Use this is you've already run nhmmscan, and
-                         just want to perfom dfamscan filtering/sorting.
-                         The file must be the one produced by nhmmscan's
-                         --dfamtblout flag.
-                         (Note: must be nhmmscan output, not nhmmer output)
-   or both of these
-    --fastafile <s>      Use these if you want dfamscan to control a
-    --hmmfile <s>        run of nhmmscan, then do filtering/sorting
+   --version    : prints version information for this program
    Requires
-    --dfam_outfile <s>   Output file, also in dfamtblout format
-   Optionally, one of these  (only -E and -T allowed with --dfam_infile)
+    --infile <s>         Use this to provide the file that holds the
+                         frahmmer results that you've already computed
+   and
+    --outfile <s>   Output file, also in tblout format
+   Optionally, one of these  (only -E and -T allowed with --infile)
     -E <f>               >0, <=$e_max
     -T <f>
-    --masking_thresh/--cut_ga
-    --annotation_thresh/--cut_tc  Default
-    --species <i>        Currently allowed are "Other", "Homo sapiens", 
-                         "Mus Musculus", "Danio rerio", "Drosophila melanogaster",
-                         or "Caenorhabditis elegans"
+
    Optionally one of these
     --sortby_eval
     --sortby_model
     --sortby_seq         Default
    Redundant Profile Hit (RPH) removal (only if not --no_rph_removal)
-    --min_cov_frac <f>   This is similar to the MaskLevel concept in 
+    --min_cov_frac <f>   This is similar to the MaskLevel concept in
                          crossmatch.  A match is considered non-redundant
                          if at least (100-min_cov_frac)% of it's aligned
                          bases are not contained within the domain of any
                          higher-scoring hit. Default: $min_cov_frac_default
    All optional
-    --trf_outfile <s>    Runs trf, put results in <s>; only with --fastafile
-    --cpu <i>            Default $default_cpu
     --no_rph_removal     Don't remove redundant profile hits
     --log_file <s>
 EOF
@@ -294,153 +222,46 @@ EOF
 }
 
 
-sub verify_programs {
-   my ($args) = @_;
-
-   logdie("nhmmscan not found in \$PATH")  unless (in_path('nhmmscan'));
-
-   if ($args->{trf_outfile}) {
-      logdie("trf not found in \$PATH")  unless (in_path('trf'));
-   }
-}
-
-sub in_path {
-   my $prog = $_[0];
-   my @dirs = split(/:/,$ENV{'PATH'});
-   foreach my $dir (@dirs) {
-      #from perl cookbook, 2nd edition
-      $dir =~   s{ ^ ~ ( [^/]* ) }
-                     { $1
-                           ? (getpwnam($1))[7]
-                           : ( $ENV{HOME} || $ENV{LOGDIR}
-                                || (getpwuid($<))[7]
-                             )
-                     }ex;
-
-      if (-e "$dir/$prog")  {
-         return 1;
-      }
-   }
-   return 0;
-}
-
-sub run_trf {
-   my ($fastafile, $trf_outfile) = @_;
-
-   # change dir to the input directory as trf wont let us
-   # specify where the output should go
-   my $cur_dir = getcwd;
-   my $out_dir = $fastafile;
-   $out_dir =~ s|[^/]*$||;
-   chdir($out_dir);
-   # params to search for old simple repeats:  2 3 5 75 20 33 7
-   my $cmd = "trf $fastafile 2 7 7 80 10 50 10 -d -h > /dev/null";
-   my $res = system($cmd);
-   rename "$fastafile.2.7.7.80.10.50.10.dat", $trf_outfile or return -1;
-
-   #get counts
-   open FH, "<$trf_outfile";
-   my $cnt = 0;
-   while (my $line = <FH>) {
-      $cnt++ if ($line =~ /^\d/);
-   }
-   close FH;
-   chdir($cur_dir);
-   return $cnt;
-}
-
-sub get_nhmmscan_hits {
+sub get_frahmmscan_hits {
    my ($args) = @_;
 
    my @hits;
    my $header= "";
    my $header_done = 0;
-   if ($args->{dfam_infile}) {
-      open FH, "<$args->{dfam_infile}";
-      while (my $line = <FH>) {
-         if ($line =~ /^#/) {
-            $header .= $line if  !$header_done;
-
-            $header_done = 1 if ($line =~ /-------------------/); # that'll be the final line of the first header, no need to replicate more headers
-            next;
-         }
-         $header_done = 1;
-         if ($args->{mask_method} =~ /^(E|T)$/ ) { #filter hits
-            my @vals = split(/\s+/, $line);
-            if ($args->{mask_method} eq "E") {
-               next if ($vals[4] > $args->{E});
-            } elsif ($args->{mask_method} eq "T") {
-               next if ($vals[3] < $args->{T});
-            }
-         }
-         push @hits, get_hit_from_hitline($line);
-
-      }
-      close FH;
-   } else { # ($args->{fastafile} && $args->{hmmfile});
-      my $cmd = "nhmmscan --noali";
-
-      my $hmmFile = $args->{hmmfile};
-      if (defined $args->{species} && $args->{species} !~ /Other/i) 
-      {
-        # Turn something like "Homo sapiens" into "homo_sapiens"
-        # Also handle wierd things like " Homo sapiens " and still return "homo_sapiens"
-        my $speciesFileName = lc($args->{species});
-        $speciesFileName =~ s/^\s+//;
-        $speciesFileName =~ s/\s+$//;
-        $speciesFileName =~ s/\s+/_/g;
-        $speciesFileName .= "_dfam.hmm";
-        my($file, $dir, $ext) = fileparse($args->{hmmfile});
-        # Check if cache already exists
-        if ( ! -s "$dir/$speciesFileName" )
-        {
-          # Extract files for a specific species 
-          die "ERROR: A species specific Dfam2.0 pressed hmm file could " 
-            . "not be found for $dir/$speciesFileName.  Currently dfamscan " 
-            . "cannot auto-generate these files."
-        }
-        $hmmFile = "$dir/$speciesFileName";
-      } 
-
-      if ($args->{mask_method} eq "E") {
-        $cmd .= " -E $args->{E}";
-      } elsif ($args->{mask_method} eq "T") {
-        $cmd .= " -T $args->{T}";
-      } elsif ($args->{mask_method} eq "GA") {
-        $cmd .= " --cut_ga";
-      } elsif ($args->{mask_method} eq "TC") {
-        $cmd .= " --cut_tc";
-      }
-
-      my ($tmpfh, $dfout_filename) = tempfile();
-
-      $cmd .= " --dfamtblout $dfout_filename";
-      $cmd .= " --cpu=$args->{cpu}";
-      $cmd .= " $hmmFile";
-      $cmd .= " $args->{fastafile}";
-
-      #print ("$cmd\n");
-      my $result = system ("$cmd > /dev/null");
-      logdie("Error running command:\n$cmd\n") if $result;
-      open FH, "<$dfout_filename";
-      while (my $line = <FH>) {
-          if ($line =~ /^#/) {
-             $header .= $line if  !$header_done;
-             next;
-          }
-          $header_done = 1;
-          push @hits, get_hit_from_hitline($line);
-       }
-       close FH;
-       unlink $dfout_filename;
+   if (!$args->{infile}) {
+      logdie("frahmmscan requires that you first run frahmmer\n")
    }
+
+   open FH, "<$args->{infile}";
+   while (my $line = <FH>) {
+      if ($line =~ /^#/) {
+         $header .= $line if  !$header_done;
+
+         $header_done = 1 if ($line =~ /-------------------/); # that'll be the final line of the first header, no need to replicate more headers
+         next;
+      }
+      $header_done = 1;
+      if ($args->{mask_method} =~ /^(E|T)$/ ) { #filter hits
+         my @vals = split(/\s+/, $line);
+         print "[[ $vals[12] ]]  -> [[ $vals[13] ]]\n";
+         if ($args->{mask_method} eq "E") {
+            next if ($vals[12] > $args->{E});
+         } elsif ($args->{mask_method} eq "T") {
+            next if ($vals[13] < $args->{T});
+         }
+      }
+      push @hits, get_hit_from_hitline($line);
+
+   }
+   close FH;
+
    return \@hits, $header;
 }
 
 
 sub get_hit_from_hitline {
     # Target, acc, Query, query acc, hmm len, hmm from, hmm to, ali from, ali to, env from, env to, evalue, score, etc
-   my ($model, $acc, $seq, $tmp1, $tmp2, $tmp3, $tmp4, $tmp5, $start, $end, $tmp6, $tmp7, $eval, $score, $tmp8) = split(/\s+/,$_[0]);
+   my ($seq, $acc, $model, $tmp1, $tmp2, $tmp3, $tmp4, $tmp5, $start, $end, $tmp6, $tmp7, $eval, $score, $tmp8) = split(/\s+/,$_[0]);
    my $orient = "+";
    if ($start > $end) {
       $tmp1 = $start;
