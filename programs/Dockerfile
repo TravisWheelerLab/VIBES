@@ -10,7 +10,8 @@ RUN apt-get update && \
         python3 \
         python3-matplotlib \
         wget \
-        git
+        git \
+        autoconf
 
 # install commander
 RUN mkdir tool_bins/ && cd tool_bins/ && curl -L https://github.com/commander-cli/commander/releases/download/v2.3.0/commander-linux-amd64 -o commander && chmod +x commander
@@ -36,8 +37,8 @@ RUN git clone https://github.com/TravisWheelerLab/FraHMMER.git && \
    autoconf && \
    ./configure --prefix /tool_bins && \
    make && \
-   make check && \                       # optional: automated tests
-   make install                     # optional: install FraHMMER programs and man pages
+   make check && \
+   make install
 
 
 # Install AWS command line tools
@@ -49,6 +50,6 @@ RUN ./aws/install
 RUN aws --version
 
 RUN mkdir -p /programs
-ADD programs /programs/
+ADD ./* programs/
 
 WORKDIR /
