@@ -9,10 +9,8 @@ RUN apt-get update && \
         perl \
         python3 \
         python3-matplotlib \
-        wget
-RUN cpan install CPAN && \
-    cpan reload cpan && \
-    cpan install Moose
+        wget \
+        git
 
 # install commander
 RUN mkdir tool_bins/ && cd tool_bins/ && curl -L https://github.com/commander-cli/commander/releases/download/v2.3.0/commander-linux-amd64 -o commander && chmod +x commander
@@ -29,6 +27,18 @@ RUN wget http://eddylab.org/software/hmmer/hmmer.tar.gz && \
     cd easel && make install
 
 ENV PATH "$PATH:/tool_bins/bin"
+
+# install frahmmer
+RUN git clone https://github.com/TravisWheelerLab/FraHMMER.git && \
+   cd FraHMMER && \
+   git clone https://github.com/TravisWheelerLab/easel && \
+   (cd easel; git checkout develop) && \
+   autoconf && \
+   ./configure --prefix /tool_bins && \
+   make && \
+   make check && \                       # optional: automated tests
+   make install                     # optional: install FraHMMER programs and man pages
+
 
 # Install AWS command line tools
 RUN apt-get update && apt-get -y install unzip
