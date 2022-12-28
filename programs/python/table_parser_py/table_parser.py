@@ -8,6 +8,8 @@ from os import remove
 import json
 
 
+TABLE_MODE = Literal["dfam", "tbl"]
+JSON_MODE = Literal["count", "annotate"]
 STRAND = Literal["+", "-"]
 # maximum allowable gap between two hits for them to be merge candidates
 MAX_MERGE_DISTANCE = 5000
@@ -172,7 +174,7 @@ def populate_tsv_from_path(tsv_path: str, seq_list: List[ViralSeq], force: bool)
             populate_tsv(tsv, seq_list)
 
 
-def parse_table(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -> List[ViralSeq]:
+def parse_dfam(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -> List[ViralSeq]:
     seq_list = []
     for line_num, line in enumerate(dfam_file, 0):
         if line[0] == "#":
@@ -197,22 +199,58 @@ def parse_table(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -
 
     return seq_list
 
+def parse_tbl(tbl_file: TextIO, genome_path: str, max_eval: float, verbose) -> List[ViralSeq]:
+    seq_list = []
+    for line_num, line in enumerate(tbl_file, 0):
+        if line[0] == "#":
+            pass
+        else:
+            line_list = line.split()
+            target_name = line_list[0]
+            query_name = line_list[2]
+            ref_vir_len = int(line_list[4])
+            hmm_st = int(line_list[5])
+            hmm_en = int(line_list[6])
+            ali_st = int(line_list[8])
+            ali_en = int(line_list[9])
+            evalue = float(line_list[12])
 
-def parse_table_from_path(dfam_path: str, genome_path: str, max_eval: float, verbose) -> List[ViralSeq]:
-    with open(dfam_path) as dfam_file:
+            strand = "+"
+            if hmm_en < hmm_st:
+                strand = "-"
+
+            if evalue <= max_eval:
+                seq_list.append(ViralSeq(target_name, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, ref_vir_len, strand, verbose))
+            else:
+                if verbose:
+                    print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of {max_eval}")
+
+    return seq_list
+
+
+def parse_table_from_path(table_path: str, genome_path: str, max_eval: float, table_mode: TABLE_MODE,  verbose) -> List[ViralSeq]:
+    with open(table_path) as table_file:
         if verbose:
-            print(f"Opening {dfam_path}...")
-        return parse_table(dfam_file, genome_path, max_eval, verbose)
+            print(f"Opening {table_path}...")
+
+        if table_mode == "dfam":
+            return parse_dfam(table_file, genome_path, max_eval, verbose)
+        elif table_mode == "tbl":
+            return parse_tbl(table_file, genome_path, max_eval, verbose)
+        else:
+            raise ValueError("table_type must be either dfam or tbl")
 
 
 def parse_args(sys_args: list) -> argparse.Namespace:
     default_eval = 1e-5
     parser = argparse.ArgumentParser(sys_args, description="Parses input dfam file, extracting information about viral sequence in the bacterial genome")
-    parser.add_argument("dfam_path", type=str, help="Path to input .dfam file")
+    parser.add_argument("table_path", type=str, help="Path to input .dfam or .tbl file")
     parser.add_argument("genome_path", type=str, help="Path to input genome in .fasta format")
     parser.add_argument("output_tsv_path", type=str, help="Path to output .tsv file")
     parser.add_argument("output_json_path", type=str, help="Path to output .json file containing information on "
                                                            "nucleotide occurrence counts")
+    parser.add_argument("table_type", type=str, choices=["dfam","tbl"], default="dfam", help="Which type of table is being supplied as input, which must be dfam or tbl (default dfam)")
+    parser.add_argument("json_type", type=str, choices=["count","annotate"], default="count", help="Sets which type of .json will be produced: count, which counts how many times an index in a reference viral genome has been detected in a specific bacterial genome, or annotate, which produces .json describing a reference viral genome annotated with viral proteins")
     parser.add_argument("--max_evalue", type=float, default=default_eval, help=f"Maximum allowable sequence e-value (must be >= 0). Default is {default_eval}")
     parser.add_argument("--verbose", action="store_true", help="Print additional information useful for debugging")
     parser.add_argument("--force", action="store_true", help="If output file already exists, overwrite it")
@@ -229,10 +267,12 @@ def do_cmd(cmd: str, verbose: bool) -> str:
 
 def _main():
     args = parse_args(sys.argv[1:])
-    dfam_path = args.dfam_path
+    table_path = args.table_path
     genome_path = args.genome_path
     tsv_path = args.output_tsv_path
     json_path = args.output_json_path
+    table_mode = args.table_type
+    json_mode = args.json_type
     max_eval = args.max_evalue
     verbose = args.verbose
     force = args.force
@@ -241,7 +281,7 @@ def _main():
     if max_eval < 0:
         raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
-    viral_seqs = parse_table_from_path(dfam_path, genome_path, max_eval, verbose)
+    viral_seqs = parse_table_from_path(table_path, genome_path, max_eval, table_mode, verbose)
     populate_tsv_from_path(tsv_path, viral_seqs, force)
     populate_occurrence_json_from_path(json_path, viral_seqs, force)
 
