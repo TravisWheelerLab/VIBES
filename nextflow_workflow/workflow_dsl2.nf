@@ -12,7 +12,7 @@ process hmm_build {
     path seq_file
 
     output:
-    path "*.hmm"
+    path "*.hmm", emit: hmm
     path "*.h3f"
     path "*.h3i"
     path "*.h3m"
@@ -172,7 +172,7 @@ workflow detect_integrations {
             table_channel = nhmmscan_create_table.out.tables
         }
         else if (seq_type == "amino") {
-            hmm_files_channel = frahmmerconvert(hmm_files_channel)
+            hmm_files_channel = frahmmconvert(hmm_files_channel.hmm)
             frahmmer_create_table(genome_files, hmm_files_channel)
             genome_channel = frahmmer_create_table.out.genomes
             table_channel = frahmmer_create_table.out.tables
