@@ -40,8 +40,8 @@ process nhmmscan_create_table {
     path h3p_file
 
     output:
-    path genome_file
-    path "*.scanned.dfam"
+    path genome_file, emit: genomes
+    path "*.scanned.dfam", emit: tables
 
     """
     nhmmscan --cpu ${task.cpus} --dfamtblout ${genome_file.simpleName}.dfam ${hmm_file} ${genome_file}
@@ -49,7 +49,7 @@ process nhmmscan_create_table {
     """
 }
 
-process frahmmerconvert {
+process frahmmconvert {
     cpus 4
     time '1h'
 
@@ -60,8 +60,9 @@ process frahmmerconvert {
     path "*.frahmmer.hmm"
 
     """
-    frahmmerconvert ${hmmer_hmm.simpleName}.frahmmer.hmm ${hmmer_hmm}
+    frahmmconvert ${hmmer_hmm.simpleName}.frahmmer.hmm ${hmmer_hmm}
     """
+}
 
 
 process frahmmer_create_table {
@@ -71,19 +72,14 @@ process frahmmer_create_table {
     input:
     path genome_file
     path hmm_file
-    path h3f_file
-    path h3i_file
-    path h3m_file
-    path h3p_file
 
     output:
-    path genome_file
-    path "*.scanned.dfam"
+    path genome_file, emit: genomes
+    path "*.scanned.tbl", emit: tables
 
     """
-    frammconvert
-    frahmmer --cpu ${task.cpus} --tblout ${genome_file.simpleName}.dfam ${hmm_file} ${genome_file}
-    ${params.dfamscan_path} --dfam_infile ${genome_file.simpleName}.dfam --dfam_outfile ${genome_file.simpleName}.scanned.dfam
+    frahmmer --cpu ${task.cpus} --tblout ${genome_file.simpleName}.tbl ${hmm_file} ${genome_file}
+    ${params.frahmmerscan_path} --infile ${genome_file.simpleName}.tbl --outfile ${genome_file.simpleName}.scanned.tbl
     """
 }
 
@@ -96,7 +92,8 @@ process format_table {
 
     input:
     path genome_file
-    path scanned_dfam_file
+    path scanned_table_file
+    val genome_type
 
     output:
     path "${genome_file.simpleName}.tsv"
@@ -104,10 +101,12 @@ process format_table {
 
     """
     python3 ${programs_path}/python/table_parser_py/table_parser.py \
-        "${scanned_dfam_file}" \
+        "${scanned_table_file}" \
         "${genome_file}" \
         "${genome_file.simpleName}.tsv" \
-        "${genome_file.simpleName}.json"
+        "${genome_file.simpleName}.json" \
+        "${scanned_table_file.extension}" \
+        "${genome_type}"
     """
 }
 
@@ -161,17 +160,29 @@ workflow detect_integrations {
     take:
         phage_file
         genome_files
+        
     main:
         hmm_files_channel = hmm_build(phage_file)
-        if (seq_type == "dna" OR seq_type == "rna") {
-            genome_and_table_channel = nhmmscan_create_table(genome_files, hmm_files_channel)
+        genome_channel = Channel.empty()
+        table_channel = Channel.empty()
+
+        if (seq_type == "dna" || seq_type == "rna") {
+            nhmmscan_create_table(genome_files, hmm_files_channel)
+            genome_channel = nhmmscan_create_table.out.genomes
+            table_channel = nhmmscan_create_table.out.tables
         }
         else if (seq_type == "amino") {
             hmm_files_channel = frahmmerconvert(hmm_files_channel)
-            genome_and_table_channel = frahmmer_create_table(genome_files, hmm_files_channel)
+            frahmmer_create_table(genome_files, hmm_files_channel)
+            genome_channel = frahmmer_create_table.out.genomes
+            table_channel = frahmmer_create_table.out.tables
         }
-            default: error: "Error: phage_seq_type in params_file must be dna, rna, or amino"}
-        format_table(genome_and_dfam_channel)
+        else {
+            error "Error: phage_seq_type in params_file must be dna, rna, or amino"
+        }
+
+        genome_type = Channel.value("count")
+        format_table(genome_channel, table_channel, genome_type)
 }
 
 // TODO: Block comment
@@ -184,8 +195,9 @@ workflow annotate_viral_genomes {
         viral_protein_hmm
     main:
         // we expect viral protein .hmms to be in amino acid format
-        hmm_channel = frammconvert(viral_protein_hmm)
-        genome_and_table_channel = frahmmer_create_table(phage_genomes, viral_protein_hmm)
+        hmm_channel = frahmmconvert(viral_protein_hmm)
+        genome_type = Channel.value("annotate")
+        genome_and_table_channel = frahmmer_create_table(phage_genomes, hmm_channel)
 
 }
 
@@ -195,12 +207,12 @@ workflow {
     annotate_viral_genomes = params.annotate_phage
     viral_protein_hmm = Channel.fromPath(params.viral_protein_db)
     bakta_annotation = params.bakta_annotation
-    bakta_db = params.bakta_db_path
+    bakta_db = file(params.bakta_db_path)
 
     detect_integrations(phage_file, genome_files)
 
     if (bakta_annotation) {
-        if (!bakta_db.exists() {
+        if (!bakta_db.exists()) {
             println("Bakta database not detected at ${bakta_db}. The database will be automatically downloaded, but this may take a few hours")
             download_bakta_db(bakta_db)
         }
@@ -208,7 +220,6 @@ workflow {
     }
 
     if (annotate_viral_genomes) {
-        annotate_viral_genomes(phage_file, viral_protein_hmm)}
-
-
+        annotate_viral_genomes(phage_file, viral_protein_hmm)
+    }
 }
