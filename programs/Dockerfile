@@ -7,11 +7,13 @@ RUN apt-get update && \
         build-essential \
         curl \
         perl \
-        python3 \
-        python3-matplotlib \
+        python3-pip \
         wget \
         git \
         autoconf
+
+# install pandas
+RUN python3 -m pip install pandas numpy
 
 # install commander
 RUN mkdir tool_bins/ && cd tool_bins/ && curl -L https://github.com/commander-cli/commander/releases/download/v2.3.0/commander-linux-amd64 -o commander && chmod +x commander
@@ -39,7 +41,6 @@ RUN git clone https://github.com/TravisWheelerLab/FraHMMER.git && \
    make && \
    make check && \
    make install
-
 
 # Install AWS command line tools
 RUN apt-get update && apt-get -y install unzip
