@@ -1,10 +1,11 @@
 import argparse
+import os.path
 import sys
 import subprocess
 from typing import TextIO
 from typing import *
 from os import path
-from os import remove
+from pathlib import Path
 import json
 import pandas as pd
 
@@ -170,11 +171,26 @@ def write_occurrence_json_from_path(json_path: str, query_hits: List[QueryHit], 
         json_file.close()
 
 
-def write_annotation_json(json_file: TextIO, query_hits: List[QueryHit], protein_annotations: Optional[pd.DataFrame], occurrence_dict: Dict[str, List[int]]) -> None:
-    vir_name = query_hits[0].query_name
+def get_genome_len(genome_path: str, verbose: bool) -> int:
+    seqstat_results = do_cmd(f"esl-seqstat {genome_path}", verbose)
+    for line in seqstat_results.split("\n"):
+        if "Total # residues" in line:
+            line_list = line.split()
+            return int(line_list[3])
 
-    annotation_json = {"prophageName": vir_name,
-                       "occurrences": occurrence_dict[vir_name]}
+
+def write_annotation_json(json_file: TextIO, query_hits: List[QueryHit], protein_annotations: Optional[Dict[str, str]], occurrence_dict: Dict[str, List[int]], genome_path: str, verbose: bool) -> None:
+    phage_name = Path(genome_path).with_suffix('').stem
+
+    if phage_name in occurrence_dict.keys():
+        annotation_json = {"prophageName": phage_name,
+                           "occurrences": occurrence_dict[phage_name]}
+    else:
+        # if this function in being run, we expect the genome to be the reference phage genome
+        genome_len = get_genome_len(genome_path, verbose)
+        annotation_json = {"prophageName": phage_name,
+                           "occurrences": [0] * genome_len}
+
     prot_anno_list = []
 
     for hit in query_hits:
@@ -191,11 +207,11 @@ def write_annotation_json(json_file: TextIO, query_hits: List[QueryHit], protein
 
     json_file.write(json.dumps(annotation_json))
 
-def write_annotation_json_from_path(json_path: str, query_hits: List[QueryHit], protein_annotations: Optional[pd.DataFrame], occurrence_dict: Dict[str, List[int]], force: bool) -> None:
+def write_annotation_json_from_path(json_path: str, query_hits: List[QueryHit], protein_annotations: Optional[Dict[str, str]], occurrence_dict: Dict[str, List[int]], genome_path: str, force: bool, verbose: bool) -> None:
     overwrite_check(json_path, force)
 
     with open(json_path, "w") as json_file:
-        write_annotation_json(json_file, query_hits, protein_annotations, occurrence_dict)
+        write_annotation_json(json_file, query_hits, protein_annotations, occurrence_dict, genome_path, verbose)
         json_file.close()
 
 
@@ -252,6 +268,7 @@ def parse_tbl(tbl_file: TextIO, genome_path: str, max_eval: float, verbose: bool
         else:
             line_list = line.split()
 
+            # FraHMMER and nhmmscan disagree over what is the target and what is the query- we use nhmmscan's notation
             target_name = str(line_list[0])
             acc_id = str(line_list[1])
             query_name = str(line_list[2])
@@ -267,7 +284,7 @@ def parse_tbl(tbl_file: TextIO, genome_path: str, max_eval: float, verbose: bool
                 strand = "-"
 
             if evalue <= max_eval:
-                hit_list.append(QueryHit(target_name, acc_id, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, hmm_len, strand, verbose))
+                hit_list.append(QueryHit(query_name, acc_id, target_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, hmm_len, strand, verbose))
             else:
                 if verbose:
                     print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of {max_eval}")
@@ -288,14 +305,26 @@ def parse_table_from_path(table_path: str, genome_path: str, max_eval: float, ta
             raise ValueError("table_type must be either dfam or tbl")
 
 
-def parse_protein_annotation_from_path(anno_tsv_path: str, verbose: bool) -> pd.DataFrame:
+def parse_protein_annotation_from_path(anno_tsv_path: str, verbose: bool) -> Dict[str, str]:
     if verbose:
         print(f"Opening {anno_tsv_path} with Pandas...")
 
-    anno_dataframe = pd.read_csv(anno_tsv_path, sep="\t")
-    anno_dataframe.set_index("id")
+    anno_dict = {}
 
-    return anno_dataframe
+    with open(anno_tsv_path, "r") as anno_file:
+        for line in anno_file:
+            phrog, desc = line.split("\t")
+            anno_dict[phrog.rstrip()] = desc.rstrip()
+
+    return anno_dict
+
+
+def load_json(json_path: str, verbose: bool) -> Dict[str, List[int]]:
+    if verbose:
+        print(f"Opening {json_path}...")
+
+    with open(json_path, "r") as json_file:
+        return json.load(json_file)
 
 
 def parse_args(sys_args: list) -> argparse.Namespace:
@@ -356,8 +385,9 @@ def _main():
             protein_annotations = parse_protein_annotation_from_path(protein_annotation_path, verbose)
 
         query_hits = parse_table_from_path(table_path, genome_path, max_eval, table_mode, verbose)
-        occurrence_dict = json.loads(occ_json_path)
-        write_annotation_json_from_path(json_path, query_hits, protein_annotations, occurrence_dict)
+        occurrence_dict = load_json(occ_json_path, verbose)
+        write_tsv_from_path(tsv_path, query_hits, force)
+        write_annotation_json_from_path(json_path, query_hits, protein_annotations, occurrence_dict, genome_path, force, verbose)
 
 
 
