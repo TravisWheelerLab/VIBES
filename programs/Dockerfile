@@ -51,6 +51,6 @@ RUN ./aws/install
 RUN aws --version
 
 RUN mkdir -p /programs
-ADD ./* programs/
+COPY python /programs/python
 
 WORKDIR /
