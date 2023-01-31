@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+import typing
 import numpy as np
 from os import path
 from typing import *
@@ -15,7 +16,7 @@ def overwrite_check(file_path: str, force: bool) -> None:
             f"Output file {file_path} already exists- either move or delete this file or enable --force")
 
 
-def read_json(json_file: TextIO, verbose: bool) -> Dict[str, np.ndarray]:
+def read_json(json_file: typing.TextIO, verbose: bool) -> Dict[str, np.ndarray]:
     occurrence_dict = {}
 
     # json.load() will return the .json as a Python dict
@@ -53,7 +54,7 @@ def sum_occurrences(dict_list: List[Dict[str, np.ndarray]], verbose: bool) -> Di
     return summed_dict
 
 
-def write_occurrence_json(json_file: TextIO, occurrence_dict: Dict[str, np.ndarray]) -> None:
+def write_occurrence_json(json_file: typing.TextIO, occurrence_dict: Dict[str, np.ndarray]) -> None:
     # convert numpy arrays back to lists so they'll work with the json package
     for key, array in occurrence_dict.items():
         occurrence_dict[key] = array.tolist()
