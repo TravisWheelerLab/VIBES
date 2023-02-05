@@ -37,9 +37,9 @@ class QueryHit:
         self.full_cutoff = full_cutoff
 
         if target_genome_len:
-            self.target_genome_len = target_genome_len
+            self.query_genome_len = target_genome_len
         else:
-            self.target_genome_len = self.get_genome_len()
+            self.query_genome_len = self.get_genome_len()
 
         # TODO: Implement flanking att site attributes once detection implemented
 
@@ -65,8 +65,8 @@ class QueryHit:
 
     def to_tsv_line(self) -> str:
         return f"{self.hit_name}\t{self.acc_id}\t{self.query_name}\t{self.evalue}\t{self.is_full_len()}\t" \
-               f"{self.query_st}\t{self.query_end}\t{self.ref_len}\t{path.basename(self.query_genome_path)}\t" \
-               f"{self.ref_st}\t{self.ref_end}\t{self.target_genome_len}\t{self.strand}\n"
+               f"{self.ref_st}\t{self.ref_end}\t{self.ref_len}\t{path.basename(self.query_genome_path)}\t" \
+               f"{self.query_st}\t{self.query_end}\t{self.query_genome_len}\t{self.strand}\n"
 
 
 def strandedness(sense_pos: int, antisense_pos: int, strand: STRAND) -> int:
@@ -205,7 +205,7 @@ def write_annotation_json(json_file: TextIO, query_hits: List[QueryHit], protein
 
     annotation_json["annotations"] = prot_anno_list
 
-    json_file.write(json.dumps(annotation_json))
+    json_file.write(json.dumps(annotation_json, indent=INDENT_VAL))
 
 def write_annotation_json_from_path(json_path: str, query_hits: List[QueryHit], protein_annotations: Optional[Dict[str, str]], occurrence_dict: Dict[str, List[int]], genome_path: str, force: bool, verbose: bool) -> None:
     overwrite_check(json_path, force)
@@ -307,7 +307,7 @@ def parse_table_from_path(table_path: str, genome_path: str, max_eval: float, ta
 
 def parse_protein_annotation_from_path(anno_tsv_path: str, verbose: bool) -> Dict[str, str]:
     if verbose:
-        print(f"Opening {anno_tsv_path} with Pandas...")
+        print(f"Opening {anno_tsv_path}...")
 
     anno_dict = {}
 
