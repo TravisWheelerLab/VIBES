@@ -1,4 +1,4 @@
-# Pseudomonas Pipeline
+# VIBES
 
 This is a pipeline that annotates viral insertions in bacterial genomes, given a set of
 reference viruses and bacterial genomes. Useful to bioinformaticians and computational biologists
@@ -30,100 +30,63 @@ TODO: Answer the following questions in this section
   				- if annotation is desired: file of reference viral proteins, .hmm or .fasta format
   				- if annotation is desired: file of reference viral domains, .hmm or .fasta format
 
-  Python/Perl Supported:
+  Python Supported:  
   				- Python 3
-  				- Perl 5
 
-  Output:
-  				- .tsv (tab separated value) files for each bacterial genome describing detected
-  				viral insertions
-  				- .png plots showing which areas of viral genomes are most often found inserted
-  				- if desired, a .pdf plot showing how integrases are distributed among bacterial
-  				genomes
+  Output:  
+  				- .json file for each bacterial genome describing detected
+  				viral insertions  
+				- optionally, .tsv (tab-separated value) file for each bacterial genome describing detected
+				viral insertions  
+  				- SODA plots showing location of each viral integration in bacterial genome
+
+Running VIBES:  
+				- Likely the easiest way to run VIBES is by running the Nextflow workflow, which accepts pipeline input,
+				runs each step of the pipeline, automatically submits jobs to job managers such as SLURM, supports both
+				Docker and Singularity, and will deposit output files in whatever directory is set in its .config file.
+				See the README file in the nextflow_workflow/ dir for more details.  
+				- If desired, users can also run each stage of the pipeline manually and submit manually-written
+				massively parallel scripts to job managers. This is not the recommended method of running VIBES.
+
+### Docker Image
+
+There is a [Docker image](https://hub.docker.com/repository/docker/traviswheelerlab/pseudomonas_pipeline_runner)
+capable of running the software, including all dependencies. As a convenience,
+it can also be built using the `build-container.sh` script in the project root.
 
 ## Programs and Scripts
 
-### hmmbuild_mult_seq.pl
-Dependencies: hmmbuild, hmmpress, Getopt::Long, strict, warnings
+### hmmbuild_mult_seq.py
+Dependencies: argparse, hmmbuild, hmmpress, os, re, subprocess, sys, typing
 
-This program accepts an input .fasta file and converts its entries into HMMs
-using hmmbuild, storing them in the user-provided output .hmm file. User can
-specify program verbosity, how many threads hmmbuild will use, and whether or
-not hmmpress should automatically be run on output .hmm file. Users can specify
-input sequence type: dna, rna, or amino acid.
+This program accepts an input .fasta file and converts its entries into HMMs using hmmbuild, storing them in the 
+user-provided output 'pressed' .hmm file. User can specify program verbosity and how many threads hmmbuild will use. 
+Users can specify input sequence type: dna, rna, or amino acid.
 
-### dfam_tableizer.pl
-Dependencies: nhmmscan, mv, dfamscan.pl, Time::HiRes, Getopt::Long, strict, warnings
+### tableizer.py
+Dependencies: argparse, dfamscan.pl, mv, nhmmscan, os, subprocess, sys, typing
 
-This program searches for viral genomes in input bacterial genomes using
-nhmmscan, saving results in DFAM table format (nhmmscan's --dfamtblout option).
-It then automatically runs dfamscan.pl, a program that resolves multiple matches
-to the same region of bacterial DNA by keeping only the best match. Required
-arguments are --hmm_db (.hmm file containing all viral genomes we want to search
-for), --job_number (allows use on server clusters by specifying which bacterial
-genome this instance of the program will search against), --dfam_dir (dir of
-tables unmodified by dfamscan.pl), --scan_dir (dir of tables modified by
-dfamscan.pl), and gen_dir (directory of bacterial genomes). User can also
-specify program verbosity, the number of worker threads, and which directory to
-store tables containing no matches to (unspecified leaves these tables with the
-others).
+This program searches for viral genomes or genome fragments in input bacterial genomes using nhmmscan, saving results in
+DFAM table format (nhmmscan's --dfamtblout option). Next, it automatically runs dfamscan.pl, a program that resolves
+multiple competing matches to the same region of bacterial DNA by keeping only the best match. Required positional 
+arguments are 1) hmm_db (.hmm file containing all viral genomes we want to search for), 2) genome_path (path to input 
+bacterial genome), and 3) output_table (path to output scanned .dfam file). User can also specify program verbosity with
+--verbose, the number of worker threads with --cpu (default 1), an optional path to dfamscan.pl with --dfamscan_path 
+(default expects it to live in the same directory as this file), and whether to overwrite output files if they already 
+exist with --force.
 
-### run_dfam_tableizer.pl
-Dependencies: seq, parallel, dfam_tableizer.pl, Time::HiRes, Getopt::Long, strict, warnings
+### table_parser.py
+Dependencies: argparse, esl-seqstat, json, os, subprocess, sys, typing
 
-This program uses GNU Parallel to run dfam_tableizer.pl, allowing for its use
-when not on a server cluster with a job manager. Use is almost identical to
-dfam_tableizer.pl with one exception: rather than a --job_number option, there's
-a --jobs option, which specifies the maximum number of instances of
-dfam_tableizer.pl we want to run simultaneously.
-
-### table_parser.pl
-Dependencies: rm, mkdir, ViralSeq.pm, FindBin::Bin, Getopt::Long, strict, warnings
-
-This program parses scanned .dfam tables, producing .tsv files and "index chart
-files" where each line in the file corresponds to a nucleotide index in a viral
-genome. Accepts a directory of reference viral genomes (--prophage), a dir of
-.dfam tables (--dfam), a dir of bacterial genomes (--bac_genomes), an output
-.tsv dir (--tsv), an output index chart dir (--index_charts), a job number
-assigned by a server cluster job manager (--job_number), and a maximum
-acceptable evalue (--max_eval). This program depends on ViralSeq.pm.
-
-### ViralSeq.pm
-Dependencies: rm, Moose, esl-sfetch, nhmmer, strict, warnings
-
-This script describes a class using Perl's Moose module. Making a class in Perl
-was a mistake. Creates a ViralSeq object containing information about a viral
-sequence identified in a bacterial genome, such as its name, the bacterial
-genome it was found in, and its coordinates in that genome. A fair amount of
-this file's content is devoted to trying to detect flanking att sites, which
-works very poorly and probably should not be used.
-
-### run_parser.pl
-Dependencies: table_parser.pl, strict, warnings
-
-This script helps run table_parser.pl on a server cluster with a job manager. 
-
-### run_table_parser_parallel.pl
-Dependencies: seq, parallel, table_parser.pl, Time::HiRes, Getopt::Long, strict, warnings
-
-This program runs table_parser.pl using GNU parallel, allowing for its use when
-not on a server cluster with a job manager. Use is almost identical to
-table_parser.pl with one exception: rather than a --job_number option, there's a
---jobs option, which specifies the maximum number of instances of
-table_parser.pl we want to run simultaneously.
-
-### combine_charts.pl
-Dependencies: File::Find, Getopt::Long, strict, warnings
-
-This program accepts an input index chart directory and an output chart dir. In
-the input directory, each bacterial genome has its own subdirectory, which
-itself contains index chart files for every virus with sequence detected in the
-bacterium's genome. Each of these files has a number of lines equivalent to the
-length of the virus's genome, and each line contains a number denoting how many
-times sequence corresponding to that location in the viral genome has been found
-in the bacterial genome. This program iterates through all of the bacterial
-directories, creating an output file for each viral genome containing the found
-insertion counts across all of the bacteria.
+This program parses scanned .dfam tables, filtering out integrations that fail to pass an e-value threshold. It
+produces .tsv files describing detected integrations in a bacterial genome and .json files that contain reference viral
+genome annotation information (if enabled) and an array in which each array index corresponds to a nucleotide index in
+the reference viral genome the .json file is named after. The value of an array index represents how many integrations 
+across all bacterial genomes in the present run of the pipeline included the nucleotide at the corresponding position in
+the file's reference viral genome. Requires an input .dfam file (dfam_path), an input bacterial genome (genome_path), an
+output .tsv file path (output_tsv_path), an output .json path (output_json_path). Optionally, the user can specify the
+maximum allowable e-value for a potential integration with --max_evalue (default 1e-5, where lower is better), program
+verbosity with --verbose, and whether output files that already exist should be overwritten with --force.
 
 ### grab_viral_proteins.py
 Dependencies: re, argparse, sys

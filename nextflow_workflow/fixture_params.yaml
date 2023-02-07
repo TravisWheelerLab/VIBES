@@ -1,0 +1,23 @@
+programs_path: ${projectDir}/../programs
+phage_file: ${projectDir}/../fixtures/fixture_2/phage_db.fasta
+genome_files: ${projectDir}/../fixtures/fixture_2/bac_*.fasta
+dfamscan_path: ${projectDir}/../programs/perl/dfamscan.pl
+frahmmerscan_path: ${projectDir}/../programs/perl/frahmmerscan.pl
+protein_annotation_tsv: ${projectDir}/../hmm/viral_proteins/annotation_files/phrogs_vibes_annotations.tsv
+# phage_seq_type should be either dna, rna, or amino
+phage_seq_type: dna
+# run phage annotation step, which searches viral proteins against phage genomes
+annotate_phage: true
+viral_protein_db: ${projectDir}/../hmm/viral_proteins/phrogs/phrog_1.frahmm
+
+# annotate bacterial genomes with Bakta. to do so, the pipeline will download a large (~30gb) annotation database
+bakta_annotation: true
+
+# path to large Bakta annotation databas. If you've already downloaded this file, put its path here
+bakta_db_path: ${projectDir}/../bakta_db/db/
+
+# if bakta database isn't found at bakta_db_path, automatically download it
+download_bakta_db: true
+
+# use container (Docker, Singularity, etc) to run Bakta. Set to 'true' if Bakta isn't already downloaded and you don't want to download it yourself
+bakta_container: true
