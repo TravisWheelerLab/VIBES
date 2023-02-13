@@ -50,7 +50,7 @@ process nhmmscan_create_table {
 
     """
     nhmmscan --cpu ${task.cpus} --dfamtblout ${genome_file.simpleName}.dfam ${hmm_file} ${genome_file}
-    ${params.dfamscan_path} --dfam_infile ${genome_file.simpleName}.dfam --dfam_outfile ${genome_file.simpleName}.scanned.dfam
+    ${params.programs_path}/perl/dfamscan.pl --dfam_infile ${genome_file.simpleName}.dfam --dfam_outfile ${genome_file.simpleName}.scanned.dfam
     """
 }
 
@@ -87,7 +87,7 @@ process frahmmer_create_table {
 
     """
     frahmmer -o /dev/null --cpu ${task.cpus} --tblout ${genome_file.simpleName}.tbl ${hmm_file} ${genome_file}
-    ${params.frahmmerscan_path} --infile ${genome_file.simpleName}.tbl --outfile ${genome_file.simpleName}.scanned.tbl
+    ${params.programs_path}/perl/frahmmerscan.pl --infile ${genome_file.simpleName}.tbl --outfile ${genome_file.simpleName}.scanned.tbl
     """
 }
 
@@ -153,7 +153,7 @@ process sum_occurrences {
     time '1h'
 
     input:
-    val jsonList
+    path jsonList
 
     output:
     path "summed_occurrences.json"
@@ -185,20 +185,21 @@ process bakta_annotation {
     container = 'oschwengers/bakta'
     publishDir('jack_output/bakta_annotations/', mode: "copy")
 
-
     cpus 4
     time '2h'
     memory '10 GB'
 
     input:
     path genome
+    path bakta_db_path
 
     output:
     path "*.gff3", emit: gff3
 
     """
     bakta \
-    --db ${params.bakta_db_path} \
+    --keep-contig-headers
+    --db ${bakta_db_path} \
     ${genome}
     """
 
@@ -226,7 +227,7 @@ workflow detect_integrations {
     take:
         phage_file
         genome_files
-        
+
     main:
         hmm_files_channel = hmm_build(phage_file)
         genome_channel = Channel.empty()
@@ -284,9 +285,10 @@ workflow frahmmer_viral_genomes {
 workflow {
     phage_file = params.phage_file
     genome_files = Channel.fromPath(params.genome_files)
-    annotate_viral_genomes = params.annotate_phage
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.protein_annotation_tsv
+
+    annotate_viral_genomes = params.annotate_phage
     bakta_annotation = params.bakta_annotation
     download_bakta_db = params.download_bakta_db
     bakta_db = file(params.bakta_db_path)
@@ -295,11 +297,12 @@ workflow {
     integration_jsons = detect_integrations.out
 
     if (bakta_annotation) {
+        // TODO: this needs a failure case for !bakta_db.exists() and !download_bakta_db
         if (!bakta_db.exists() && download_bakta_db) {
             println("Warning: Bakta database not detected at ${bakta_db}. The database is now being automatically downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
             download_bakta_db(bakta_db)
         }
-        bakta_annotation(genome_files)
+        bakta_annotation(genome_files, params.bakta_db_path)
     }
 
     if (annotate_viral_genomes) {
@@ -308,8 +311,8 @@ workflow {
         annotation_tables = frahmmer_viral_genomes.out.tables
 
         integration_json_paths_file = integration_jsons.toList()
-        occurrence_json = sum_occurrences(integration_json_paths_file)
 
+        occurrence_json = sum_occurrences(integration_json_paths_file)
         reformat_annotations(annotation_genomes, annotation_tables, occurrence_json, protein_annotations)
     }
 }
