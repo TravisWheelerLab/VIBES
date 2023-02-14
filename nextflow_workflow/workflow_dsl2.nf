@@ -167,14 +167,14 @@ process sum_occurrences {
 
 process download_bakta_db {
     if (params.bakta_container)
-        container = "oschwengers/bakta"
+        container = "bakta"
 
     cpus 4
     time '2h'
 
     input:
     path bakta_db
-
+    
     """
     bakta_db download --output ${params.bakta_db_path}
     """
@@ -182,7 +182,7 @@ process download_bakta_db {
 }
 
 process bakta_annotation {
-    container = 'oschwengers/bakta'
+    container = 'bakta'
     publishDir('jack_output/bakta_annotations/', mode: "copy")
 
     cpus 4
@@ -197,10 +197,7 @@ process bakta_annotation {
     path "*.gff3", emit: gff3
 
     """
-    bakta \
-    --keep-contig-headers
-    --db ${bakta_db_path} \
-    ${genome}
+    bakta --keep-contig-headers --db ${bakta_db_path} ${genome}
     """
 
 }
@@ -302,7 +299,7 @@ workflow {
             println("Warning: Bakta database not detected at ${bakta_db}. The database is now being automatically downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
             download_bakta_db(bakta_db)
         }
-        bakta_annotation(genome_files, params.bakta_db_path)
+        // bakta_annotation(genome_files, params.bakta_db_path)
     }
 
     if (annotate_viral_genomes) {

@@ -52,5 +52,6 @@ RUN aws --version
 
 RUN mkdir -p /programs
 COPY python /programs/python
+COPY perl /programs/perl
 
 WORKDIR /
