@@ -8,7 +8,7 @@ from os import path
 from pathlib import Path
 import json
 import pandas as pd
-
+# Dependency: esl-seqstat in some circumstances
 
 INDENT_VAL = 4
 TABLE_MODE = Literal["dfam", "tbl"]
@@ -20,7 +20,7 @@ MAX_MERGE_DISTANCE = 5000
 
 
 class QueryHit:
-    def __init__(self, hit_name: str, acc_id: str, query_name: str, evalue: float, ali_st: int, ali_end: int, query_genome_path: str, hmm_st: int, hmm_end: int, hmm_len: int, strand: STRAND, verbose: bool, full_cutoff: int = 100, target_genome_len : int = None):
+    def __init__(self, hit_name: str, acc_id: str, query_name: str, evalue: float, ali_st: int, ali_end: int, query_genome_path: str, hmm_st: int, hmm_end: int, hmm_len: int, strand: STRAND, verbose: bool, full_cutoff: int = 100, query_genome_len : int = None):
         # target = integration or (when annotating virus) protein, query = bacteria or (when annotating virus) virus
         self.hit_name = hit_name
         self.acc_id = acc_id
@@ -36,8 +36,8 @@ class QueryHit:
         self.verbose = verbose
         self.full_cutoff = full_cutoff
 
-        if target_genome_len:
-            self.query_genome_len = target_genome_len
+        if query_genome_len:
+            self.query_genome_len = query_genome_len
         else:
             self.query_genome_len = self.get_genome_len()
 
@@ -69,33 +69,35 @@ class QueryHit:
                f"{self.query_st}\t{self.query_end}\t{self.query_genome_len}\t{self.strand}\n"
 
 
-def strandedness(sense_pos: int, antisense_pos: int, strand: STRAND) -> int:
+def strandedness(sense_position: int, antisense_position: int, strand: STRAND) -> int:
     if strand == "+":
-        return sense_pos
+        return sense_position
     else:
-        return antisense_pos
+        return antisense_position
 
 
 # This function tests whether current_hit is followed by next_hit on the reference viral genome
-def order_preserved(current_hit: QueryHit, next_hit: QueryHit) -> bool:
-    if current_hit.query_st < next_hit.query_st:
+def ref_order_preserved(current_hit: QueryHit, prev_hit: QueryHit) -> bool:
+    if prev_hit.ref_st < current_hit.ref_st:
         return True
     else:
         return False
 
 
-def should_merge(current_hit: QueryHit, next_hit: QueryHit) -> bool:
+def should_merge(prev_hit: QueryHit, current_hit: QueryHit) -> bool:
+    prev_ref_virus = prev_hit.hit_name
     current_ref_virus = current_hit.hit_name
-    next_ref_virus = next_hit.hit_name
 
-    if current_ref_virus == next_ref_virus:
-        # get current end and next start positions, relative to bacterial genome. Depends on strand.
-        current_bac_end = strandedness(current_hit.ref_end, current_hit.ref_st, current_hit.strand)
-        next_bac_st = strandedness(next_hit.ref_st, next_hit.ref_end, next_hit.strand)
+    # if both match to same reference virus
+    if current_ref_virus == prev_ref_virus:
+        # get previous hit end and current hit start positions on the bacterial genome
+        prev_bac_end = strandedness(prev_hit.ref_end, prev_hit.ref_st, prev_hit.strand)
+        current_bac_st = strandedness(current_hit.ref_st, current_hit.ref_end, current_hit.strand)
 
-        bac_hit_distance = next_bac_st - current_bac_end
+        bac_hit_distance = current_bac_st - prev_bac_end
 
-        if bac_hit_distance <= MAX_MERGE_DISTANCE and order_preserved(current_hit, next_hit):
+        # if the ends are close enough to each other and in the right order
+        if bac_hit_distance <= MAX_MERGE_DISTANCE and ref_order_preserved(prev_hit, current_hit):
             return True
 
     return False
@@ -106,19 +108,25 @@ def should_merge(current_hit: QueryHit, next_hit: QueryHit) -> bool:
 # as multiple unrelated hits. So we check for nearby, contiguous hits to the same reference viral genome. If spacing of
 # the hits on the bacterial genome roughly matches the spacing of these same regions on the viral genome, we merge the
 # hits.
-def detect_merges(viral_hits: List[QueryHit]) -> List[QueryHit]:
-    list_length = len(viral_hits)
-    # for every hit in our list of detected viral sequences, compare to the next hit in the list. Merge the two if they
-    # appear to be one viral integration incorrectly called as two separate hits
-    for index, current_hit in enumerate(viral_hits):
-        if (index + 1) < list_length:
-            next_hit = viral_hits[index + 1]
+def detect_merges(hit_list: List[QueryHit]) -> List[QueryHit]:
+    # first, check that there are multiple hits to merge
+    if len(hit_list) > 1:
+        # then, sort the list, first by query sequence name (in case of multiple contigs) and then by start position relative to the
+        # bacterial genome (so if the integration has - for strand, we want to use the end, which occurs first on the
+        # bacterial genome)
+        hit_list.sort(key=lambda x: (x.query_name, strandedness(x.query_st, x.query_end, x.strand)))
+        prev_hit = None
+        merged_list = []
 
-            if should_merge(current_hit, next_hit):
+        # for every hit in our list of detected viral sequences, compare to the next hit in the list. Merge the two if they
+        # appear to be one viral integration incorrectly called as two separate hits
+        for current_hit in hit_list:
+            if prev_hit is not None and should_merge(prev_hit, current_hit):
                 target_name = current_hit.hit_name
                 query_name = current_hit.query_name
+                acc_id = current_hit.acc_id
                 # TODO: Eventually update to merge e-values
-                evalue = max(current_hit.evalue, next_hit.evalue)
+                evalue = max(current_hit.evalue, prev_hit.evalue)
                 # TODO: investigate prevalence of merge candidates with mismatched strandedness. However, we
                 # TODO: don't anticipate this to be a major problem- nhmmer has no notion of the directionality of the
                 # TODO: individual genes, so even antisense genes should be labeled as '+' if the instance in the
@@ -126,14 +134,40 @@ def detect_merges(viral_hits: List[QueryHit]) -> List[QueryHit]:
                 # TODO: potentially may be cases where viral strains have 'flipped' genes, or something weird happened
                 # TODO: to the integration post insertion. In the meantime, we just call strandedness to match hit 1
                 strand = current_hit.strand
-                bac_st = strandedness(current_hit.ref_st, next_hit.ref_st, strand)
-                bac_end = strandedness(next_hit.ref_end, current_hit.ref_end, strand)
+                bac_st = strandedness(prev_hit.query_st, current_hit.query_st, strand)
+                bac_end = strandedness(current_hit.query_end, prev_hit.query_end, strand)
                 bac_genome_path = current_hit.query_genome_path
-                # if we've gotten this far, we already know that current_hit occurs before next_hit on the viral genome
-                ref_vir_st = current_hit.query_st
-                ref_vir_end = next_hit.query_end
+                bac_genome_len = current_hit.query_genome_len
+                # if we've gotten this far, we already know that prev_hit occurs before current_hit on the same viral genome
+                # So, start at prev_hit and extend to the end of current_hit
+                ref_vir_st = prev_hit.ref_st
+                ref_vir_end = current_hit.ref_end
+                ref_vir_len = current_hit.ref_len
+                verbose = current_hit.verbose
+                cutoff = current_hit.full_cutoff
 
-                # TODO: create new merged hit, figure out how to get the list order sorted
+                merged_hit = QueryHit(target_name, acc_id, query_name, evalue, bac_st, bac_end, bac_genome_path, ref_vir_st, ref_vir_end, ref_vir_len, strand, verbose, cutoff, bac_genome_len)
+
+                # this should always be the case
+                if merged_list[-1] is prev_hit:
+                    merged_list[-1] = merged_hit
+
+                # this case shouldn't ever get used, right?
+                else:
+                    merged_list.append(merged_hit)
+
+                prev_hit = merged_hit
+
+            # if the hit shouldn't be merged, or if prev_hit is None, then add the hit to the list
+            else:
+                prev_hit = current_hit
+                merged_list.append(current_hit)
+
+        return merged_list
+
+    else:
+        return hit_list
+
 
 
 def overwrite_check(file_path: str, force: bool) -> None:
@@ -235,6 +269,10 @@ def write_tsv_from_path(tsv_path: str, seq_list: List[QueryHit], force: bool) ->
 
 def parse_dfam(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) -> List[QueryHit]:
     hit_list = []
+    # For the first hit, we don't know what the query genome length is. The QueryHit class contains a method that can
+    # get the query genome length, but since we expect each run of table_parser.py to only deal with one query genome,
+    # we can re-use the data one we get it via esl-seqstat
+    genome_len = None
     for line_num, line in enumerate(dfam_file, 0):
         if line[0] == "#":
             pass
@@ -253,7 +291,9 @@ def parse_dfam(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) ->
             hmm_len = int(line_list[13])
 
             if evalue <= max_eval:
-                hit_list.append(QueryHit(target_name, acc_id, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, hmm_len, strand, verbose))
+                hit = QueryHit(target_name, acc_id, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, hmm_len, strand, verbose, query_genome_len=genome_len)
+                genome_len = hit.query_genome_len
+                hit_list.append(hit)
             else:
                 if verbose:
                     print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of {max_eval}")
@@ -262,6 +302,7 @@ def parse_dfam(dfam_file: TextIO, genome_path: str, max_eval: float, verbose) ->
 
 def parse_tbl(tbl_file: TextIO, genome_path: str, max_eval: float, verbose: bool) -> List[QueryHit]:
     hit_list = []
+    genome_len = None
     for line_num, line in enumerate(tbl_file, 0):
         if line[0] == "#":
             pass
@@ -284,7 +325,9 @@ def parse_tbl(tbl_file: TextIO, genome_path: str, max_eval: float, verbose: bool
                 strand = "-"
 
             if evalue <= max_eval:
-                hit_list.append(QueryHit(query_name, acc_id, target_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, hmm_len, strand, verbose))
+                hit = QueryHit(query_name, acc_id, target_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en, hmm_len, strand, verbose, query_genome_len=genome_len)
+                genome_len = hit.query_genome_len
+                hit_list.append(hit)
             else:
                 if verbose:
                     print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of {max_eval}")

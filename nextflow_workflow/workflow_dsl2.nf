@@ -12,8 +12,11 @@ nextflow.enable.dsl=2
  //
 
 process hmm_build {
-    cpus 4
-    time '1h'
+    cpus { 4 * task.attempt }
+    time { 2.hour * task.attempt }
+
+    errorStrategy 'retry'
+    maxRetries 2
 
     input:
     path seq_file
@@ -35,8 +38,12 @@ process hmm_build {
 }
 
 process nhmmscan_create_table {
-    cpus 4
-    time '1h'
+    cpus { 4 * task.attempt }
+    time { 2.hour * task.attempt }
+    memory {5.GB * task.cpus }
+
+    errorStrategy 'retry'
+    maxRetries 2
 
     input:
     path genome_file
@@ -57,8 +64,11 @@ process nhmmscan_create_table {
 }
 
 process frahmmconvert {
-    cpus 8
-    time '3h'
+    cpus { 4 * task.attempt }
+    time { 2.hour * task.attempt }
+
+    errorStrategy 'retry'
+    maxRetries 2
 
     input:
     path hmmer_hmm, name: '*.*hmm'
@@ -76,8 +86,11 @@ process frahmmconvert {
 
 
 process frahmmer_create_table {
-    cpus 4
-    time '1h'
+    cpus { 4 * task.attempt }
+    time { 2.hour * task.attempt }
+
+    errorStrategy 'retry'
+    maxRetries 2
 
     input:
     path genome_file
@@ -192,8 +205,11 @@ process bakta_annotation {
 
 
     cpus 4
-    time '2h'
+    time { 2.hour * task.attempt }
     memory '10 GB'
+
+    errorStrategy 'retry'
+    maxRetries 2
 
     input:
     path genome
@@ -275,7 +291,6 @@ workflow frahmmer_viral_genomes {
         phage_genomes = rename_fasta(phage_genomes, phage_ids)
 
         // we expect viral protein .hmms to be amino acid seqs, so we use FraHMMER
-
         if (viral_protein_hmm.getExtension() == "hmm") {
             frahmmconvert(viral_protein_hmm)
             viral_protein_hmm = frahmmconvert.out.frahmm
