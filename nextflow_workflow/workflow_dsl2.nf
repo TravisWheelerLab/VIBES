@@ -2,11 +2,13 @@
 
 seq_type = params.phage_seq_type
 programs_path = params.programs_path
+output_path = params.output_path
 nextflow.enable.dsl=2
 
  // TODO: QOL features like:
  //     - more efficient process ordering (this has mostly been done!)
  //     - a process to build protein sequences into a .hmm file (to support user-specified viral annotation)
+ //     - description field
  //
 
 process hmm_build {
@@ -95,8 +97,7 @@ process reformat_integrations {
     cpus 1
     time '1h'
 
-    publishDir 'jack_output/integrations/bacterial_integrations/tsv', mode: "copy", pattern: "*.tsv"
-    publishDir 'jack_output/integrations/bacterial_integrations/json', mode: "copy", pattern: "*.json"
+    publishDir '${output_path}/tsv/bacterial_integrations/', mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -122,8 +123,7 @@ process reformat_annotations {
     cpus 1
     time '1h'
 
-    publishDir 'jack_output/viral_genome_annotation/tsv', mode: "copy", pattern: "*.tsv"
-    publishDir 'jack_output/viral_genome_annotation/json', mode: "copy", pattern: "*.json"
+    publishDir '${output_path}/tsv/viral_gene_annotations/', mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -170,9 +170,14 @@ process download_bakta_db {
         container = "oschwengers/bakta"
 
     cpus 4
-    time '2h'
+    time '12h'
 
     input:
+    path bakta_db
+
+    // this output should be the same as the input- the idea here is that this forces bakta_annotation() to wait on
+    // download_bakta_db(), since it depends on output from this process
+    output:
     path bakta_db
 
     """
@@ -183,7 +188,7 @@ process download_bakta_db {
 
 process bakta_annotation {
     container = 'oschwengers/bakta'
-    publishDir('jack_output/bakta_annotations/', mode: "copy")
+    publishDir('${output_path}/bakta_annotations/', mode: "copy")
 
 
     cpus 4
@@ -192,13 +197,14 @@ process bakta_annotation {
 
     input:
     path genome
+    path bakta_db
 
     output:
     path "*.gff3", emit: gff3
 
     """
     bakta \
-    --db ${params.bakta_db_path} \
+    --db ${bakta_db} \
     ${genome}
     """
 
@@ -262,14 +268,15 @@ workflow frahmmer_viral_genomes {
     main:
         phage_genomes = Channel.fromPath(phage_file).splitFasta(file: true)
         phage_ids = Channel.fromPath(phage_file).splitFasta(record: [id: true])
+        viral_protein_hmm = file(viral_protein_hmm)
         table_type = Channel.value("tbl")
 
         // we want the .fasta file names to be more informative than something like phage_db.x.fasta, so rename to virus id
         phage_genomes = rename_fasta(phage_genomes, phage_ids)
 
         // we expect viral protein .hmms to be amino acid seqs, so we use FraHMMER
-        should_convert = viral_protein_hmm.getExtension() == "hmm"
-        if (should_convert) {
+
+        if (viral_protein_hmm.getExtension() == "hmm") {
             frahmmconvert(viral_protein_hmm)
             viral_protein_hmm = frahmmconvert.out.frahmm
         }
@@ -281,6 +288,24 @@ workflow frahmmer_viral_genomes {
         tables = frahmmer_create_table.out.tables
 }
 
+
+workflow bacterial_annotation_bakta {
+    take:
+        genome_files
+        bakta_db_path
+
+    main:
+        println !bakta_db_path.exists()
+        println params.download_bakta_db
+        if (!bakta_db_path.exists() && params.download_bakta_db) {
+            println("Warning: Bakta database not detected at ${bakta_db_path}. The database is now being automatically downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
+            bakta_db_path = download_bakta_db(bakta_db_path)
+        }
+
+        // TODO: force bakta process to wait on DB download
+        bakta_annotation(genome_files, bakta_db_path)
+}
+
 workflow {
     phage_file = params.phage_file
     genome_files = Channel.fromPath(params.genome_files)
@@ -288,18 +313,13 @@ workflow {
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.protein_annotation_tsv
     bakta_annotation = params.bakta_annotation
-    download_bakta_db = params.download_bakta_db
     bakta_db = file(params.bakta_db_path)
 
     detect_integrations(phage_file, genome_files)
     integration_jsons = detect_integrations.out
 
     if (bakta_annotation) {
-        if (!bakta_db.exists() && download_bakta_db) {
-            println("Warning: Bakta database not detected at ${bakta_db}. The database is now being automatically downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
-            download_bakta_db(bakta_db)
-        }
-        bakta_annotation(genome_files)
+        bacterial_annotation_bakta(genome_files, bakta_db)
     }
 
     if (annotate_viral_genomes) {
