@@ -1,23 +1,56 @@
+# BASIC OPTIONS: These will likely change from run to run
+
+# genome_file: Path to .fasta files of bacterial genomes to search in. To select multiple, use an expansion character
+# like *, which will match any text (so *_genome.fasta would match all of the following: ecoli_genome.fasta,
+# pseudomonas_genome.fasta, yersinia_genome.fasta, but would not match ecoli.fasta because it doesn't contain _genome)
+genome_files: ${projectDir}/../fixtures/5_full_bac_2_vir/*.fna
+
+# programs_path: Where is the VIBES /programs folder located?
 programs_path: ${projectDir}/../programs
-phage_file: ${projectDir}/../fixtures/fixture_2/phage_db.fasta
-genome_files: ${projectDir}/../fixtures/fixture_2/bac_*.fasta
-dfamscan_path: ${projectDir}/../programs/perl/dfamscan.pl
-frahmmerscan_path: ${projectDir}/../programs/perl/frahmmerscan.pl
-protein_annotation_tsv: ${projectDir}/../hmm/viral_proteins/annotation_files/phrogs_vibes_annotations.tsv
-# phage_seq_type should be either dna, rna, or amino
+
+# phage_file: Path to .fasta file containing all phage genomes VIBES will search for. This must be a full path without
+# expansion characters like * or ?
+phage_file: ${projectDir}/../fixtures/5_full_bac_2_vir/2_phage_db.fasta
+
+# phage_seq_type should be one of the following: dna, rna, amino
 phage_seq_type: dna
+
+# output_path: Path to folder where VIBES should store output
+output_path: ${projectDir}/output/
+
+#                                                                                                 ID     \t Description
+# .tsv format file with descriptions of viral protein annotations. Format must be as follows: protein_id \t description
+# (where \t is a tab character seperating the two columns. Spaces between tabs and field values are used here for visual
+# clarity, and are not necessary in the .tsv file itself)
+viral_protein_annotation_tsv: ${projectDir}/../fixtures/5_full_bac_2_vir/phrogs_vibes_annotations.tsv
+
+# path to viral protein database. Must be full path without glob characters (so no * allowed)
+viral_protein_db: ${projectDir}/../fixtures/5_full_bac_2_vir/all_phrogs.1-26-23.frahmm
+
+# PIPELINE FUNCTIONALITY: Flags that enable (true) or disable (false) VIBES functions
+
 # run phage annotation step, which searches viral proteins against phage genomes
 annotate_phage: true
-viral_protein_db: ${projectDir}/../hmm/viral_proteins/phrogs/phrog_1.frahmm
+
 
 # annotate bacterial genomes with Bakta. to do so, the pipeline will download a large (~30gb) annotation database
 bakta_annotation: true
 
+
+# BAKTA OPTIONS
+
+# use container (Docker, Singularity, or whatever is specified in nextflow.config) to run Bakta. Set to 'true' if Bakta isn't already downloaded and you don't want to download it yourself
+bakta_container: true
+
 # path to large Bakta annotation databas. If you've already downloaded this file, put its path here
-bakta_db_path: ${projectDir}/../bakta_db/db/
+bakta_db_path: ${projectDir}/bakta_db_download_test/db/
 
 # if bakta database isn't found at bakta_db_path, automatically download it
-download_bakta_db: true
+download_bakta_db: false
 
-# use container (Docker, Singularity, etc) to run Bakta. Set to 'true' if Bakta isn't already downloaded and you don't want to download it yourself
-bakta_container: true
+
+# ADVANCED OPTIONS
+
+dfamscan_path: ${projectDir}/../programs/perl/dfamscan.pl
+frahmmerscan_path: ${projectDir}/../programs/perl/frahmmerscan.pl
+
