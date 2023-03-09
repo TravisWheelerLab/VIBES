@@ -38,8 +38,8 @@ def get_element_info(tsv_data: pd.DataFrame, element_name: str) -> pd.DataFrame:
     # grab all rows with name == element_name
     matching_rows = tsv_data.loc[tsv_data["Name"] == element_name]
     # reduce retained columns to relevant info: Name, Query Name, bacterial start, bacterial end, bacterial length, +/-
-    matching_rows = matching_rows[["Name", "Query Sequence Name", "Match Start Position on Bacterial Genome",
-                                   "Match End Position on Bacterial Genome", "Bacterial Genome Length", "Strand"]]
+    matching_rows = matching_rows[["Hit Name", "Query Sequence Name", "Match Start on Query Seq",
+                                   "Match End on Query Seq", "Query Genome Length", "Strand"]]
 
     return matching_rows
 
@@ -119,7 +119,10 @@ def _main():
     tsv_data = read_tsv(tsv_path)
     element_data = get_element_info(tsv_data, element_name)
     subseqs = get_subseq_list(element_data, flank_len, genome_path, verbose)
-    write_to_output(output_path, subseqs, force)
+
+    if len(subseqs) > 0:
+        write_to_output(output_path, subseqs, force)
+
     index_cleanup(genome_path, verbose)
 
 
