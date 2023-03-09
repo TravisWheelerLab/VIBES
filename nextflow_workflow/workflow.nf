@@ -110,7 +110,7 @@ process reformat_integrations {
     cpus 1
     time '1h'
 
-    publishDir '${output_path}/tsv/bacterial_integrations/', mode: "copy", pattern: "*.tsv"
+    publishDir "${output_path}/tsv/bacterial_integrations/", mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -136,7 +136,7 @@ process reformat_annotations {
     cpus 1
     time '1h'
 
-    publishDir '${output_path}/tsv/viral_gene_annotations/', mode: "copy", pattern: "*.tsv"
+    publishDir "${output_path}/tsv/viral_gene_annotations/", mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -201,7 +201,7 @@ process download_bakta_db {
 
 process bakta_annotation {
     container = 'oschwengers/bakta'
-    publishDir('${output_path}/bakta_annotations/', mode: "copy")
+    publishDir("${output_path}/bakta_annotations/", mode: "copy")
 
 
     cpus 4
