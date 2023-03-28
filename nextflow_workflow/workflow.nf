@@ -3,7 +3,47 @@
 seq_type = params.phage_seq_type
 programs_path = params.programs_path
 output_path = params.output_path
+bakta_container = params.bakta_container
+bakta_db_type = params.bakta_db_type
 nextflow.enable.dsl=2
+
+// process resource settings
+hmmbuild_cpus = params.hmmbuild_cpus
+hmmbuild_time = params.hmmbuild_time
+hmmbuild_memory = params.hmmbuild_memory
+
+nhmmscan_cpus = params.nhmmscan_cpus
+nhmmscan_time = params.nhmmscan_time
+nhmmscan_memory = params.nhmmscan_memory
+
+frahmmconvert_cpus = params.frahmmconvert_cpus
+frahmmconvert_time = params.frahmmconvert_time
+frahmmconvert_memory = params.frahmmconvert_memory
+
+frahmmer_cpus = params.frahmmer_cpus
+frahmmer_time = params.frahmmer_time
+frahmmer_memory = params.frahmmer_memory
+
+bakta_cpus = params.bakta_cpus
+bakta_time = params.bakta_time
+bakta_memory = params.bakta_memory
+
+download_db_cpus = params.download_db_cpus
+download_db_time = params.download_db_time
+download_db_memory = params.download_db_memory
+
+rp_cpus = params.rp_cpus
+rp_time = params.rp_time
+rp_memory = params.rp_memory
+
+ri_cpus = params.ri_cpus
+ri_time = params.ri_time
+ri_memory = params.ri_memory
+
+integration_full_threshold = params.integration_full_threshold
+overlap_tolerance = params.overlap_tolerance
+integration_distance_threshold = params.integration_distance_threshold
+integration_minimum_length = params.integration_minimum_length
 
  // TODO: QOL features like:
  //     - more efficient process ordering (this has mostly been done!)
@@ -12,8 +52,9 @@ nextflow.enable.dsl=2
  //
 
 process hmm_build {
-    cpus { 4 * task.attempt }
-    time { 2.hour * task.attempt }
+    cpus { hmmbuild_cpus * task.attempt }
+    time { hmmbuild_time.hour * task.attempt }
+    memory { hmmbuild_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -23,24 +64,26 @@ process hmm_build {
 
     output:
     path "*.hmm", emit: hmm
-    path "*.h3f"
-    path "*.h3i"
-    path "*.h3m"
-    path "*.h3p"
+    path "*.h3f", emit: h3f
+    path "*.h3i", emit: h3i
+    path "*.h3m", emit: h3m
+    path "*.h3p", emit: h3p
+
 
     """
     python3 ${programs_path}/python/table_gen_py/hmmbuild_mult_seq.py \
         --cpu ${task.cpus} \
         --seq_type ${seq_type} \
+        --temp_folder ${workDir} \
         "${seq_file}" \
         "${seq_file}.hmm"
     """
 }
 
-process nhmmscan_create_table {
-    cpus { 4 * task.attempt }
-    time { 2.hour * task.attempt }
-    memory {5.GB * task.cpus }
+process nhmmscan {
+    cpus { nhmmscan_cpus * task.attempt }
+    time { nhmmscan_time.hour * task.attempt }
+    memory { nhmmscan_memory.GB * task.cpus }
 
     errorStrategy 'retry'
     maxRetries 2
@@ -64,8 +107,9 @@ process nhmmscan_create_table {
 }
 
 process frahmmconvert {
-    cpus { 4 * task.attempt }
-    time { 2.hour * task.attempt }
+    cpus { frahmmconvert_cpus * task.attempt }
+    time { frahmmconvert_time.hour * task.attempt }
+    memory { frahmmconvert_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -85,9 +129,10 @@ process frahmmconvert {
 }
 
 
-process frahmmer_create_table {
-    cpus { 4 * task.attempt }
-    time { 2.hour * task.attempt }
+process frahmmer {
+    cpus { frahmmer_cpus * task.attempt }
+    time { frahmmer_time.hour * task.attempt }
+    memory { frahmmer_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -107,8 +152,9 @@ process frahmmer_create_table {
 }
 
 process reformat_integrations {
-    cpus 1
-    time '1h'
+    cpus ri_cpus
+    time ri_time.hour
+    memory ri_memory.GB
 
     publishDir "${output_path}/tsv/bacterial_integrations/", mode: "copy", pattern: "*.tsv"
 
@@ -118,46 +164,46 @@ process reformat_integrations {
 
     output:
     path "${genome_file.simpleName}.tsv"
-    path "${genome_file.simpleName}.json", emit: occurrence_jsons
 
     """
     python3 ${programs_path}/python/table_parser_py/table_parser.py \
+        integration_annotation \
+        --full_threshold ${integration_full_threshold} \
+        --overlap_tolerance ${overlap_tolerance} \
+        --distance_threshold ${integration_distance_threshold} \
+        --minimum_length ${integration_minimum_length} \
         "${scanned_table_file}" \
         "${genome_file}" \
         "${genome_file.simpleName}.tsv" \
-        "${genome_file.simpleName}.json" \
-        "${scanned_table_file.extension}" \
-        "integration"
+        "${scanned_table_file.extension}"
     """
 }
 
 
-process reformat_annotations {
-    cpus 1
-    time '1h'
+process reformat_proteins {
+    cpus rp_cpus
+    time rp_time.hour
+    memory rp_memory.GB
 
     publishDir "${output_path}/tsv/viral_gene_annotations/", mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
     path scanned_table_file
-    path occurrences_json
     path protein_annotations
 
     output:
     path "${genome_file.simpleName}.tsv"
-    path "${genome_file.simpleName}.json", emit: annotation_jsons
 
     """
     python3 ${programs_path}/python/table_parser_py/table_parser.py \
-        --occurrence_json ${occurrences_json} \
+        protein_annotation \
         --annotation_tsv ${protein_annotations} \
+        --full_threshold ${integration_full_threshold} \
         ${scanned_table_file} \
         ${genome_file} \
         ${genome_file.simpleName}.tsv \
-        ${genome_file.simpleName}.json \
-        ${scanned_table_file.extension} \
-        annotation
+        ${scanned_table_file.extension}
     """
 }
 
@@ -179,11 +225,17 @@ process sum_occurrences {
 }
 
 process download_bakta_db {
-    if (params.bakta_container)
+    if (bakta_container)
         container = "oschwengers/bakta"
 
-    cpus 4
-    time '12h'
+    cpus { download_db_cpus * task.attempt }
+    time { download_db_time.hour * task.attempt }
+    memory { download_db_memory.GB * task.attempt }
+    // debug will print process stdout to Nextflow stdout, allowing users to see progress bar
+    debug true
+
+    errorStrategy 'retry'
+    maxRetries 2
 
     input:
     path bakta_db
@@ -194,7 +246,7 @@ process download_bakta_db {
     path bakta_db
 
     """
-    bakta_db download --output ${params.bakta_db_path}
+    bakta_db download --output ${bakta_db} --type ${bakta_db_type}
     """
 
 }
@@ -204,9 +256,9 @@ process bakta_annotation {
     publishDir("${output_path}/bakta_annotations/", mode: "copy")
 
 
-    cpus 4
-    time { 2.hour * task.attempt }
-    memory '10 GB'
+    cpus { bakta_cpus * task.attempt }
+    time { bakta_time.hour * task.attempt }
+    memory { bakta_memory.GB * task.attempt }
 
     errorStrategy 'retry'
     maxRetries 2
@@ -217,6 +269,7 @@ process bakta_annotation {
 
     output:
     path "*.gff3", emit: gff3
+    path "*.json", emit: json
 
     """
     bakta \
@@ -243,36 +296,54 @@ process rename_fasta {
 }
 
 
+workflow build_hmm {
+    take:
+        phage_file
+
+    main:
+        hmm_files_channel = hmm_build(phage_file)
+
+    emit:
+        hmm = hmm_build.out.hmm
+        h3f = hmm_build.out.h3f
+        h3i = hmm_build.out.h3i
+        h3m = hmm_build.out.h3m
+        h3p = hmm_build.out.h3p
+}
+
+
 // TODO: Block comment
 workflow detect_integrations {
     take:
-        phage_file
+        hmm_file
+        h3f_file
+        h3i_file
+        h3m_file
+        h3p_file
         genome_files
         
     main:
-        hmm_files_channel = hmm_build(phage_file)
         genome_channel = Channel.empty()
         table_channel = Channel.empty()
 
         if (seq_type == "dna" || seq_type == "rna") {
-            nhmmscan_create_table(genome_files, hmm_files_channel)
-            genome_channel = nhmmscan_create_table.out.genomes
-            table_channel = nhmmscan_create_table.out.tables
+            nhmmscan(genome_files, hmm_file, h3f_file, h3i_file, h3m_file, h3p_file)
+            genome_channel = nhmmscan.out.genomes
+            table_channel = nhmmscan.out.tables
         }
         else if (seq_type == "amino") {
-            hmm_files_channel = frahmmconvert(hmm_files_channel.hmm)
-            frahmmer_create_table(genome_files, hmm_files_channel)
-            genome_channel = frahmmer_create_table.out.genomes
-            table_channel = frahmmer_create_table.out.tables
+            frahmm_file = frahmmconvert(hmm_file)
+            frahmmer(genome_files, frahmm_file)
+            genome_channel = frahmmer.out.genomes
+            table_channel = frahmmer.out.tables
         }
         else {
             error "Error: phage_seq_type in params_file must be dna, rna, or amino"
         }
 
-        reformat_integrations(genome_channel, table_channel)
-
     emit:
-        reformat_integrations.out.occurrence_jsons
+        genomes = genome_channel
+        tables = table_channel
 }
 
 // TODO: Block comment
@@ -287,7 +358,8 @@ workflow frahmmer_viral_genomes {
         viral_protein_hmm = file(viral_protein_hmm)
         table_type = Channel.value("tbl")
 
-        // we want the .fasta file names to be more informative than something like phage_db.x.fasta, so rename to virus id
+        // we want the .fasta file names to be more informative than something like phage_db.x.fasta, so rename to virus
+        // id
         phage_genomes = rename_fasta(phage_genomes, phage_ids)
 
         // we expect viral protein .hmms to be amino acid seqs, so we use FraHMMER
@@ -296,11 +368,11 @@ workflow frahmmer_viral_genomes {
             viral_protein_hmm = frahmmconvert.out.frahmm
         }
 
-        frahmmer_create_table(phage_genomes, viral_protein_hmm)
+        frahmmer(phage_genomes, viral_protein_hmm)
 
     emit:
-        genomes = frahmmer_create_table.out.genomes
-        tables = frahmmer_create_table.out.tables
+        genomes = frahmmer.out.genomes
+        tables = frahmmer.out.tables
 }
 
 
@@ -310,10 +382,9 @@ workflow bacterial_annotation_bakta {
         bakta_db_path
 
     main:
-        println !bakta_db_path.exists()
-        println params.download_bakta_db
         if (!bakta_db_path.exists() && params.download_bakta_db) {
-            println("Warning: Bakta database not detected at ${bakta_db_path}. The database is now being automatically downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
+           // println("Warning: Bakta database not detected at ${bakta_db_path}. The database is now being automatically
+           // downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
             bakta_db_path = download_bakta_db(bakta_db_path)
         }
 
@@ -326,12 +397,15 @@ workflow {
     genome_files = Channel.fromPath(params.genome_files)
     annotate_viral_genomes = params.annotate_phage
     viral_protein_hmm = file(params.viral_protein_db)
-    protein_annotations = params.protein_annotation_tsv
+    protein_annotations = params.viral_protein_annotation_tsv
     bakta_annotation = params.bakta_annotation
     bakta_db = file(params.bakta_db_path)
 
-    detect_integrations(phage_file, genome_files)
-    integration_jsons = detect_integrations.out
+    hmm_files = build_hmm(phage_file)
+    detect_integrations(hmm_files, genome_files)
+    integration_genomes = detect_integrations.out.genomes
+    integration_tables = detect_integrations.out.tables
+    reformat_integrations(integration_genomes, integration_tables)
 
     if (bakta_annotation) {
         bacterial_annotation_bakta(genome_files, bakta_db)
@@ -342,9 +416,9 @@ workflow {
         annotation_genomes = frahmmer_viral_genomes.out.genomes
         annotation_tables = frahmmer_viral_genomes.out.tables
 
-        integration_json_paths_file = integration_jsons.toList()
-        occurrence_json = sum_occurrences(integration_json_paths_file)
+        // TODO: delete this later integration_json_paths_file = integration_jsons.toList()
+        // TODO: occurrence_json = sum_occurrences(integration_json_paths_file)
 
-        reformat_annotations(annotation_genomes, annotation_tables, occurrence_json, protein_annotations)
+        reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
     }
 }

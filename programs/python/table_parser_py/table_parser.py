@@ -6,6 +6,7 @@ from typing import *
 from os import path
 from pathlib import Path
 import json
+
 # Dependency: esl-seqstat in some circumstances
 
 INDENT_VAL = 4
@@ -13,17 +14,12 @@ TABLE_MODE = Literal["dfam", "tbl"]
 JSON_MODE = Literal["integration", "annotation"]
 STRAND = Literal["+", "-"]
 
-# maximum percentage of reference genome length we allow to occur between merge candidates on reference (viral or
-# protein) seq
-REFERENCE_MAX_GAP_FACTOR = .25
-# TODO: Make this a command line option
-
 
 # TODO: Document this class and its quirks
 class QueryHit:
     def __init__(self, hit_name: str, acc_id: str, query_name: str, evalue: float, ali_st: int, ali_end: int,
                  query_genome_name: str, hmm_st: int, hmm_end: int, hmm_len: int, strand: STRAND, verbose: bool,
-                 query_genome_len : int = None, description: str = "-"):
+                 query_genome_len: int = None, description: str = "-"):
         # target = integration or (when annotating virus) protein, query = bacteria or (when annotating virus) virus
         self.hit_name = hit_name
         self.acc_id = acc_id
@@ -39,7 +35,7 @@ class QueryHit:
         self.verbose = verbose
         self.full_length = None
         self.description = description
-        self.integration_id = "" # Document quirk here
+        self.integration_id = ""  # Document quirk here
 
         if query_genome_len:
             self.query_genome_len = query_genome_len
@@ -61,7 +57,7 @@ class QueryHit:
     def get_percent_complete(self) -> float:
         return float(self.get_seq_len_on_ref()) / self.ref_len
 
-# TODO: Look up deprecation annotation in Python
+    # TODO: Look up deprecation annotation in Python
 
     def to_tsv_line(self) -> str:
         return f"{self.hit_name}\t{self.description}\t{self.acc_id}\t{self.evalue}\t{self.full_length}\t" \
@@ -78,7 +74,7 @@ def find_position_for_strand_type(sense_position: int, antisense_position: int, 
 
 
 # This function tests whether current_hit is followed by next_hit on the reference viral genome
-def ref_order_preserved(current_hit: QueryHit, prev_hit: QueryHit, overlap_tolerance_percent) -> bool:
+def ref_order_preserved(current_hit: QueryHit, prev_hit: QueryHit, overlap_tolerance: int) -> bool:
     # if strand is +, then prev_hit occurs before current_hit on both the reference viral and bacterial genomes.
     # if strand is -, then current_hit occurs before prev_hit on the viral genome, but prev_hit is still first on the
     # bacterial genome (which is why it's the previous hit)
@@ -88,10 +84,9 @@ def ref_order_preserved(current_hit: QueryHit, prev_hit: QueryHit, overlap_toler
     # if a significant mutation has occurred, then the second hit's viral genome start position might come slightly
     # before the first hit's end position, so we allow for a bit of overlap
     overlap = find_position_for_strand_type(prev_hit.ref_end, current_hit.ref_end, prev_hit.strand) \
-            - find_position_for_strand_type(current_hit.ref_st, prev_hit.ref_st, prev_hit.strand)
-    max_overlap = current_hit.ref_len * overlap_tolerance_percent
+              - find_position_for_strand_type(current_hit.ref_st, prev_hit.ref_st, prev_hit.strand)
 
-    return overlap <= max_overlap
+    return overlap <= overlap_tolerance
 
 
 def names_and_strand_match(prev_hit: QueryHit, current_hit: QueryHit) -> bool:
@@ -99,7 +94,7 @@ def names_and_strand_match(prev_hit: QueryHit, current_hit: QueryHit) -> bool:
         current_hit.query_name == prev_hit.query_name
 
 
-def same_integration(prev_hit: QueryHit, current_hit: QueryHit, overlap_tolerance_percent: float) -> bool:
+def same_integration(prev_hit: QueryHit, current_hit: QueryHit, max_gap_percent: float, overlap_tolerance: int) -> bool:
     strand = current_hit.strand
 
     # if both match to same reference virus
@@ -108,19 +103,13 @@ def same_integration(prev_hit: QueryHit, current_hit: QueryHit, overlap_toleranc
         # get where previous hit ends and the current hit starts, from the perspective of the bacterial genome
         prev_bac_end = find_position_for_strand_type(prev_hit.query_end, prev_hit.query_st, strand)
         current_bac_st = find_position_for_strand_type(current_hit.query_st, current_hit.query_end, strand)
-        # if strand is +, then prev_hit should have the lower reference start position. if strand is -, then current hit
-        # will have the lower reference start position (since it's reversed from the perspective of the bacterial genome)
-        # note: this will only be the case if fragments are actually part of a larger insertion. May not hold if they're
-        # unrelated
-        lower_ref_end = find_position_for_strand_type(prev_hit.ref_end, current_hit.ref_end, strand)
-        higher_ref_st = find_position_for_strand_type(current_hit.ref_st, prev_hit.ref_st, strand)
 
-        max_hit_gap = current_hit.ref_len * REFERENCE_MAX_GAP_FACTOR
+        max_hit_gap = current_hit.ref_len * max_gap_percent
         bac_hit_gap = current_bac_st - prev_bac_end
         # if the gaps are small enough* and hits are in the right order:
         # *some unrelated hits won't obey the logic above, potentially resulting in negative gap values
         # TODO: ake this a function too
-        if 0 <= bac_hit_gap <= max_hit_gap and ref_order_preserved(current_hit, prev_hit, overlap_tolerance_percent):
+        if 0 <= bac_hit_gap <= max_hit_gap and ref_order_preserved(current_hit, prev_hit, overlap_tolerance):
             return True
 
     return False
@@ -131,8 +120,8 @@ def same_integration(prev_hit: QueryHit, current_hit: QueryHit, overlap_toleranc
 # as multiple unrelated hits. So we check for nearby, contiguous hits to the same reference viral genome. If spacing of
 # the hits on the bacterial genome roughly matches the spacing of these same regions on the viral genome, we merge the
 # hits.
-def assign_integration_ids(hit_list: List[QueryHit], overlap_tolerance_percent: float) -> Dict[int, List[QueryHit]]:
-    #hit_list.sort(key=lambda x: (x.query_name, x.hit_name, find_position_for_strand_type(x.query_st, x.query_end, x.strand)))
+def assign_integration_ids(hit_list: List[QueryHit], max_gap_percent: float, overlap_tolerance: int) -> Dict[
+    int, List[QueryHit]]:
     prev_hit = None
     # dict holding a list of hits for each individual integration, using integration ID as the key. Will be used later
     # to ask if an integration is considering full length based on whether
@@ -143,7 +132,7 @@ def assign_integration_ids(hit_list: List[QueryHit], overlap_tolerance_percent: 
     # they belong to the same integration
     for current_hit in hit_list:
         # if there is no previous hit, or if they aren't part of the same integration, iterate integration_index
-        if prev_hit is None or not same_integration(prev_hit, current_hit, overlap_tolerance_percent):
+        if prev_hit is None or not same_integration(prev_hit, current_hit, max_gap_percent, overlap_tolerance):
             prev_hit = current_hit
             # we want the index to start at one, so it's fine to iterate before assigning
             integration_index += 1
@@ -179,7 +168,8 @@ def sort_hit_list(hit_list: List[QueryHit]) -> None:
     # the bacterial genome (so if the integration has - for strand, we want to use the end, which occurs first on the
     # bacterial genome). This will ensure that any hits that are part of the same integration are next to each other
     # in the list.
-    hit_list.sort(key=lambda x: (x.query_name, x.hit_name, find_position_for_strand_type(x.query_st, x.query_end, x.strand)))
+    hit_list.sort(
+        key=lambda x: (x.query_name, x.hit_name, find_position_for_strand_type(x.query_st, x.query_end, x.strand)))
 
 
 def overwrite_check(file_path: str, force: bool) -> None:
@@ -198,8 +188,8 @@ def write_occurrence_json(json_file: TextIO, query_hits: List[QueryHit]) -> None
         if hit.hit_name not in occ_dict.keys():
             occ_dict[hit.hit_name] = [0] * hit.ref_len
 
-        ref_start_index = hit.ref_st - 1 # offset by 1 because genomes are 1-indexed, lists are 0-indexed
-        ref_end_index = hit.ref_end # don't offset by 1 because range() excludes end
+        ref_start_index = hit.ref_st - 1  # offset by 1 because genomes are 1-indexed, lists are 0-indexed
+        ref_end_index = hit.ref_end  # don't offset by 1 because range() excludes end
 
         for index in range(ref_start_index, ref_end_index):
             occ_dict[hit.hit_name][index] += 1
@@ -252,6 +242,7 @@ def write_annotation_json(json_file: TextIO, query_hits: List[QueryHit], protein
 
     json_file.write(json.dumps(annotation_json, indent=INDENT_VAL))
 
+
 def write_annotation_json_from_path(json_path: str, query_hits: List[QueryHit],
                                     protein_annotations: Optional[Dict[str, str]],
                                     occurrence_dict: Dict[str, List[int]], genome_path: str, force: bool,
@@ -286,7 +277,7 @@ def set_hit_full_length(hit: QueryHit, threshold: float) -> None:
     hit.full_length = hit.get_percent_complete() >= threshold
 
 
-def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, max_eval: float, verbose)\
+def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, max_eval: float, verbose) \
         -> List[QueryHit]:
     hit_list = []
     # For the first hit, we don't know what the query genome length is. The QueryHit class contains a method that can
@@ -344,7 +335,7 @@ def parse_tbl_file(tbl_file: TextIO, genome_path: str, full_threshold: float, ma
             acc_id = str(line_list[1])
             hit_name = str(line_list[2])
             hmm_len = int(line_list[4])
-            hmm_st = int(line_list[5]) # position of match relative to model
+            hmm_st = int(line_list[5])  # position of match relative to model
             hmm_en = int(line_list[6])
             ali_st = int(line_list[8])
             ali_en = int(line_list[9])
@@ -374,14 +365,14 @@ def parse_tbl_file(tbl_file: TextIO, genome_path: str, full_threshold: float, ma
 
 
 def parse_table_from_path(table_path: str, genome_path: str, full_threshold: float, max_eval: float,
-                          table_mode: TABLE_MODE,  verbose: bool,
+                          table_mode: TABLE_MODE, verbose: bool,
                           annotations: Dict[str, str] = None) -> List[QueryHit]:
     with open(table_path) as table_file:
         if verbose:
             print(f"Opening {table_path}...")
 
         if table_mode == "dfam":
-            return parse_dfam_file(table_file, genome_path, full_threshold,  max_eval, verbose)
+            return parse_dfam_file(table_file, genome_path, full_threshold, max_eval, verbose)
         elif table_mode == "tbl":
             return parse_tbl_file(table_file, genome_path, full_threshold, max_eval, verbose, annotations=annotations)
         else:
@@ -411,27 +402,68 @@ def load_json(json_path: str, verbose: bool) -> Dict[str, List[int]]:
 
 
 # TODO: subcommands, full length threshold %, minimum length for reporting, gap size %, overlap tolerance %
-def parse_args(sys_args: List[str]) -> argparse.Namespace:
+def parse_args(sys_args: str) -> argparse.Namespace:
     default_eval = 1e-5
-    parser = argparse.ArgumentParser(sys_args, description="Parses input .dfam or .tbl (from FraHMMER --tblout) file,"
-                                    " extracting information about query hits detected in target genome")
-    parser.add_argument("table_path", type=str, help="Path to input .dfam or .tbl file made up of query hits")
-    parser.add_argument("genome_path", type=str, help="Path to target genome in .fasta format")
-    parser.add_argument("output_tsv_path", type=str, help="Path to output .tsv file")
-    parser.add_argument("output_json_path", type=str, help="Path to output .json file containing information on "
-                                                           "nucleotide occurrence counts")
-    parser.add_argument("table_type", type=str, choices=["dfam","tbl"], default="dfam", help="Which type of table is "
-                        "being supplied as input, which must be dfam or tbl (default dfam)")
-    parser.add_argument("json_type", type=str, choices=["integration","annotation"], default="integration", help="Sets"
-                        " which type of .json will be produced: integration, which counts how many times a position in"
-                        " a user-supplied viral genome has been detected in a specific bacterial genome, or annotation,"
-                        " which produces .json describing a reference viral genome annotated with viral proteins."
-                        " Default is integration")
-    parser.add_argument("--occurrence_json", type=str, default="", help="Path to summed occurrence .json. This file contains a field for each virus found integrated at least once across all bacteria, which contains a per-position count of how many times each position has been detected in an integration. Necessary to produce annotation .jsons")
-    parser.add_argument("--annotation_tsv", type=str, default="", help="Path to .tsv file containing information about the function of viral proteins used to annotate user-supplied viruses")
-    parser.add_argument("--max_evalue", type=float, default=default_eval, help=f"Maximum allowed sequence e-value (must be >= 0). Default is {default_eval}")
-    parser.add_argument("--verbose", action="store_true", help="Print additional information useful for debugging")
-    parser.add_argument("--force", action="store_true", help="If output file already exists, overwrite it")
+    # set up parent parser
+    parser = argparse.ArgumentParser(sys_args, description="Parses input .dfam or .tbl (from FraHMMER --tblout) file, "
+                                                           "extracting information about query hits detected in target "
+                                                           "genome.")
+    # set up subparsers, which will tell table_parser what mode to use
+    subparsers = parser.add_subparsers(dest='annotation_mode',
+                                       help="Set table_parser.py mode. protein_annotation accepts a .tsv file with "
+                                            "protein descriptions (--annotation_tsv) while integration_annotation has "
+                                            "several options related to deciding whether nearby hits the same reference"
+                                            " virus are part of the same integration.")
+    protein_parser = subparsers.add_parser('protein_annotation',
+                                           help="Set when inputs are protein annotations on viral genomes.")
+    integration_parser = subparsers.add_parser('integration_annotation',
+                                               help="Set when inputs are viral hits on bacterial genomes. In some "
+                                                    "cases, one viral sequence (integration) is broken up over "
+                                                    "multiple hits due to regions of low similarity with user-provided "
+                                                    "viral genomes. As a result, hits can be assigned the same "
+                                                    "integration ID to indicate that they may be represent one partial "
+                                                    "match rather than multiple partial matches.")
+    # subparsers have independent lists of arguments. To set common arguments, loop over the subparsers
+    for name, subp in subparsers.choices.items():
+        subp.add_argument("table_path", type=str,
+                          help="Path to input .dfam or .tbl file made up of query hits.")
+        subp.add_argument("genome_path", type=str,
+                          help="Path to target genome in .fasta format.")
+        subp.add_argument("output_tsv_path", type=str,
+                          help="Path to output .tsv file.")
+        subp.add_argument("table_type", type=str, choices=["dfam", "tbl"],
+                          help="Which type of table is being supplied as input, which must be dfam or tbl.")
+        subp.add_argument("--max_evalue", type=float, default=default_eval,
+                          help=f"Maximum allowed sequence e-value (must be >= 0). Default is {default_eval}.")
+        subp.add_argument("--full_threshold", type=float,
+                          help="Controls whether hits are labeled as full length. Accepts a decimal input. "
+                               "With an input of 0.7, a hit's length must be at least 70%% of the length of "
+                               "the full_threshold = args.full_thresholdhit's reference viral genome to be "
+                               "considered full length.")
+        subp.add_argument("--verbose", action="store_true",
+                          help="Print additional information useful for debugging.")
+        subp.add_argument("--force", action="store_true",
+                          help="If output file already exists, overwrite it.")
+
+    # now, out of the loop, we set the mode-specific options.
+    # IMPORTANT: If a % character is used anywhere in the help strings, you must use two (%%) or argparse will start
+    # throwing errors. '%%' will be displayed as a single % in the --help output
+    protein_parser.add_argument("--annotation_tsv", type=str, default="",
+                                help="Path to .tsv file containing information about the function of viral proteins "
+                                     "used to annotate user-supplied viruses.")
+    integration_parser.add_argument("--overlap_tolerance", type=int,
+                                    help="As a result of significant mismatches/indels between user-provided viral seq "
+                                         "and detected integrations, two consecutive hits mapping to one viral "
+                                         "integration may sometimes have slightly overlapping end/start positions "
+                                         "relative to the user-provided viral seq. Sets tolerance for maximum allowed "
+                                         "overlap before sequences are assigned separate integration IDs.")
+    integration_parser.add_argument("--distance_threshold", type=float,
+                                    help="Accepts decimal input representing a percentage (an input of 0.25 = 25%%)."
+                                         "When combined with length of a hit's matching viral genome, sets maximum "
+                                         "distance allowed between consecutive hits mapping to the same integration.")
+    integration_parser.add_argument("--minimum_length", type=int, default=0,
+                                    help="Minimum length for a hit to be reported in .tsv output. For example, if set "
+                                         "to 200, then hits less than 200bp long are filtered out.")
 
     return parser.parse_args()
 
@@ -449,13 +481,11 @@ def _main():
     table_path = args.table_path
     genome_path = args.genome_path
     tsv_path = args.output_tsv_path
-    json_path = args.output_json_path
+    # TODO: json_path = args.output_json_path
     table_mode = args.table_type
-    json_mode = args.json_type
-    occ_json_path = args.occurrence_json
-    protein_annotation_path = args.annotation_tsv
-    full_threshold = 0.7
-    overlap_tolerance_percent = 0.01
+    annotation_mode = args.annotation_mode
+    # TODO: occ_json_path = args.occurrence_json
+    full_threshold = args.full_threshold
     max_eval = args.max_evalue
     verbose = args.verbose
     force = args.force
@@ -465,22 +495,30 @@ def _main():
         raise ValueError("--max_evalue must be used with an argument greater than or equal to 0")
 
     # integration mode
-    if json_mode == "integration":
+    if annotation_mode == "integration_annotation":
+        # parse mode-specific arguments
+        overlap_tolerance = args.overlap_tolerance #TODO: make hard number, 50-100
+        max_gap_percent = args.distance_threshold
+
+
         # parse table for information on hits detected on query
         query_hits = parse_table_from_path(table_path, genome_path, full_threshold, max_eval, table_mode, verbose)
         # sort list to ensure that any hits from the same integration are next to each other
         sort_hit_list(query_hits)
         # examine sorted hits to determine if any of them are part of one integration broken up over multiple hits
-        integration_id_dict = assign_integration_ids(query_hits, overlap_tolerance_percent)
+        integration_id_dict = assign_integration_ids(query_hits, max_gap_percent, overlap_tolerance)
         # check whether any integrations broken up over multiple hits cover enough of their reference viral genome to be
         # considered full length. If so, set each constituent hit to full_length = True
         set_integration_full_length(integration_id_dict, full_threshold)
         # write output
         write_tsv_from_path(tsv_path, query_hits, force)
-        write_occurrence_json_from_path(json_path, query_hits, force)
+        # TODO: write_occurrence_json_from_path(json_path, query_hits, force)
 
     # annotation mode
-    elif json_mode == "annotation":
+    elif annotation_mode == "protein_annotation":
+        # parse mode-specific arguments
+        protein_annotation_path = args.annotation_tsv
+
         protein_annotations = None
 
         if protein_annotation_path:
@@ -488,10 +526,10 @@ def _main():
 
         query_hits = parse_table_from_path(table_path, genome_path, full_threshold, max_eval, table_mode, verbose,
                                            protein_annotations)
-        occurrence_dict = load_json(occ_json_path, verbose)
+        # TODO: occurrence_dict = load_json(occ_json_path, verbose)
         write_tsv_from_path(tsv_path, query_hits, force)
-        write_annotation_json_from_path(json_path, query_hits, protein_annotations, occurrence_dict, genome_path, force,
-                                        verbose)
+        # TODO: write_annotation_json_from_path(json_path, query_hits, protein_annotations, occurrence_dict, genome_path, force,
+        # TODO: verbose)
 
 
 if __name__ == "__main__":
