@@ -24,13 +24,9 @@ frahmmer_cpus = params.frahmmer_cpus
 frahmmer_time = params.frahmmer_time
 frahmmer_memory = params.frahmmer_memory
 
-bakta_cpus = params.bakta_cpus
-bakta_time = params.bakta_time
-bakta_memory = params.bakta_memory
-
-download_db_cpus = params.download_db_cpus
-download_db_time = params.download_db_time
-download_db_memory = params.download_db_memory
+prokka_cpus = params.prokka_cpus
+prokka_time = params.prokka_time
+prokka_memory = params.prokka_memory
 
 rp_cpus = params.rp_cpus
 rp_time = params.rp_time
@@ -44,6 +40,7 @@ integration_full_threshold = params.integration_full_threshold
 overlap_tolerance = params.overlap_tolerance
 integration_distance_threshold = params.integration_distance_threshold
 integration_minimum_length = params.integration_minimum_length
+bakta_db_string = params.bakta_db_path
 
  // TODO: QOL features like:
  //     - more efficient process ordering (this has mostly been done!)
@@ -76,14 +73,14 @@ process hmm_build {
         --seq_type ${seq_type} \
         --temp_folder ${workDir} \
         "${seq_file}" \
-        "${seq_file}.hmm"
+        "${seq_file.simpleName}.hmm"
     """
 }
 
 process nhmmscan {
     cpus { nhmmscan_cpus * task.attempt }
     time { nhmmscan_time.hour * task.attempt }
-    memory { nhmmscan_memory.GB * task.cpus }
+    memory { nhmmscan_memory.GB * task.attempt }
 
     errorStrategy 'retry'
     maxRetries 2
@@ -101,8 +98,15 @@ process nhmmscan {
     path "*.scanned.dfam", emit: tables
 
     """
-    nhmmscan --cpu ${task.cpus} --dfamtblout ${genome_file.simpleName}.dfam ${hmm_file} ${genome_file}
-    ${params.dfamscan_path} --dfam_infile ${genome_file.simpleName}.dfam --dfam_outfile ${genome_file.simpleName}.scanned.dfam
+    nhmmscan \
+    --cpu ${task.cpus} \
+    --dfamtblout ${genome_file.simpleName}.dfam \
+    ${hmm_file} \
+    ${genome_file}
+
+    ${params.dfamscan_path} \
+    --dfam_infile ${genome_file.simpleName}.dfam \
+    --dfam_outfile ${genome_file.simpleName}.scanned.dfam
     """
 }
 
@@ -146,8 +150,16 @@ process frahmmer {
     path "*.scanned.tbl", emit: tables
 
     """
-    frahmmer -o /dev/null --cpu ${task.cpus} --tblout ${genome_file.simpleName}.tbl ${hmm_file} ${genome_file}
-    ${params.frahmmerscan_path} --infile ${genome_file.simpleName}.tbl --outfile ${genome_file.simpleName}.scanned.tbl
+    frahmmer \
+    -o /dev/null \
+    --cpu ${task.cpus} \
+    --tblout ${genome_file.simpleName}.tbl \
+    ${hmm_file} \
+    ${genome_file}
+
+    ${params.frahmmerscan_path} \
+    --infile ${genome_file.simpleName}.tbl \
+    --outfile ${genome_file.simpleName}.scanned.tbl
     """
 }
 
@@ -231,22 +243,23 @@ process download_bakta_db {
     cpus { download_db_cpus * task.attempt }
     time { download_db_time.hour * task.attempt }
     memory { download_db_memory.GB * task.attempt }
-    // debug will print process stdout to Nextflow stdout, allowing users to see progress bar
-    debug true
 
     errorStrategy 'retry'
     maxRetries 2
 
     input:
-    path bakta_db
+    path bakta_db_path
 
     // this output should be the same as the input- the idea here is that this forces bakta_annotation() to wait on
     // download_bakta_db(), since it depends on output from this process
     output:
-    path bakta_db
+    path bakta_db_path
 
     """
-    bakta_db download --output ${bakta_db} --type ${bakta_db_type}
+    echo ${bakta_db_string}
+    bakta_db download \
+    --output ${bakta_db_string} \
+    --type ${bakta_db_type}
     """
 
 }
@@ -277,6 +290,62 @@ process bakta_annotation {
     ${genome}
     """
 
+}
+
+process prokka_setup_db {
+    container = 'staphb/prokka:latest'
+
+    cpus { prokka_cpus * task.attempt }
+    time { prokka_time.hour * task.attempt }
+    memory { prokka_memory.GB * task.attempt }
+
+    errorStrategy 'retry'
+    maxRetries 2
+
+    // we don't actually use the output here, we just want to force Nextflow to wait for this to complete before
+    // spinning up prokka jobs
+    output:
+    stdout
+
+    """
+    prokka \
+    --setupdb
+    """
+}
+
+process prokka_annotation {
+    container = 'staphb/prokka:latest'
+    publishDir("${output_path}/prokka_annotations/gff/", mode: "copy", pattern: "*.gff")
+    publishDir("${output_path}/prokka_annotations/tsv/", mode: "copy", pattern: "*.tsv")
+    publishDir("${output_path}/prokka_annotations/annotation_info/", mode: "copy", pattern: "{*.txt,*.err}")
+
+    cpus { prokka_cpus * task.attempt }
+    time { prokka_time.hour * task.attempt }
+    memory { prokka_memory.GB * task.attempt }
+
+    errorStrategy 'retry'
+    maxRetries 2
+
+    input:
+    val unused_stdout
+    path genome
+
+    output:
+    path "*.err", emit: err
+    path "*.gff", emit: gff
+    path "*.tsv", emit: tsv
+    path "*.txt", emit: txt
+
+
+    """
+    prokka \
+    --outdir prokka/ \
+    --prefix ${genome.simpleName} \
+    --cpus ${task.cpus} \
+    ${genome}
+
+    mv prokka/* .
+    """
 }
 
 process rename_fasta {
@@ -376,20 +445,15 @@ workflow frahmmer_viral_genomes {
 }
 
 
-workflow bacterial_annotation_bakta {
+workflow bacterial_annotation_prokka {
     take:
         genome_files
-        bakta_db_path
 
     main:
-        if (!bakta_db_path.exists() && params.download_bakta_db) {
-           // println("Warning: Bakta database not detected at ${bakta_db_path}. The database is now being automatically
-           // downloaded, but this may take a few hours. The download size is ~30GB, the extracted database is ~65GB")
-            bakta_db_path = download_bakta_db(bakta_db_path)
-        }
-
-        // TODO: force bakta process to wait on DB download
-        bakta_annotation(genome_files, bakta_db_path)
+        // wait_channel doesn't actually get used: it just tells Nextflow to wait for setup_db before beginning
+        // annotation
+        wait_channel = prokka_setup_db()
+        prokka_annotation(wait_channel, genome_files)
 }
 
 workflow {
@@ -408,7 +472,7 @@ workflow {
     reformat_integrations(integration_genomes, integration_tables)
 
     if (bakta_annotation) {
-        bacterial_annotation_bakta(genome_files, bakta_db)
+        bacterial_annotation_prokka(genome_files)
     }
 
     if (annotate_viral_genomes) {

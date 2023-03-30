@@ -3,14 +3,14 @@
 # genome_file: Path to .fasta files of bacterial genomes to search in. To select multiple, use an expansion character
 # like *, which will match any text (so *_genome.fasta would match all of the following: ecoli_genome.fasta,
 # pseudomonas_genome.fasta, yersinia_genome.fasta, but would not match ecoli.fasta because it doesn't contain _genome)
-genome_files: ${projectDir}/../fixtures/5_full_bac_2_vir/*.fna
+genome_files: ${projectDir}/../fixtures/fixture_1/bac*.fasta
 
 # programs_path: Where is the VIBES /programs folder located?
 programs_path: ${projectDir}/../programs
 
 # phage_file: Path to .fasta file containing all phage genomes VIBES will search for. This must be a full path without
 # expansion characters like * or ?
-phage_file: ${projectDir}/../fixtures/5_full_bac_2_vir/2_phage_db.fasta
+phage_file: ${projectDir}/../fixtures/fixture_1/phage_database.fasta
 
 # phage_seq_type should be one of the following: dna, rna, amino
 phage_seq_type: dna
@@ -46,7 +46,10 @@ bakta_container: true
 bakta_db_path: ${projectDir}/bakta_db_download_test/db/
 
 # if bakta database isn't found at bakta_db_path, automatically download it
-download_bakta_db: false
+download_bakta_db: true
+
+# what type of Bakta db to download (full or light)
+bakta_db_type: light
 
 
 # ADVANCED OPTIONS
