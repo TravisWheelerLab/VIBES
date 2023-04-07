@@ -507,7 +507,7 @@ def _main():
     # integration mode
     if annotation_mode == "integration_annotation":
         # parse mode-specific arguments
-        overlap_tolerance = args.overlap_tolerance #TODO: make hard number, 50-100
+        overlap_tolerance = args.overlap_tolerance
         max_gap_percent = args.distance_threshold
 
 
@@ -526,7 +526,6 @@ def _main():
 
         # write output
         write_tsv_from_path(tsv_path, query_hits, force)
-        # TODO: write_occurrence_json_from_path(json_path, query_hits, force)
 
     # annotation mode
     elif annotation_mode == "protein_annotation":
@@ -540,10 +539,8 @@ def _main():
 
         query_hits = parse_table_from_path(table_path, genome_path, full_threshold, max_eval, table_mode, verbose,
                                            protein_annotations)
-        # TODO: occurrence_dict = load_json(occ_json_path, verbose)
+
         write_tsv_from_path(tsv_path, query_hits, force)
-        # TODO: write_annotation_json_from_path(json_path, query_hits, protein_annotations, occurrence_dict, genome_path, force,
-        # TODO: verbose)
 
 
 if __name__ == "__main__":
