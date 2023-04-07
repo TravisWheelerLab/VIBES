@@ -400,6 +400,9 @@ def load_json(json_path: str, verbose: bool) -> Dict[str, List[int]]:
     with open(json_path, "r") as json_file:
         return json.load(json_file)
 
+# TODO: a method for filtering out hits that do not contain a match to an optionally specified region on the viral
+# TODO: genome. this method should only run after integrations have been assigned IDs, to avoid filtering out flanking
+# TODO: regions of  a hit broken up into multiple parts
 
 # TODO: subcommands, full length threshold %, minimum length for reporting, gap size %, overlap tolerance %
 def parse_args(sys_args: str) -> argparse.Namespace:
@@ -423,6 +426,7 @@ def parse_args(sys_args: str) -> argparse.Namespace:
                                                     "viral genomes. As a result, hits can be assigned the same "
                                                     "integration ID to indicate that they may be represent one partial "
                                                     "match rather than multiple partial matches.")
+
     # subparsers have independent lists of arguments. To set common arguments, loop over the subparsers
     for name, subp in subparsers.choices.items():
         subp.add_argument("table_path", type=str,
@@ -464,6 +468,14 @@ def parse_args(sys_args: str) -> argparse.Namespace:
     integration_parser.add_argument("--minimum_length", type=int, default=0,
                                     help="Minimum length for a hit to be reported in .tsv output. For example, if set "
                                          "to 200, then hits less than 200bp long are filtered out.")
+    integration_parser.add_argument("--mandatory_regions_tsv", type=str, default="",
+                                    help="Path to tab-delimited .tsv file where each line has a virus name, start "
+                                         "coordinate (integer) on that viral genome, and end coordinate (integer). Any "
+                                         "matches to that virus that do not overlap with the region starting at and "
+                                         "ending with the associated coordinates will be discarded. This option is "
+                                         "intended to allow users to filter out any integrations that do not contain "
+                                         "an especially important sequence, like a gene of interest or core viral "
+                                         "genome.")
 
     return parser.parse_args()
 
@@ -481,10 +493,8 @@ def _main():
     table_path = args.table_path
     genome_path = args.genome_path
     tsv_path = args.output_tsv_path
-    # TODO: json_path = args.output_json_path
     table_mode = args.table_type
     annotation_mode = args.annotation_mode
-    # TODO: occ_json_path = args.occurrence_json
     full_threshold = args.full_threshold
     max_eval = args.max_evalue
     verbose = args.verbose
@@ -503,13 +513,17 @@ def _main():
 
         # parse table for information on hits detected on query
         query_hits = parse_table_from_path(table_path, genome_path, full_threshold, max_eval, table_mode, verbose)
+
         # sort list to ensure that any hits from the same integration are next to each other
         sort_hit_list(query_hits)
+
         # examine sorted hits to determine if any of them are part of one integration broken up over multiple hits
         integration_id_dict = assign_integration_ids(query_hits, max_gap_percent, overlap_tolerance)
+
         # check whether any integrations broken up over multiple hits cover enough of their reference viral genome to be
         # considered full length. If so, set each constituent hit to full_length = True
         set_integration_full_length(integration_id_dict, full_threshold)
+
         # write output
         write_tsv_from_path(tsv_path, query_hits, force)
         # TODO: write_occurrence_json_from_path(json_path, query_hits, force)
