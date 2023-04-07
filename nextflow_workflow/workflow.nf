@@ -315,9 +315,8 @@ process prokka_setup_db {
 
 process prokka_annotation {
     container = 'staphb/prokka:latest'
-    publishDir("${output_path}/prokka_annotations/gff/", mode: "copy", pattern: "*.gff")
-    publishDir("${output_path}/prokka_annotations/tsv/", mode: "copy", pattern: "*.tsv")
-    publishDir("${output_path}/prokka_annotations/annotation_info/", mode: "copy", pattern: "{*.txt,*.err}")
+    publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "${genome.simpleName}/*")
+    publishDir("${output_path}/prokka_annotations/prokka_tsv/", mode: "copy", pattern: "*.tsv")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -331,20 +330,17 @@ process prokka_annotation {
     path genome
 
     output:
-    path "*.err", emit: err
-    path "*.gff", emit: gff
-    path "*.tsv", emit: tsv
-    path "*.txt", emit: txt
-
+    path "${genome.simpleName}/*"
+    path "${genome.simpleName}.tsv"
 
     """
     prokka \
-    --outdir prokka/ \
+    --outdir ${genome.simpleName}/ \
     --prefix ${genome.simpleName} \
     --cpus ${task.cpus} \
     ${genome}
 
-    mv prokka/* .
+    cp ${genome.simpleName}/*.tsv .
     """
 }
 
@@ -462,8 +458,7 @@ workflow {
     annotate_viral_genomes = params.annotate_phage
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.viral_protein_annotation_tsv
-    bakta_annotation = params.bakta_annotation
-    bakta_db = file(params.bakta_db_path)
+    prokka_annotation = params.prokka_annotation
 
     hmm_files = build_hmm(phage_file)
     detect_integrations(hmm_files, genome_files)
@@ -471,7 +466,7 @@ workflow {
     integration_tables = detect_integrations.out.tables
     reformat_integrations(integration_genomes, integration_tables)
 
-    if (bakta_annotation) {
+    if (prokka_annotation) {
         bacterial_annotation_prokka(genome_files)
     }
 
