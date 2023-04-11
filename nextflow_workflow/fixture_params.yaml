@@ -35,9 +35,6 @@ annotate_phage: true
 # annotate bacterial genomes with Bakta. to do so, the pipeline will download a large (~30gb) annotation database
 prokka_annotation: true
 
-# use container (Docker, Singularity, or whatever is specified in nextflow.config) to run Bakta. Set to 'true' if Bakta isn't already downloaded and you don't want to download it yourself
-prokka_container: true
-
 # ADVANCED OPTIONS
 dfamscan_path: ${projectDir}/../programs/perl/dfamscan.pl
 

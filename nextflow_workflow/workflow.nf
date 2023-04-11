@@ -78,7 +78,7 @@ process hmm_build {
 }
 
 process nhmmscan {
-    cpus { nhmmscan_cpus * task.attempt }
+    cpus nhmmscan_cpus
     time { nhmmscan_time.hour * task.attempt }
     memory { nhmmscan_memory.GB * task.attempt }
 
@@ -134,7 +134,7 @@ process frahmmconvert {
 
 
 process frahmmer {
-    cpus { frahmmer_cpus * task.attempt }
+    cpus frahmmer_cpus
     time { frahmmer_time.hour * task.attempt }
     memory { frahmmer_memory.GB * task.attempt}
 
@@ -292,29 +292,10 @@ process bakta_annotation {
 
 }
 
-process prokka_setup_db {
-    container = 'staphb/prokka:latest'
-
-    cpus { prokka_cpus * task.attempt }
-    time { prokka_time.hour * task.attempt }
-    memory { prokka_memory.GB * task.attempt }
-
-    errorStrategy 'retry'
-    maxRetries 2
-
-    // we don't actually use the output here, we just want to force Nextflow to wait for this to complete before
-    // spinning up prokka jobs
-    output:
-    stdout
-
-    """
-    prokka \
-    --setupdb
-    """
-}
-
 process prokka_annotation {
     container = 'staphb/prokka:latest'
+    conda "bioconda::prokka"
+
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "${genome.simpleName}/*")
     publishDir("${output_path}/prokka_annotations/prokka_tsv/", mode: "copy", pattern: "*.tsv")
 
@@ -326,7 +307,6 @@ process prokka_annotation {
     maxRetries 2
 
     input:
-    val unused_stdout
     path genome
 
     output:
@@ -446,10 +426,7 @@ workflow bacterial_annotation_prokka {
         genome_files
 
     main:
-        // wait_channel doesn't actually get used: it just tells Nextflow to wait for setup_db before beginning
-        // annotation
-        wait_channel = prokka_setup_db()
-        prokka_annotation(wait_channel, genome_files)
+        prokka_annotation(genome_files)
 }
 
 workflow {
