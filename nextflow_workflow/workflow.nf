@@ -3,8 +3,6 @@
 seq_type = params.phage_seq_type
 programs_path = params.programs_path
 output_path = params.output_path
-bakta_container = params.bakta_container
-bakta_db_type = params.bakta_db_type
 nextflow.enable.dsl=2
 
 // process resource settings
@@ -40,7 +38,6 @@ integration_full_threshold = params.integration_full_threshold
 overlap_tolerance = params.overlap_tolerance
 integration_distance_threshold = params.integration_distance_threshold
 integration_minimum_length = params.integration_minimum_length
-bakta_db_string = params.bakta_db_path
 
  // TODO: QOL features like:
  //     - more efficient process ordering (this has mostly been done!)
