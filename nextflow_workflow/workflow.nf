@@ -53,6 +53,8 @@ process hmm_build {
 
     errorStrategy 'retry'
     maxRetries 2
+    
+    cache 'lenient'
 
     input:
     path seq_file
@@ -82,6 +84,7 @@ process nhmmscan {
 
     errorStrategy 'retry'
     maxRetries 2
+    cache 'lenient'
 
     input:
     path genome_file
@@ -165,6 +168,8 @@ process reformat_integrations {
     cpus ri_cpus
     time ri_time.hour
     memory ri_memory.GB
+
+    cache 'lenient'
 
     publishDir "${output_path}/tsv/bacterial_integrations/", mode: "copy", pattern: "*.tsv"
 
