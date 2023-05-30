@@ -3,14 +3,14 @@
 # genome_file: Path to .fasta files of bacterial genomes to search in. To select multiple, use an expansion character
 # like *, which will match any text (so *_genome.fasta would match all of the following: ecoli_genome.fasta,
 # pseudomonas_genome.fasta, yersinia_genome.fasta, but would not match ecoli.fasta because it doesn't contain _genome)
-genome_files: ${projectDir}/../fixtures/fixture_1/bac*.fasta
+genome_files: ${projectDir}/../fixtures/5_full_bac_2_vir/*.fna
 
 # programs_path: Where is the VIBES /programs folder located?
 programs_path: ${projectDir}/../programs
 
 # phage_file: Path to .fasta file containing all phage genomes VIBES will search for. This must be a full path without
 # expansion characters like * or ?
-phage_file: ${projectDir}/../fixtures/fixture_1/phage_database.fasta
+phage_file: ${projectDir}/../fixtures/5_full_bac_2_vir/2_phage_db.fasta
 
 # phage_seq_type should be one of the following: dna, rna, amino
 phage_seq_type: dna
@@ -29,11 +29,14 @@ viral_protein_db: ${projectDir}/../fixtures/5_full_bac_2_vir/all_phrogs.1-26-23.
 
 # PIPELINE FUNCTIONALITY: Flags that enable (true) or disable (false) VIBES functions
 # run phage annotation step, which searches viral proteins against phage genomes
-annotate_phage: true
+annotate_phage_genes: false
 
 # PROKKA OPTIONS
 # annotate bacterial genomes with Bakta. to do so, the pipeline will download a large (~30gb) annotation database
-prokka_annotation: true
+prokka_annotation: false
+
+# zip prokka output into a .tar.gz file
+zip_prokka_output: true
 
 # ADVANCED OPTIONS
 dfamscan_path: ${projectDir}/../programs/perl/dfamscan.pl

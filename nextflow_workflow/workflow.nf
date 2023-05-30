@@ -25,6 +25,7 @@ frahmmer_memory = params.frahmmer_memory
 prokka_cpus = params.prokka_cpus
 prokka_time = params.prokka_time
 prokka_memory = params.prokka_memory
+zip_prokka = params.zip_prokka_output
 
 rp_cpus = params.rp_cpus
 rp_time = params.rp_time
@@ -321,6 +322,40 @@ process prokka_annotation {
     """
 }
 
+process prokka_annotation_zip_output {
+    container = 'staphb/prokka:latest'
+    conda "bioconda::prokka"
+
+    publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "*.tar.gz")
+    publishDir("${output_path}/prokka_annotations/prokka_tsv/", mode: "copy", pattern: "*.tsv")
+
+    cpus { prokka_cpus * task.attempt }
+    time { prokka_time.hour * task.attempt }
+    memory { prokka_memory.GB * task.attempt }
+
+    errorStrategy 'retry'
+    maxRetries 2
+
+    input:
+    path genome
+
+    output:
+    path "${genome.simpleName}.tar.gz"
+    path "${genome.simpleName}.tsv"
+
+    """
+    prokka \
+    --outdir ${genome.simpleName}/ \
+    --prefix ${genome.simpleName} \
+    --cpus ${task.cpus} \
+    ${genome}
+
+    cp ${genome.simpleName}/*.tsv .
+
+    tar --remove -czf ${genome.simpleName}.tar.gz ${genome.simpleName}
+    """
+}
+
 process rename_fasta {
     cpus 1
     time '1h'
@@ -417,28 +452,55 @@ workflow frahmmer_viral_genomes {
         tables = frahmmer.out.tables
 }
 
+workflow reformat_integration_tables {
+    take:
+        genomes
+        integration_tables
+
+    main:
+        reformat_integrations(genomes, integration_tables)
+}
+
 
 workflow bacterial_annotation_prokka {
     take:
         genome_files
 
     main:
-        prokka_annotation(genome_files)
+        if (zip_prokka == true) {
+            prokka_annotation_zip_output(genome_files)
+        }
+
+        else if (zip_prokka == false) {
+            prokka_annotation(genome_files)
+        }
+
+        else {
+            error "zip_prokka must be either true or false in parameters file"
+        }
 }
 
 workflow {
     phage_file = params.phage_file
     genome_files = Channel.fromPath(params.genome_files)
-    annotate_viral_genomes = params.annotate_phage
+    detect_integrations = params.detect_integrations
+    annotate_viral_genomes = params.annotate_phage_genes
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.viral_protein_annotation_tsv
     prokka_annotation = params.prokka_annotation
 
-    hmm_files = build_hmm(phage_file)
-    detect_integrations(hmm_files, genome_files)
-    integration_genomes = detect_integrations.out.genomes
-    integration_tables = detect_integrations.out.tables
-    reformat_integrations(integration_genomes, integration_tables)
+    if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes) {
+        println "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation) in\
+         params file set to false"
+    }
+
+    if (detect_integrations) {
+        hmm_files = build_hmm(phage_file)
+        detect_integrations(hmm_files, genome_files)
+        integration_genomes = detect_integrations.out.genomes
+        integration_tables = detect_integrations.out.tables
+        reformat_integration_tables(integration_genomes, integration_tables)
+    }
 
     if (prokka_annotation) {
         bacterial_annotation_prokka(genome_files)
