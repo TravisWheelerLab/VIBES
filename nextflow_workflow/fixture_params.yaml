@@ -18,6 +18,9 @@ phage_seq_type: dna
 # output_path: Path to folder where VIBES should store output
 output_path: ${projectDir}/output/
 
+# run main integration detection arm of workflow
+detect_integrations: true
+
 #                                                                                                 ID     \t Description
 # .tsv format file with descriptions of viral protein annotations. Format must be as follows: protein_id \t description
 # (where \t is a tab character seperating the two columns. Spaces between tabs and field values are used here for visual
