@@ -53,8 +53,6 @@ process hmm_build {
 
     errorStrategy 'retry'
     maxRetries 2
-    
-    cache 'lenient'
 
     input:
     path seq_file
@@ -84,7 +82,6 @@ process nhmmscan {
 
     errorStrategy 'retry'
     maxRetries 2
-    cache 'lenient'
 
     input:
     path genome_file
@@ -168,8 +165,6 @@ process reformat_integrations {
     cpus ri_cpus
     time ri_time.hour
     memory ri_memory.GB
-
-    cache 'lenient'
 
     publishDir "${output_path}/tsv/bacterial_integrations/", mode: "copy", pattern: "*.tsv"
 
@@ -321,6 +316,7 @@ process prokka_annotation {
     --outdir ${genome.simpleName}/ \
     --prefix ${genome.simpleName} \
     --cpus ${task.cpus} \
+    --compliant \
     ${genome}
 
     cp ${genome.simpleName}/*.tsv .
@@ -353,6 +349,7 @@ process prokka_annotation_zip_output {
     --outdir ${genome.simpleName}/ \
     --prefix ${genome.simpleName} \
     --cpus ${task.cpus} \
+    --compliant \
     ${genome}
 
     cp ${genome.simpleName}/*.tsv .
@@ -495,7 +492,7 @@ workflow {
     prokka_annotation = params.prokka_annotation
 
     if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes) {
-        println "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation) in\
+        error "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation) in\
          params file set to false"
     }
 
