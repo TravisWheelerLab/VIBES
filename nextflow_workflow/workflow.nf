@@ -295,7 +295,7 @@ process prokka_annotation {
     conda "bioconda::prokka"
 
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "${genome.simpleName}/*")
-    publishDir("${output_path}/prokka_annotations/prokka_tsv/", mode: "copy", pattern: "*.tsv")
+    publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -309,7 +309,7 @@ process prokka_annotation {
 
     output:
     path "${genome.simpleName}/*"
-    path "${genome.simpleName}.tsv"
+    path "${genome.simpleName}.gff"
 
     """
     prokka \
@@ -319,7 +319,7 @@ process prokka_annotation {
     --compliant \
     ${genome}
 
-    cp ${genome.simpleName}/*.tsv .
+    cp ${genome.simpleName}/*.gff .
     """
 }
 
@@ -328,7 +328,7 @@ process prokka_annotation_zip_output {
     conda "bioconda::prokka"
 
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "*.tar.gz")
-    publishDir("${output_path}/prokka_annotations/prokka_tsv/", mode: "copy", pattern: "*.tsv")
+    publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -342,7 +342,7 @@ process prokka_annotation_zip_output {
 
     output:
     path "${genome.simpleName}.tar.gz"
-    path "${genome.simpleName}.tsv"
+    path "${genome.simpleName}.gff"
 
     """
     prokka \
@@ -352,7 +352,7 @@ process prokka_annotation_zip_output {
     --compliant \
     ${genome}
 
-    cp ${genome.simpleName}/*.tsv .
+    cp ${genome.simpleName}/*.gff .
 
     tar --remove -czf ${genome.simpleName}.tar.gz ${genome.simpleName}
     """
