@@ -277,8 +277,12 @@ def set_hit_full_length(hit: QueryHit, threshold: float) -> None:
     hit.full_length = hit.get_percent_complete() >= threshold
 
 
-def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, max_eval: float, verbose) \
-        -> List[QueryHit]:
+def is_minimum_length(ali_st: int, ali_en: int, minimum_length: int) -> bool:
+    return abs(ali_en - ali_st) >= minimum_length
+
+
+def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, max_eval: float, minimum_len: int,
+                    verbose) -> List[QueryHit]:
     hit_list = []
     # For the first hit, we don't know what the query genome length is. The QueryHit class contains a method that can
     # get the query genome length, but since we expect each run of table_parser.py to only deal with one query genome,
@@ -303,7 +307,7 @@ def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, 
             ali_en = int(line_list[10])
             hmm_len = int(line_list[13])
 
-            if evalue <= max_eval:
+            if evalue <= max_eval and is_minimum_length(ali_st, ali_en, minimum_len):
                 hit = QueryHit(hit_name, acc_id, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en,
                                hmm_len, strand, verbose, query_genome_len=genome_len)
                 genome_len = hit.query_genome_len
@@ -311,8 +315,8 @@ def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, 
                 hit_list.append(hit)
             else:
                 if verbose:
-                    print(f"Excluding line {line_num}: e-value of {evalue} failed to pass maximum e-value threshold of "
-                          f"{max_eval}")
+                    print(f"Excluding line {line_num}: e-value of {evalue} larger than threshold of {max_eval} or "
+                          f"{abs(ali_en - ali_st)} shorter than minumum length of {minimum_len}")
 
     return hit_list
 
@@ -364,7 +368,7 @@ def parse_tbl_file(tbl_file: TextIO, genome_path: str, full_threshold: float, ma
     return hit_list
 
 
-def parse_table_from_path(table_path: str, genome_path: str, full_threshold: float, max_eval: float,
+def parse_table_from_path(table_path: str, genome_path: str, full_threshold: float, max_eval: float, minimum_len: int,
                           table_mode: TABLE_MODE, verbose: bool,
                           annotations: Dict[str, str] = None) -> List[QueryHit]:
     with open(table_path) as table_file:
@@ -372,7 +376,7 @@ def parse_table_from_path(table_path: str, genome_path: str, full_threshold: flo
             print(f"Opening {table_path}...")
 
         if table_mode == "dfam":
-            return parse_dfam_file(table_file, genome_path, full_threshold, max_eval, verbose)
+            return parse_dfam_file(table_file, genome_path, full_threshold, max_eval, minimum_len, verbose)
         elif table_mode == "tbl":
             return parse_tbl_file(table_file, genome_path, full_threshold, max_eval, verbose, annotations=annotations)
         else:
@@ -509,10 +513,11 @@ def _main():
         # parse mode-specific arguments
         overlap_tolerance = args.overlap_tolerance
         max_gap_percent = args.distance_threshold
-
+        minimum_length = args.minimum_length
 
         # parse table for information on hits detected on query
-        query_hits = parse_table_from_path(table_path, genome_path, full_threshold, max_eval, table_mode, verbose)
+        query_hits = parse_table_from_path(table_path, genome_path, full_threshold, max_eval, minimum_length,
+                                           table_mode, verbose)
 
         # sort list to ensure that any hits from the same integration are next to each other
         sort_hit_list(query_hits)
