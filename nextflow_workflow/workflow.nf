@@ -291,8 +291,7 @@ process bakta_annotation {
 }
 
 process prokka_annotation {
-    container = 'staphb/prokka:latest'
-    conda "bioconda::prokka"
+    container = 'connercopeland/prokka_500_char_contig_id_limit'
 
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "${genome.simpleName}/*")
     publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
@@ -324,8 +323,7 @@ process prokka_annotation {
 }
 
 process prokka_annotation_zip_output {
-    container = 'staphb/prokka:latest'
-    conda "bioconda::prokka"
+    container = 'connercopeland/prokka_500_char_contig_id_limit'
 
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "*.tar.gz")
     publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
@@ -349,7 +347,6 @@ process prokka_annotation_zip_output {
     --outdir ${genome.simpleName}/ \
     --prefix ${genome.simpleName} \
     --cpus ${task.cpus} \
-    --compliant \
     ${genome}
 
     cp ${genome.simpleName}/*.gff .

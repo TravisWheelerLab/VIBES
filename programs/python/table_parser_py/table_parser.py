@@ -256,10 +256,10 @@ def write_annotation_json_from_path(json_path: str, query_hits: List[QueryHit],
 
 def write_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     # write header line first
-    headers = ["Hit Name", "Description", "Accession", "E-Value", "Full Length",
-               "Ref Seq Start", "Ref Seq End", "Ref Seq Length",
-               "Bacterial Genome Name", "Query Sequence Name", "Match Start on Query Seq",
-               "Match End on Query Seq", "Query Genome Length", "Strand", "Integration ID\n"]
+    headers = ["Hit name", "Description", "Accession", "E-value", "Full length",
+               "Ref seq start", "Ref seq end", "Ref seq length",
+               "Bacterial genome name", "Query sequence name", "Match start on query seq",
+               "Match end on query seq", "Query genome length", "Strand", "Integration ID\n"]
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
         tsv.write(viral_seq.to_tsv_line())
