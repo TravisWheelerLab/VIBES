@@ -17,6 +17,8 @@ STRAND = Literal["+", "-"]
 
 # TODO: Document this class and its quirks
 class QueryHit:
+    # shared dict that will save target sequence lengths, reducing calls to esl-seqstat
+    target_seq_len_dict = {}
     def __init__(self, hit_name: str, acc_id: str, query_name: str, evalue: float, ali_st: int, ali_end: int,
                  query_genome_name: str, hmm_st: int, hmm_end: int, hmm_len: int, strand: STRAND, verbose: bool,
                  target_genome_len: int = None, description: str = "-"):
@@ -40,21 +42,24 @@ class QueryHit:
         if target_genome_len:
             self.target_genome_len = target_genome_len
         else:
-            self.target_genome_len = self.get_genome_len()
+            self.target_genome_len = self.get_target_genome_len()
 
     def get_seq_len_on_ref(self) -> int:
         # these positions are 1-indexed, so we have to add one
         # (if you start at position 1 and go to position 5, the sequence is 5 positions long, not 4)
         return abs(self.query_end - self.query_st) + 1
 
-    def get_genome_len(self) -> int:
-        if self.
+    def get_target_genome_len(self) -> int:
+        if self.target_name in self.target_seq_len_dict.keys():
+            return self.target_seq_len_dict[self.target_name]
 
-        seqstat_results = do_cmd(f"esl-seqstat {self.target_genome_file}", self.verbose)
-        for line in seqstat_results.split("\n"):
-            if "Total # residues" in line:
-                line_list = line.split()
-                return int(line_list[3])
+        else:
+            seqstat_results = do_cmd(f"esl-seqstat -a {self.target_genome_file}", self.verbose)
+            for line in seqstat_results.split("\n"):
+                if self.target_name in line:
+                    line_list = line.split()
+                    self.target_seq_len_dict[self.target_name] = int(line_list[2])
+                    return int(line_list[2])
 
     def get_percent_complete(self) -> float:
         return float(self.get_seq_len_on_ref()) / self.query_len
@@ -303,7 +308,6 @@ def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, 
     # For the first hit, we don't know what the query genome length is. The QueryHit class contains a method that can
     # get the query genome length, but since we expect each run of table_parser.py to only deal with one query genome,
     # we can re-use the data one we get it via esl-seqstat
-    genome_len = None
     for line_num, line in enumerate(dfam_file, 0):
         if line[0] == "#":
             pass
@@ -325,8 +329,7 @@ def parse_dfam_file(dfam_file: TextIO, genome_path: str, full_threshold: float, 
 
             if evalue <= max_eval and is_minimum_length(ali_st, ali_en, minimum_len):
                 hit = QueryHit(hit_name, acc_id, query_name, evalue, ali_st, ali_en, genome_path, hmm_st, hmm_en,
-                               hmm_len, strand, verbose, target_genome_len=genome_len)
-                genome_len = hit.target_genome_len
+                               hmm_len, strand, verbose)
                 set_hit_full_length(hit, full_threshold)
                 hit_list.append(hit)
             else:
