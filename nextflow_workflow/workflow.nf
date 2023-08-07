@@ -291,10 +291,9 @@ process bakta_annotation {
 }
 
 process prokka_annotation {
-    container = 'connercopeland/prokka_500_char_contig_id_limit'
+    container = 'staphb/prokka'
 
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "${genome.simpleName}/*")
-    publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -308,7 +307,7 @@ process prokka_annotation {
 
     output:
     path "${genome.simpleName}/*"
-    path "${genome.simpleName}.gff"
+    tuple val("${genome.simpleName}"), path("${genome.simpleName}.gff"), emit: tuples
 
     """
     prokka \
@@ -323,10 +322,9 @@ process prokka_annotation {
 }
 
 process prokka_annotation_zip_output {
-    container = 'connercopeland/prokka_500_char_contig_id_limit'
+    container = 'staphb/prokka'
 
     publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "*.tar.gz")
-    publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -340,7 +338,7 @@ process prokka_annotation_zip_output {
 
     output:
     path "${genome.simpleName}.tar.gz"
-    path "${genome.simpleName}.gff"
+    tuple val("${genome.simpleName}"), path("${genome.simpleName}.gff"), emit: tuples
 
     """
     prokka \
@@ -370,6 +368,67 @@ process rename_fasta {
     cat ${original_fasta} > ${name_record.id}.${original_fasta.getExtension()}
     """
 }
+
+process rename_contig_ids {
+    cpus 1
+    time '1h'
+
+    input:
+    path genome_fasta
+
+    output:
+    tuple path("${task.index}.${genome_fasta.extension}"), val("${genome_fasta.simpleName}"), emit: genome_tuples
+    tuple val("${genome_fasta.simpleName}"), path("${genome_fasta.simpleName}_id_map.json"), emit: tuples
+
+    """
+    change_contig_ids.py \
+    rename \
+    ${genome_fasta} \
+    ${genome_fasta.simpleName}_id_map.json \
+    --output_fasta ${task.index}.${genome_fasta.extension} \
+    --verbose
+    """
+}
+
+process revert_contig_ids {
+    publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
+    cpus 1
+    time '1h'
+
+    input:
+    tuple val(genome_name), path(mapping_json), path(input_file)
+
+    output:
+    path input_file
+
+    """
+    change_contig_ids.py \
+    revert \
+    ${input_file} \
+    ${mapping_json} \
+    --verbose
+    """
+}
+
+// So, rename_contig_ids has an issue in that it wants to overwrite contig names in the actual input files (this seems
+// bad). I tried using stageInMode 'copy', which should fix this issue by creating a copy of the genome, but instead
+// this causes a mysterious crash. So in the meantime, I'm creating a new output file and renaming it to be the same as
+// the input genome here
+process fix_modified_fasta_name {
+    cpus 1
+    time '1h'
+
+    input:
+    tuple path(genome_with_wrong_name), val(actual_name)
+
+    output:
+    path "${actual_name}.${genome_with_wrong_name.extension}"
+
+    """
+    mv ${genome_with_wrong_name} ${actual_name}.${genome_with_wrong_name.extension}
+    """
+}
+
 
 
 workflow build_hmm {
@@ -466,17 +525,32 @@ workflow bacterial_annotation_prokka {
         genome_files
 
     main:
+        rename_contig_ids(genome_files)
+        renamed_contig_id_genomes_wrong_name = rename_contig_ids.out.genome_tuples
+        renamed_contig_tuples = rename_contig_ids.out.tuples
+
+        renamed_contig_id_genomes = fix_modified_fasta_name(renamed_contig_id_genomes_wrong_name)
+
+        // store annotation output in tuples so we can join to the proper ID mapping JSON
+        output_tuples = Channel.empty()
+
         if (zip_prokka == true) {
-            prokka_annotation_zip_output(genome_files)
+            prokka_annotation_zip_output(renamed_contig_id_genomes)
+            output_tuples = prokka_annotation_zip_output.out.tuples
         }
 
         else if (zip_prokka == false) {
-            prokka_annotation(genome_files)
+            prokka_annotation(renamed_contig_id_genomes)
+            output_tuples = prokka_annotation.out.tuples
         }
 
         else {
             error "zip_prokka must be either true or false in parameters file"
         }
+
+        // renamed_contig_tuples should contain (genome_name, JSON). output_tuples should contain (genome_name, GFF).
+        // .join() should match matching genome names, giving us (genome_name, JSON, GFF)
+        revert_contig_ids(renamed_contig_tuples.join(output_tuples))
 }
 
 workflow {
