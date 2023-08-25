@@ -55,12 +55,12 @@ def load_map_dict_from_json(json_path: str, verbose: bool) -> Dict[str, str]:
 
 
 def dict_to_json(json_path: str, map_dict: Dict[str, str]) -> None:
-    with open(json_path, "w") as json_file: # TODO: Make this a 'wb' type that also reads in as a bytes-like object and writes with b"" https://stackoverflow.com/questions/33054527/typeerror-a-bytes-like-object-is-required-not-str-when-handling-file-conte
+    with open(json_path, "w") as json_file:
         json_file.write(json.dumps(map_dict, indent=INDENT_VAL))
 
 
 def tuple_list_to_fasta(fasta_path: str, tuple_list: List[Tuple[str,str,str]]) -> None:
-    with open(fasta_path, "w") as output_fasta: # TODO: Make this a 'wb' type that also reads in as a bytes-like object and writes with b"" https://stackoverflow.com/questions/33054527/typeerror-a-bytes-like-object-is-required-not-str-when-handling-file-conte
+    with open(fasta_path, "w") as output_fasta:
         for entry in tuple_list:
             header = entry[1]
             sequence = entry[2]
@@ -92,7 +92,7 @@ def change_contig_ids(fasta_tuple_list: List[Tuple[str,str,str]], prefix: str, v
             print(f"Replacing {original_id} with {replacement_id}...")
 
     # the values in the dict have added backslashes to escape any weird characters- we need to get rid of them so they
-    # match exactly
+    # match the original contig ID exactly
     for key in id_map_dict.keys():
         id_map_dict[key] = re.sub("\\\\", "", id_map_dict[key])
         
@@ -110,8 +110,6 @@ def parse_fasta(fasta_file: TextIO) -> List[Tuple[str, str, str]]:
         header, sequence = entry.split("\n", 1)
         # grab the 'name,' or fasta header line up to the first whitespace character
         seq_id = re.escape(header.split()[0])
-
-        # encoded_id = seq_id.encode('utf-8').decode()
 
         entry_tuple = (seq_id, header, sequence)
         parsed_tuple_list.append(entry_tuple)

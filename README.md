@@ -4,7 +4,8 @@
 
 VIBES (**V**iral **I**ntegrations in **B**acterial g**E**nome**S**) is a Nextflow-based automated sequence similarity search pipeline that can search for prophage integrations in bacterial whole genome sequence, annotate bacterial and viral proteins, and produce interactive HTML visual output. Users provide VIBES with bacterial whole genome sequence to search in and prophage genomes to search for.
 
-## Pipeline Diagram? ##
+## Pipeline Diagram ##
+![pipeline_diagram](readme_images/fig1_rough.png)
 
 ## Features ##
 * Workflow automation with Nextflow
@@ -73,6 +74,8 @@ Profiles tell Nextflow how it should try to run tasks in the workflow: should it
 
 A couple of key profile options to pay attention to: `process.executor` allows users to set whether Nextflow should submit tasks to an executor like SLURM ([list of job managers supported by Nextflow)](https://www.nextflow.io/docs/latest/executor.html)) or run the tasks locally. Similarly, `docker.enabled` and `process.container` tell Nextflow to use Docker to run containers and sets the default container for all tasks to the value of `process.container`. `process.clusterOptions` will be an important profile setting for most users who run VIBES on a HPC environment- this setting appends its value to all commands submitted to a job manager (i.e. SLURM) and is a useful place to set cluster options such as partition or an account to be billed.
 
+Full profile documentation can be [found here.](https://www.nextflow.io/docs/latest/config.html?highlight=profile#config-profiles)
+
 ### Launching VIBES ###
 
 Once you've created a YAML file with your preferred parameters and a profile for your environment, you can launch VIBES with `nextflow run workflow.nf -params-file your_params.yaml -profile your_profile`. If you want to resume a run of VIBES after resolving whatever issue stopped it, you can resume the previous run by adding `-resume` to your `nextflow run` command (`nextflow run workflow.nf -params-file your_params.yaml -profile your_profile -resume`).
@@ -101,10 +104,9 @@ A complete list of VIBES workflow parameters in the YAML file:
     * viral_protein_annotation_tsv: Path to .tsv file with two fields: protein ID and function description, separated by a tab character
 
 
-* mention environment vars like ${projectDir}
-### Profiles ###
-* HPC vs Desktop
-* Link to Nextflow Profile Docs
+#### Configuration Environment Variables ####
+In Nextflow parameters files, some environment variables can be accessed that can make it easier to reference files outside of the directory that Nextflow is being run in. `${projectDir}`, for instance, points Nextflow to the directory that `workflow.nf` is located in (in this case, `VIBES/nextflow_workflow/`). Using these environment variables to point to file path(s) is important since Nextflow runs each portion of the workflow from subdirectories in a `work/` directory, so relative file paths will not point to the correct locations unless they inlcude `${projectDir}` or `${launchDir}`.
+
 ### More on nextflow run ###
 
 `nextflow run workflow.nf -params-file your_params.yaml -profile your_profile` is the minimum necessary command to launch VIBES, but there are some other useful options worth knowing about:
@@ -123,8 +125,6 @@ A complete list of VIBES workflow parameters in the YAML file:
 Coming Soon
 
 ## Acknowledgements ##
-* License
-* I would like to thank...
+* Thanks for helping make VIBES happen!
     * George Lesica
-    * People who made Prokka Docker container?
-    * Who else?
+    * Jeremiah Gaiser
