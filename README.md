@@ -36,8 +36,8 @@ VIBES (**V**iral **I**ntegrations in **B**acterial g**E**nome**S**) is a Nextflo
 1. Install VIBES dependencies:
 * Python 3 (v3.8.10)
 * Perl (v5.30.0)
-* nHMMER (v3.3) and Easel (v0.48)
-* FrahMMER (v?)
+* nhmmer (v3.3) and Easel (v0.48)
+* FraHMMER (v?)
 * Prokka (v1.14.6)
 2. [Install Java 11 or later](https://www.oracle.com/java/technologies/downloads/), if necessary
 3. [Install Nextflow](https://www.nextflow.io/docs/latest/getstarted.html#installation), if necessary
