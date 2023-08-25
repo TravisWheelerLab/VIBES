@@ -5,7 +5,7 @@
 VIBES (**V**iral **I**ntegrations in **B**acterial g**E**nome**S**) is a Nextflow-based automated sequence similarity search pipeline that can search for prophage integrations in bacterial whole genome sequence, annotate bacterial and viral proteins, and produce interactive HTML visual output. Users provide VIBES with bacterial whole genome sequence to search in and prophage genomes to search for.
 
 ## Pipeline Diagram ##
-![pipeline_diagram](readme_images/fig1_rough_paper_format.svg)
+![pipeline_diagram](readme_images/fig1_rough.png)
 
 ## Features ##
 * Workflow automation with Nextflow
@@ -104,7 +104,8 @@ A complete list of VIBES workflow parameters in the YAML file:
     * viral_protein_annotation_tsv: Path to .tsv file with two fields: protein ID and function description, separated by a tab character
 
 
-* mention environment vars like ${projectDir}
+#### Configuration Environment Variables ####
+In Nextflow parameters files, some environment variables can be accessed that can make it easier to reference files outside of the directory that Nextflow is being run in. `${projectDir}`, for instance, points Nextflow to the directory that `workflow.nf` is located in (in this case, `VIBES/nextflow_workflow/`). Using these environment variables to point to file path(s) is important since Nextflow runs each portion of the workflow from subdirectories in a `work/` directory, so relative file paths will not point to the correct locations unless they inlcude `${projectDir}` or `${launchDir}`.
 
 ### More on nextflow run ###
 
@@ -124,8 +125,6 @@ A complete list of VIBES workflow parameters in the YAML file:
 Coming Soon
 
 ## Acknowledgements ##
-* License
-* I would like to thank...
+* Thanks for helping make VIBES happen!
     * George Lesica
-    * People who made Prokka Docker container?
-    * Who else?
+    * Jeremiah Gaiser
