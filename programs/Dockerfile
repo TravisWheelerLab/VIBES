@@ -10,7 +10,8 @@ RUN apt-get update && \
         python3-pip \
         wget \
         git \
-        autoconf
+        autoconf \
+        prokka
 
 # install pandas
 RUN python3 -m pip install pandas numpy
