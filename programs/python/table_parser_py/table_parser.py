@@ -265,7 +265,7 @@ def write_integration_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     # write header line first
     headers = ["Query name", "Description", "Accession", "E-value", "Full length",
                "Query start", "Query end", "Query length",
-               "Target sequence file", "Target sequence name", "Target start",
+               "Target file", "Target name", "Target start",
                "Target end", "Target length", "Strand", "Integration ID\n"]
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
@@ -276,7 +276,7 @@ def write_protein_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     # write header line first
     headers = ["Query name", "Description", "Accession", "E-value", "Full length",
                "Query start", "Query end", "Query length",
-               "Target sequence file", "Target sequence name", "Target start",
+               "Target file", "Target name", "Target start",
                "Target end", "Target length", "Strand\n"]
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
