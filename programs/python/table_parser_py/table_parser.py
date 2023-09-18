@@ -374,7 +374,7 @@ def parse_tbl_file(tbl_file: TextIO, genome_path: str, full_threshold: float, ma
 
             # TODO: comment on what strand is
             strand = "+"
-            if hmm_en < hmm_st:
+            if ali_en < ali_st:
                 strand = "-"
 
             if evalue <= max_eval:
