@@ -40,11 +40,6 @@ overlap_tolerance = params.overlap_tolerance
 integration_distance_threshold = params.integration_distance_threshold
 integration_minimum_length = params.integration_minimum_length
 
- // TODO: QOL features like:
- //     - more efficient process ordering (this has mostly been done!)
- //     - a process to build protein sequences into a .hmm file (to support user-specified viral annotation)
- //     - description field
- //
 
 process hmm_build {
     cpus { hmmbuild_cpus * task.attempt }
@@ -162,6 +157,7 @@ process frahmmer {
 }
 
 process reformat_integrations {
+    cache false
     cpus ri_cpus
     time ri_time.hour
     memory ri_memory.GB
@@ -191,6 +187,7 @@ process reformat_integrations {
 
 
 process reformat_proteins {
+    cache false
     cpus rp_cpus
     time rp_time.hour
     memory rp_memory.GB
@@ -429,6 +426,29 @@ process fix_modified_fasta_name {
     """
 }
 
+process output_visualization {
+    publishDir("${output_path}/visual_output/", mode: "copy")
+    cpus 1
+    time '1h'
+
+    input:
+    path output_dir
+    // other inputs do nothing, but force this process to wait on others before running
+    val di
+    val pa
+    val vg
+
+    output:
+    path 'viz/*.html'
+
+    """
+    parse.py \
+    -b ${projectDir}/resources/vibes-soda.js \
+    -t ${projectDir}/resources/template.html \
+    ${output_dir}
+    """
+}
+
 
 
 workflow build_hmm {
@@ -517,6 +537,9 @@ workflow reformat_integration_tables {
 
     main:
         reformat_integrations(genomes, integration_tables)
+
+    emit:
+        tsv_files = reformat_integrations.out
 }
 
 
@@ -551,7 +574,29 @@ workflow bacterial_annotation_prokka {
         // renamed_contig_tuples should contain (genome_name, JSON). output_tuples should contain (genome_name, GFF).
         // .join() should match matching genome names, giving us (genome_name, JSON, GFF)
         revert_contig_ids(renamed_contig_tuples.join(output_tuples))
+
+    emit:
+        reverted_files = revert_contig_ids.out
 }
+
+
+workflow html_visual_output {
+    take:
+        output_dir
+        // the variables below this comment are accepted to ensure the pipeline 
+        // waits for all output to be generated before running this, but are 
+        // otherwise unused in this workflow
+        di_output
+        pa_output
+        vg_output
+
+    main:
+        output_visualization(output_dir, di_output, pa_output, vg_output)
+
+    emit:
+        html_files = output_visualization.out
+}
+
 
 workflow {
     phage_file = params.phage_file
@@ -561,22 +606,33 @@ workflow {
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.viral_protein_annotation_tsv
     prokka_annotation = params.prokka_annotation
+    visualize_output = params.visualize_output
 
-    if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes) {
-        error "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation) in\
+    if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes && !visualize_output) {
+        error "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation, html_visual_output) in\
          params file set to false"
     }
+
+    // if statements allow users to disable specific parts of the VIBES workflow
+    // else statements ensures html_visual_output waits on other workflows to 
+    // complete, if enabled
 
     if (detect_integrations) {
         hmm_files = build_hmm(phage_file)
         detect_integrations(hmm_files, genome_files)
         integration_genomes = detect_integrations.out.genomes
         integration_tables = detect_integrations.out.tables
-        reformat_integration_tables(integration_genomes, integration_tables)
+        di_output = reformat_integration_tables(integration_genomes, integration_tables)
+    }
+    else {
+        di_output = Channel.of(1)
     }
 
     if (prokka_annotation) {
-        bacterial_annotation_prokka(genome_files)
+        pa_output = bacterial_annotation_prokka(genome_files)
+    }
+    else {
+        pa_output = Channel.of(1)
     }
 
     if (annotate_viral_genomes) {
@@ -584,9 +640,16 @@ workflow {
         annotation_genomes = frahmmer_viral_genomes.out.genomes
         annotation_tables = frahmmer_viral_genomes.out.tables
 
-        // TODO: delete this later integration_json_paths_file = integration_jsons.toList()
-        // TODO: occurrence_json = sum_occurrences(integration_json_paths_file)
+        vg_output = reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
+    }
+    else {
+        vg_output = Channel.of(1)
+    }
 
-        reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
+    if (visualize_output) {
+        // we only want to spin up one process to generate visuals, so take
+        // 1 value from each channel (since they're only here to force this
+        // process to wait on all others)
+        vo_output = html_visual_output(output_path, di_output.randomSample(1), pa_output.randomSample(1), vg_output.randomSample(1))
     }
 }
