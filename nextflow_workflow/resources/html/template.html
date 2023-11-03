@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+  <head>
+    <title>vibes-soda</title>
+    <style>
+      :root {
+        --primary-color: cadetblue;
+        --darker-primary-color: darkcyan;
+        --background-color: white;
+      }
+
+      body {
+        font-family: "Proza Libre", "Helvetica Neue", Helvetica, Arial,
+          "Lucida Grande", sans-serif;
+        background-color: var(--background-color);
+      }
+
+      .autocomplete {
+        background: white;
+        z-index: 1000;
+        font:
+          14px/22px "-apple-system",
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
+        overflow: auto;
+        box-sizing: border-box;
+        border: 1px solid rgba(50, 50, 50, 0.6);
+      }
+
+      .autocomplete * {
+        font: inherit;
+      }
+
+      .autocomplete > div {
+        padding: 0 4px;
+      }
+
+      .autocomplete .group {
+        background: #eee;
+      }
+
+      .autocomplete > div:hover:not(.group),
+      .autocomplete > div.selected {
+        background: var(--primary-color);
+        cursor: pointer;
+      }
+
+      .input {
+        width: 50%;
+        position: relative;
+        padding: 25px;
+      }
+
+      .input-text {
+        width: 100%;
+        outline: none;
+        border: none;
+        border-bottom: 1px solid #777;
+        box-shadow: none !important;
+        cursor: pointer;
+      }
+
+      .input-text:focus {
+        border-color: var(--primary-color);
+        cursor: auto;
+      }
+
+      .floating-label {
+        position: absolute;
+        pointer-events: none;
+        top: 25px;
+        transition: 0.2s ease all;
+      }
+
+      input:hover ~ .floating-label,
+      input:hover ~ .floating-arrow {
+        color: var(--darker-primary-color);
+      }
+
+      input:focus ~ .floating-label,
+      input:focus ~ .floating-arrow {
+        color: var(--primary-color);
+      }
+
+      input:focus ~ .floating-label,
+      input:not(:focus):valid ~ .floating-label {
+        top: 10px;
+      }
+
+      .floating-arrow {
+        position: absolute;
+        pointer-events: none;
+        font-size: 12px;
+        top: 29px;
+        right: 22px;
+      }
+
+      .button {
+        border: none;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 4px;
+        padding: 6px 6px;
+        transition-duration: 0.4s;
+        cursor: pointer;
+        outline: none;
+        background: var(--primary-color);
+        color: white;
+        user-select: none;
+      }
+
+      .button:hover {
+        background: var(--darker-primary-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="viz" style="margin-left: 15%; margin-right: 15%">
+      <div style="display: flex">
+        <div class="input">
+          <input
+            class="input-text"
+            type="text"
+            autocomplete="off"
+            required
+            id="bacteria-selection"
+          />
+          <span class="floating-label" id="bacteria-label">Bacteria</span>
+          <span class="floating-arrow">&#x25BC;</span>
+        </div>
+        <div class="input">
+          <input
+            class="input-text"
+            type="text"
+            autocomplete="off"
+            required
+            id="seq-selection"
+          />
+          <span class="floating-label" id="seq-label">Sequence</span>
+          <span class="floating-arrow">&#x25BC;</span>
+        </div>
+      </div>
+      <div id="charts" style="width: 100%">
+        <div id="vibes-top" style="position: relative">
+          <div id="vibes-ref"></div>
+
+          <div id="vibes-linear"></div>
+        </div>
+        <div
+          id="vibes-mid"
+          style="display: flex; justify-content: space-between"
+        >
+          <div id="vibes-radial" style="flex: 1"></div>
+          <div id="vibes-occurrence" style="flex: 1; position: relative">
+            <div
+              class="input"
+              style="position: absolute; top: -5px; left: 0; width: 90%"
+            >
+              <input
+                class="input-text"
+                type="text"
+                autocomplete="off"
+                required
+                id="integration-selection"
+              />
+              <span class="floating-label" id="integration-label"
+                >Viral integration</span
+              >
+              <span class="floating-arrow">&#x25BC;</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: center">
+          <span id="chart-toggle" class="button"></span>
+          <span id="reset-zoom" class="button">reset zoom</span>
+          <span id="related-toggle" class="button"></span>
+        </div>
+        <div id="vibes-bottom"></div>
+      </div>
+    </div>
+    <script>
+      let bacteriaNames = [];
+    </script>
+    <script src="bacteria.js"></script>
+    <script>
+      VIBES_DATA_TARGET;
+    </script>
+    <script>
+      VIBES_SODA_TARGET;
+    </script>
+    <script>
+      vs.run(data);
+    </script>
+  </body>
+</html>

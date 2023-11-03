@@ -61,7 +61,7 @@ process hmm_build {
 
 
     """
-    python3 ${programs_path}/python/table_gen_py/hmmbuild_mult_seq.py \
+    hmmbuild_mult_seq.py \
         --cpu ${task.cpus} \
         --seq_type ${seq_type} \
         --temp_folder ${workDir} \
@@ -97,7 +97,7 @@ process nhmmscan {
     ${hmm_file} \
     ${genome_file}
 
-    ${params.dfamscan_path} \
+    dfamscan.pl \
     --dfam_infile ${genome_file.simpleName}.dfam \
     --dfam_outfile ${genome_file.simpleName}.scanned.dfam
     """
@@ -121,7 +121,7 @@ process frahmmconvert {
     path "*.frahmm", emit: frahmm
 
     """
-    frahmmconvert ${hmmer_hmm.simpleName}.frahmm ${hmmer_hmm}
+    bathconvert ${hmmer_hmm.simpleName}.frahmm ${hmmer_hmm}
     """
 }
 
@@ -143,21 +143,20 @@ process frahmmer {
     path "*.scanned.tbl", emit: tables
 
     """
-    frahmmer \
+    bathsearch \
     -o /dev/null \
     --cpu ${task.cpus} \
     --tblout ${genome_file.simpleName}.tbl \
     ${hmm_file} \
     ${genome_file}
 
-    ${params.frahmmerscan_path} \
+    frahmmerscan.pl \
     --infile ${genome_file.simpleName}.tbl \
     --outfile ${genome_file.simpleName}.scanned.tbl
     """
 }
 
 process reformat_integrations {
-    cache false
     cpus ri_cpus
     time ri_time.hour
     memory ri_memory.GB
@@ -172,7 +171,7 @@ process reformat_integrations {
     path "${genome_file.simpleName}.tsv"
 
     """
-    python3 ${programs_path}/python/table_parser_py/table_parser.py \
+    table_parser.py \
         integration_annotation \
         --full_threshold ${integration_full_threshold} \
         --overlap_tolerance ${overlap_tolerance} \
@@ -187,7 +186,6 @@ process reformat_integrations {
 
 
 process reformat_proteins {
-    cache false
     cpus rp_cpus
     time rp_time.hour
     memory rp_memory.GB
@@ -203,7 +201,7 @@ process reformat_proteins {
     path "${genome_file.simpleName}.tsv"
 
     """
-    python3 ${programs_path}/python/table_parser_py/table_parser.py \
+    table_parser.py \
         protein_annotation \
         --annotation_tsv ${protein_annotations} \
         --full_threshold ${integration_full_threshold} \
@@ -225,7 +223,7 @@ process sum_occurrences {
     path "summed_occurrences.json"
 
     """
-    python3 ${programs_path}/python/table_parser_py/sum_occurrences.py \
+    sum_occurrences.py \
     "summed_occurrences.json" \
     ${jsonList}
     """
@@ -427,7 +425,7 @@ process fix_modified_fasta_name {
 }
 
 process output_visualization {
-    publishDir("${output_path}/visual_output/", mode: "copy")
+    publishDir("${output_path}/", mode: "copy")
     cpus 1
     time '1h'
 
@@ -439,12 +437,13 @@ process output_visualization {
     val vg
 
     output:
-    path 'viz/*.html'
+    path 'html_viz/*.html'
 
     """
     parse.py \
-    -b ${projectDir}/resources/vibes-soda.js \
-    -t ${projectDir}/resources/template.html \
+    -b ${projectDir}/resources/html/vibes-soda.js \
+    -t ${projectDir}/resources/html/template.html \
+    -o html_viz/ \
     ${output_dir}
     """
 }
