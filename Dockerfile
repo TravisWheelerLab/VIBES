@@ -15,8 +15,6 @@ RUN apt-get update && \
 # install pandas
 RUN python3 -m pip install pandas numpy
 
-# install commander
-# RUN mkdir tool_bins/ && cd tool_bins/ && curl -L https://github.com/commander-cli/commander/releases/download/v2.3.0/commander-linux-amd64 -o commander && chmod +x commander
 ENV PATH "$PATH:/tool_bins"
 
 # install HMMER

@@ -31,7 +31,7 @@ viral_protein_db: ${projectDir}/../fixtures/5_full_bac_2_vir/all_phrogs.1-26-23.
 detect_integrations: true
 
 # run phage annotation step, which searches viral proteins against phage genomes
-annotate_phage_genes: true
+annotate_phage_genes: false
 
 # annotate bacterial genomes with Bakta. to do so, the pipeline will download a large (~30gb) annotation database
 prokka_annotation: true
@@ -42,13 +42,4 @@ visualize_output: true
 # PROKKA OPTIONS
 # zip prokka output into a .tar.gz file
 zip_prokka_output: true
-
-# ADVANCED OPTIONS
-
-# programs_path: Where is the VIBES /programs folder located?
-programs_path: ${projectDir}/../programs
-
-dfamscan_path: ${projectDir}/../programs/perl/dfamscan.pl
-
-frahmmerscan_path: ${projectDir}/../programs/perl/frahmmerscan.pl
 

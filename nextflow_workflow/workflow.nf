@@ -14,13 +14,13 @@ nhmmscan_cpus = params.nhmmscan_cpus
 nhmmscan_time = params.nhmmscan_time
 nhmmscan_memory = params.nhmmscan_memory
 
-frahmmconvert_cpus = params.frahmmconvert_cpus
-frahmmconvert_time = params.frahmmconvert_time
-frahmmconvert_memory = params.frahmmconvert_memory
+bathconvert_cpus = params.bathconvert_cpus
+bathconvert_time = params.bathconvert_time
+bathconvert_memory = params.bathconvert_memory
 
-frahmmer_cpus = params.frahmmer_cpus
-frahmmer_time = params.frahmmer_time
-frahmmer_memory = params.frahmmer_memory
+bath_cpus = params.bath_cpus
+bath_time = params.bath_time
+bath_memory = params.bath_memory
 
 prokka_cpus = params.prokka_cpus
 prokka_time = params.prokka_time
@@ -103,10 +103,10 @@ process nhmmscan {
     """
 }
 
-process frahmmconvert {
-    cpus { frahmmconvert_cpus * task.attempt }
-    time { frahmmconvert_time.hour * task.attempt }
-    memory { frahmmconvert_memory.GB * task.attempt}
+process bathconvert {
+    cpus { bathconvert_cpus * task.attempt }
+    time { bathconvert_time.hour * task.attempt }
+    memory { bathconvert_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -118,18 +118,18 @@ process frahmmconvert {
     hmmer_hmm.getExtension() == "hmm"
 
     output:
-    path "*.frahmm", emit: frahmm
+    path "*.bath", emit: bath
 
     """
-    bathconvert ${hmmer_hmm.simpleName}.frahmm ${hmmer_hmm}
+    bathconvert ${hmmer_hmm.simpleName}.bath ${hmmer_hmm}
     """
 }
 
 
-process frahmmer {
-    cpus frahmmer_cpus
-    time { frahmmer_time.hour * task.attempt }
-    memory { frahmmer_memory.GB * task.attempt}
+process bathsearch {
+    cpus bath_cpus
+    time { bath_time.hour * task.attempt }
+    memory { bath_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -150,7 +150,7 @@ process frahmmer {
     ${hmm_file} \
     ${genome_file}
 
-    frahmmerscan.pl \
+    bathscan.pl \
     --infile ${genome_file.simpleName}.tbl \
     --outfile ${genome_file.simpleName}.scanned.tbl
     """
@@ -486,10 +486,10 @@ workflow detect_integrations {
             table_channel = nhmmscan.out.tables
         }
         else if (seq_type == "amino") {
-            frahmm_file = frahmmconvert(hmm_file)
-            frahmmer(genome_files, frahmm_file)
-            genome_channel = frahmmer.out.genomes
-            table_channel = frahmmer.out.tables
+            bath_file = bathconvert(hmm_file)
+            bathsearch(genome_files, bath_file)
+            genome_channel = bath.out.genomes
+            table_channel = bath.out.tables
         }
         else {
             error "Error: phage_seq_type in params_file must be dna, rna, or amino"
@@ -501,7 +501,7 @@ workflow detect_integrations {
 }
 
 // TODO: Block comment
-workflow frahmmer_viral_genomes {
+workflow bath_viral_genomes {
     take:
         phage_file
         viral_protein_hmm
@@ -516,17 +516,17 @@ workflow frahmmer_viral_genomes {
         // id
         phage_genomes = rename_fasta(phage_genomes, phage_ids)
 
-        // we expect viral protein .hmms to be amino acid seqs, so we use FraHMMER
+        // we expect viral protein .hmms to be amino acid seqs, so we use BATH
         if (viral_protein_hmm.getExtension() == "hmm") {
-            frahmmconvert(viral_protein_hmm)
-            viral_protein_hmm = frahmmconvert.out.frahmm
+            bathconvert(viral_protein_hmm)
+            viral_protein_hmm = bathconvert.out.bath
         }
 
-        frahmmer(phage_genomes, viral_protein_hmm)
+        bathsearch(phage_genomes, viral_protein_hmm)
 
     emit:
-        genomes = frahmmer.out.genomes
-        tables = frahmmer.out.tables
+        genomes = bath.out.genomes
+        tables = bath.out.tables
 }
 
 workflow reformat_integration_tables {
@@ -635,9 +635,9 @@ workflow {
     }
 
     if (annotate_viral_genomes) {
-        frahmmer_viral_genomes(phage_file, viral_protein_hmm)
-        annotation_genomes = frahmmer_viral_genomes.out.genomes
-        annotation_tables = frahmmer_viral_genomes.out.tables
+        bath_viral_genomes(phage_file, viral_protein_hmm)
+        annotation_genomes = bath_viral_genomes.out.genomes
+        annotation_tables = bath_viral_genomes.out.tables
 
         vg_output = reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
     }
