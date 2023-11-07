@@ -18,9 +18,9 @@ bathconvert_cpus = params.bathconvert_cpus
 bathconvert_time = params.bathconvert_time
 bathconvert_memory = params.bathconvert_memory
 
-bath_cpus = params.bath_cpus
-bath_time = params.bath_time
-bath_memory = params.bath_memory
+bathsearch_cpus = params.bathsearch_cpus
+bathsearch_time = params.bathsearch_time
+bathsearch_memory = params.bathsearch_memory
 
 prokka_cpus = params.prokka_cpus
 prokka_time = params.prokka_time
@@ -118,18 +118,18 @@ process bathconvert {
     hmmer_hmm.getExtension() == "hmm"
 
     output:
-    path "*.bath", emit: bath
+    path "*.bathmm", emit: bathmm
 
     """
-    bathconvert ${hmmer_hmm.simpleName}.bath ${hmmer_hmm}
+    bathconvert ${hmmer_hmm.simpleName}.bathmm ${hmmer_hmm}
     """
 }
 
 
 process bathsearch {
-    cpus bath_cpus
-    time { bath_time.hour * task.attempt }
-    memory { bath_memory.GB * task.attempt}
+    cpus bathsearch_cpus
+    time { bathsearch_time.hour * task.attempt }
+    memory { bathsearch_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -519,14 +519,14 @@ workflow bath_viral_genomes {
         // we expect viral protein .hmms to be amino acid seqs, so we use BATH
         if (viral_protein_hmm.getExtension() == "hmm") {
             bathconvert(viral_protein_hmm)
-            viral_protein_hmm = bathconvert.out.bath
+            viral_protein_hmm = bathconvert.out.bathmm
         }
 
         bathsearch(phage_genomes, viral_protein_hmm)
 
     emit:
-        genomes = bath.out.genomes
-        tables = bath.out.tables
+        genomes = bathsearch.out.genomes
+        tables = bathsearch.out.tables
 }
 
 workflow reformat_integration_tables {
