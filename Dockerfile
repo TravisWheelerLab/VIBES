@@ -57,8 +57,4 @@ RUN mkdir vibes_scripts/
 COPY ../nextflow_workflow/bin/ vibes_scripts/
 ENV PATH "$PATH:/vibes_scripts"
 
-# copy default viral annotation db, visualization generation helper files
-RUN mkdir resources/
-COPY nextflow_workflow/resources/ resources/
-
 WORKDIR /
