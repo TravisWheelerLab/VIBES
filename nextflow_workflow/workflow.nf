@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 
 seq_type = params.phage_seq_type
-programs_path = params.programs_path
 output_path = params.output_path
 nextflow.enable.dsl=2
 
@@ -190,7 +189,7 @@ process reformat_proteins {
     time rp_time.hour
     memory rp_memory.GB
 
-    publishDir "${output_path}/tsv/viral_gene_annotations/", mode: "copy", pattern: "*.tsv"
+    publishDir "${output_path}/tsv/viral_gene_annotations", mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -467,6 +466,33 @@ workflow build_hmm {
 
 
 // TODO: Block comment
+workflow amino_annotation {
+    take:
+        // bath_query_file must be a file type object ala file(bath_query)
+        bath_query_file
+        genome_files
+
+    main:
+        if (bath_query_file.getExtension() != "hmm" && bath_query_file.getExtension() != "bathmm") {
+            build_hmm(bath_query_file)
+            bath_query_file = build_hmm.out.hmm
+        }
+
+        if (bath_query_file.getExtension() != "bathmm") {
+        bath_query_file = bathconvert(bath_query_file)
+        }
+
+        bathsearch(genome_files, bath_query_file)
+        genome_channel = bathsearch.out.genomes
+        table_channel = bathsearch.out.tables
+
+    emit:
+        genomes = genome_channel
+        tables = table_channel
+}
+
+
+// TODO: Block comment
 workflow detect_integrations {
     take:
         hmm_file
@@ -480,20 +506,10 @@ workflow detect_integrations {
         genome_channel = Channel.empty()
         table_channel = Channel.empty()
 
-        if (seq_type == "dna" || seq_type == "rna") {
-            nhmmscan(genome_files, hmm_file, h3f_file, h3i_file, h3m_file, h3p_file)
-            genome_channel = nhmmscan.out.genomes
-            table_channel = nhmmscan.out.tables
-        }
-        else if (seq_type == "amino") {
-            bath_file = bathconvert(hmm_file)
-            bathsearch(genome_files, bath_file)
-            genome_channel = bath.out.genomes
-            table_channel = bath.out.tables
-        }
-        else {
-            error "Error: phage_seq_type in params_file must be dna, rna, or amino"
-        }
+
+        nhmmscan(genome_files, hmm_file, h3f_file, h3i_file, h3m_file, h3p_file)
+        genome_channel = nhmmscan.out.genomes
+        table_channel = nhmmscan.out.tables
 
     emit:
         genomes = genome_channel
@@ -612,16 +628,27 @@ workflow {
          params file set to false"
     }
 
+    if (seq_type != "dna" && seq_type != "rna" && seq_type != "amino") {
+        error "Error: phage_seq_type in params_file must be dna, rna, or amino"
+    }
+
     // if statements allow users to disable specific parts of the VIBES workflow
     // else statements ensures html_visual_output waits on other workflows to 
     // complete, if enabled
 
-    if (detect_integrations) {
+    if (detect_integrations && (seq_type == "dna" || seq_type == "rna")) {
         hmm_files = build_hmm(phage_file)
         detect_integrations(hmm_files, genome_files)
         integration_genomes = detect_integrations.out.genomes
         integration_tables = detect_integrations.out.tables
         di_output = reformat_integration_tables(integration_genomes, integration_tables)
+    }
+    else if (detect_integrations && seq_type == "amino") {
+        phage_file = file(phage_file)
+        amino_annotation(phage_file, genome_files)
+        amino_genomes = amino_annotation.out.genomes
+        amino_tables = amino_annotation.out.tables
+        di_output = reformat_proteins(amino_genomes, amino_tables, protein_annotations)
     }
     else {
         di_output = Channel.of(1)
@@ -638,6 +665,8 @@ workflow {
         bath_viral_genomes(phage_file, viral_protein_hmm)
         annotation_genomes = bath_viral_genomes.out.genomes
         annotation_tables = bath_viral_genomes.out.tables
+
+        print "${output_path}/tsv/"
 
         vg_output = reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
     }
