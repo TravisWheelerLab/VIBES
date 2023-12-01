@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 
 seq_type = params.phage_seq_type
-programs_path = params.programs_path
 output_path = params.output_path
 nextflow.enable.dsl=2
 
@@ -14,13 +13,13 @@ nhmmscan_cpus = params.nhmmscan_cpus
 nhmmscan_time = params.nhmmscan_time
 nhmmscan_memory = params.nhmmscan_memory
 
-frahmmconvert_cpus = params.frahmmconvert_cpus
-frahmmconvert_time = params.frahmmconvert_time
-frahmmconvert_memory = params.frahmmconvert_memory
+bathconvert_cpus = params.bathconvert_cpus
+bathconvert_time = params.bathconvert_time
+bathconvert_memory = params.bathconvert_memory
 
-frahmmer_cpus = params.frahmmer_cpus
-frahmmer_time = params.frahmmer_time
-frahmmer_memory = params.frahmmer_memory
+bathsearch_cpus = params.bathsearch_cpus
+bathsearch_time = params.bathsearch_time
+bathsearch_memory = params.bathsearch_memory
 
 prokka_cpus = params.prokka_cpus
 prokka_time = params.prokka_time
@@ -40,11 +39,6 @@ overlap_tolerance = params.overlap_tolerance
 integration_distance_threshold = params.integration_distance_threshold
 integration_minimum_length = params.integration_minimum_length
 
- // TODO: QOL features like:
- //     - more efficient process ordering (this has mostly been done!)
- //     - a process to build protein sequences into a .hmm file (to support user-specified viral annotation)
- //     - description field
- //
 
 process hmm_build {
     cpus { hmmbuild_cpus * task.attempt }
@@ -66,7 +60,7 @@ process hmm_build {
 
 
     """
-    python3 ${programs_path}/python/table_gen_py/hmmbuild_mult_seq.py \
+    hmmbuild_mult_seq.py \
         --cpu ${task.cpus} \
         --seq_type ${seq_type} \
         --temp_folder ${workDir} \
@@ -102,16 +96,16 @@ process nhmmscan {
     ${hmm_file} \
     ${genome_file}
 
-    ${params.dfamscan_path} \
+    dfamscan.pl \
     --dfam_infile ${genome_file.simpleName}.dfam \
     --dfam_outfile ${genome_file.simpleName}.scanned.dfam
     """
 }
 
-process frahmmconvert {
-    cpus { frahmmconvert_cpus * task.attempt }
-    time { frahmmconvert_time.hour * task.attempt }
-    memory { frahmmconvert_memory.GB * task.attempt}
+process bathconvert {
+    cpus { bathconvert_cpus * task.attempt }
+    time { bathconvert_time.hour * task.attempt }
+    memory { bathconvert_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -123,18 +117,18 @@ process frahmmconvert {
     hmmer_hmm.getExtension() == "hmm"
 
     output:
-    path "*.frahmm", emit: frahmm
+    path "*.bathmm", emit: bathmm
 
     """
-    frahmmconvert ${hmmer_hmm.simpleName}.frahmm ${hmmer_hmm}
+    bathconvert ${hmmer_hmm.simpleName}.bathmm ${hmmer_hmm}
     """
 }
 
 
-process frahmmer {
-    cpus frahmmer_cpus
-    time { frahmmer_time.hour * task.attempt }
-    memory { frahmmer_memory.GB * task.attempt}
+process bathsearch {
+    cpus bathsearch_cpus
+    time { bathsearch_time.hour * task.attempt }
+    memory { bathsearch_memory.GB * task.attempt}
 
     errorStrategy 'retry'
     maxRetries 2
@@ -148,14 +142,14 @@ process frahmmer {
     path "*.scanned.tbl", emit: tables
 
     """
-    frahmmer \
+    bathsearch \
     -o /dev/null \
     --cpu ${task.cpus} \
     --tblout ${genome_file.simpleName}.tbl \
     ${hmm_file} \
     ${genome_file}
 
-    ${params.frahmmerscan_path} \
+    bathscan.pl \
     --infile ${genome_file.simpleName}.tbl \
     --outfile ${genome_file.simpleName}.scanned.tbl
     """
@@ -176,7 +170,7 @@ process reformat_integrations {
     path "${genome_file.simpleName}.tsv"
 
     """
-    python3 ${programs_path}/python/table_parser_py/table_parser.py \
+    table_parser.py \
         integration_annotation \
         --full_threshold ${integration_full_threshold} \
         --overlap_tolerance ${overlap_tolerance} \
@@ -195,7 +189,7 @@ process reformat_proteins {
     time rp_time.hour
     memory rp_memory.GB
 
-    publishDir "${output_path}/tsv/viral_gene_annotations/", mode: "copy", pattern: "*.tsv"
+    publishDir "${output_path}/tsv/viral_gene_annotations", mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -206,7 +200,7 @@ process reformat_proteins {
     path "${genome_file.simpleName}.tsv"
 
     """
-    python3 ${programs_path}/python/table_parser_py/table_parser.py \
+    table_parser.py \
         protein_annotation \
         --annotation_tsv ${protein_annotations} \
         --full_threshold ${integration_full_threshold} \
@@ -228,7 +222,7 @@ process sum_occurrences {
     path "summed_occurrences.json"
 
     """
-    python3 ${programs_path}/python/table_parser_py/sum_occurrences.py \
+    sum_occurrences.py \
     "summed_occurrences.json" \
     ${jsonList}
     """
@@ -429,6 +423,30 @@ process fix_modified_fasta_name {
     """
 }
 
+process output_visualization {
+    publishDir("${output_path}/", mode: "copy")
+    cpus 1
+    time '1h'
+
+    input:
+    path output_dir
+    // other inputs do nothing, but force this process to wait on others before running
+    val di
+    val pa
+    val vg
+
+    output:
+    path 'html_viz/*.html'
+
+    """
+    parse.py \
+    -b ${projectDir}/resources/html/vibes-soda.js \
+    -t ${projectDir}/resources/html/template.html \
+    -o html_viz/ \
+    ${output_dir}
+    """
+}
+
 
 
 workflow build_hmm {
@@ -448,6 +466,33 @@ workflow build_hmm {
 
 
 // TODO: Block comment
+workflow amino_annotation {
+    take:
+        // bath_query_file must be a file type object ala file(bath_query)
+        bath_query_file
+        genome_files
+
+    main:
+        if (bath_query_file.getExtension() != "hmm" && bath_query_file.getExtension() != "bathmm") {
+            build_hmm(bath_query_file)
+            bath_query_file = build_hmm.out.hmm
+        }
+
+        if (bath_query_file.getExtension() != "bathmm") {
+        bath_query_file = bathconvert(bath_query_file)
+        }
+
+        bathsearch(genome_files, bath_query_file)
+        genome_channel = bathsearch.out.genomes
+        table_channel = bathsearch.out.tables
+
+    emit:
+        genomes = genome_channel
+        tables = table_channel
+}
+
+
+// TODO: Block comment
 workflow detect_integrations {
     take:
         hmm_file
@@ -461,20 +506,10 @@ workflow detect_integrations {
         genome_channel = Channel.empty()
         table_channel = Channel.empty()
 
-        if (seq_type == "dna" || seq_type == "rna") {
-            nhmmscan(genome_files, hmm_file, h3f_file, h3i_file, h3m_file, h3p_file)
-            genome_channel = nhmmscan.out.genomes
-            table_channel = nhmmscan.out.tables
-        }
-        else if (seq_type == "amino") {
-            frahmm_file = frahmmconvert(hmm_file)
-            frahmmer(genome_files, frahmm_file)
-            genome_channel = frahmmer.out.genomes
-            table_channel = frahmmer.out.tables
-        }
-        else {
-            error "Error: phage_seq_type in params_file must be dna, rna, or amino"
-        }
+
+        nhmmscan(genome_files, hmm_file, h3f_file, h3i_file, h3m_file, h3p_file)
+        genome_channel = nhmmscan.out.genomes
+        table_channel = nhmmscan.out.tables
 
     emit:
         genomes = genome_channel
@@ -482,7 +517,7 @@ workflow detect_integrations {
 }
 
 // TODO: Block comment
-workflow frahmmer_viral_genomes {
+workflow bath_viral_genomes {
     take:
         phage_file
         viral_protein_hmm
@@ -497,17 +532,17 @@ workflow frahmmer_viral_genomes {
         // id
         phage_genomes = rename_fasta(phage_genomes, phage_ids)
 
-        // we expect viral protein .hmms to be amino acid seqs, so we use FraHMMER
+        // we expect viral protein .hmms to be amino acid seqs, so we use BATH
         if (viral_protein_hmm.getExtension() == "hmm") {
-            frahmmconvert(viral_protein_hmm)
-            viral_protein_hmm = frahmmconvert.out.frahmm
+            bathconvert(viral_protein_hmm)
+            viral_protein_hmm = bathconvert.out.bathmm
         }
 
-        frahmmer(phage_genomes, viral_protein_hmm)
+        bathsearch(phage_genomes, viral_protein_hmm)
 
     emit:
-        genomes = frahmmer.out.genomes
-        tables = frahmmer.out.tables
+        genomes = bathsearch.out.genomes
+        tables = bathsearch.out.tables
 }
 
 workflow reformat_integration_tables {
@@ -517,6 +552,9 @@ workflow reformat_integration_tables {
 
     main:
         reformat_integrations(genomes, integration_tables)
+
+    emit:
+        tsv_files = reformat_integrations.out
 }
 
 
@@ -551,7 +589,29 @@ workflow bacterial_annotation_prokka {
         // renamed_contig_tuples should contain (genome_name, JSON). output_tuples should contain (genome_name, GFF).
         // .join() should match matching genome names, giving us (genome_name, JSON, GFF)
         revert_contig_ids(renamed_contig_tuples.join(output_tuples))
+
+    emit:
+        reverted_files = revert_contig_ids.out
 }
+
+
+workflow html_visual_output {
+    take:
+        output_dir
+        // the variables below this comment are accepted to ensure the pipeline 
+        // waits for all output to be generated before running this, but are 
+        // otherwise unused in this workflow
+        di_output
+        pa_output
+        vg_output
+
+    main:
+        output_visualization(output_dir, di_output, pa_output, vg_output)
+
+    emit:
+        html_files = output_visualization.out
+}
+
 
 workflow {
     phage_file = params.phage_file
@@ -561,32 +621,63 @@ workflow {
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.viral_protein_annotation_tsv
     prokka_annotation = params.prokka_annotation
+    visualize_output = params.visualize_output
 
-    if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes) {
-        error "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation) in\
+    if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes && !visualize_output) {
+        error "Warning: All workflow operations (detect_integrations, annotate_phage_genes, prokka_annotation, html_visual_output) in\
          params file set to false"
     }
 
-    if (detect_integrations) {
+    if (seq_type != "dna" && seq_type != "rna" && seq_type != "amino") {
+        error "Error: phage_seq_type in params_file must be dna, rna, or amino"
+    }
+
+    // if statements allow users to disable specific parts of the VIBES workflow
+    // else statements ensures html_visual_output waits on other workflows to 
+    // complete, if enabled
+
+    if (detect_integrations && (seq_type == "dna" || seq_type == "rna")) {
         hmm_files = build_hmm(phage_file)
         detect_integrations(hmm_files, genome_files)
         integration_genomes = detect_integrations.out.genomes
         integration_tables = detect_integrations.out.tables
-        reformat_integration_tables(integration_genomes, integration_tables)
+        di_output = reformat_integration_tables(integration_genomes, integration_tables)
+    }
+    else if (detect_integrations && seq_type == "amino") {
+        phage_file = file(phage_file)
+        amino_annotation(phage_file, genome_files)
+        amino_genomes = amino_annotation.out.genomes
+        amino_tables = amino_annotation.out.tables
+        di_output = reformat_proteins(amino_genomes, amino_tables, protein_annotations)
+    }
+    else {
+        di_output = Channel.of(1)
     }
 
     if (prokka_annotation) {
-        bacterial_annotation_prokka(genome_files)
+        pa_output = bacterial_annotation_prokka(genome_files)
+    }
+    else {
+        pa_output = Channel.of(1)
     }
 
     if (annotate_viral_genomes) {
-        frahmmer_viral_genomes(phage_file, viral_protein_hmm)
-        annotation_genomes = frahmmer_viral_genomes.out.genomes
-        annotation_tables = frahmmer_viral_genomes.out.tables
+        bath_viral_genomes(phage_file, viral_protein_hmm)
+        annotation_genomes = bath_viral_genomes.out.genomes
+        annotation_tables = bath_viral_genomes.out.tables
 
-        // TODO: delete this later integration_json_paths_file = integration_jsons.toList()
-        // TODO: occurrence_json = sum_occurrences(integration_json_paths_file)
+        print "${output_path}/tsv/"
 
-        reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
+        vg_output = reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
+    }
+    else {
+        vg_output = Channel.of(1)
+    }
+
+    if (visualize_output) {
+        // we only want to spin up one process to generate visuals, so take
+        // 1 value from each channel (since they're only here to force this
+        // process to wait on all others)
+        vo_output = html_visual_output(output_path, di_output.randomSample(1), pa_output.randomSample(1), vg_output.randomSample(1))
     }
 }

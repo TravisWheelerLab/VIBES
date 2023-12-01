@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import sys
 import subprocess
@@ -265,8 +266,9 @@ def write_integration_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     # write header line first
     headers = ["Query name", "Description", "Accession", "E-value", "Full length",
                "Query start", "Query end", "Query length",
-               "Target sequence file", "Target sequence name", "Target start",
+               "Target file", "Target name", "Target start",
                "Target end", "Target length", "Strand", "Integration ID\n"]
+    tsv.write("# ")
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
         tsv.write(viral_seq.to_tsv_line())
@@ -276,10 +278,14 @@ def write_protein_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     # write header line first
     headers = ["Query name", "Description", "Accession", "E-value", "Full length",
                "Query start", "Query end", "Query length",
-               "Target sequence file", "Target sequence name", "Target start",
+               "Target file", "Target name", "Target start",
                "Target end", "Target length", "Strand\n"]
+    tsv.write("# ")           
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
+        match_text = viral_seq.to_tsv_line()
+        # Python likes to insert escape \ characters, so we removing with encoding/decoding
+        match_text_no_escapes = match_text.encode("utf-8").decode('unicode-escape')
         tsv.write(viral_seq.to_tsv_line())
 
 
@@ -369,7 +375,7 @@ def parse_tbl_file(tbl_file: TextIO, genome_path: str, full_threshold: float, ma
 
             # TODO: comment on what strand is
             strand = "+"
-            if hmm_en < hmm_st:
+            if ali_en < ali_st:
                 strand = "-"
 
             if evalue <= max_eval:
