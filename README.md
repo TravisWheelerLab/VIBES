@@ -28,7 +28,12 @@ VIBES (**V**iral **I**ntegrations in **B**acterial g**E**nome**S**) is a Nextflo
 5. Clone the VIBES GitHub repo to your desired destination:
 
     `git clone https://github.com/TravisWheelerLab/VIBES.git`
-6. To run VIBES, enter the `VIBES/nextflow_workflow/` directory:
+6. Navigate to the default viral gene database directory and download:
+
+   `cd VIBES/nextflow_workflow/resources/db/`
+   
+   `wget https://zenodo.org/records/10372885/files/phrog_v4.bathmm`
+7. To run VIBES, enter the `VIBES/nextflow_workflow/` directory:
 
     `cd VIBES/nextflow_workflow`
 
@@ -45,7 +50,12 @@ VIBES (**V**iral **I**ntegrations in **B**acterial g**E**nome**S**) is a Nextflo
 5. Clone the VIBES GitHub repo to your desired destination:
 
     `git clone https://github.com/TravisWheelerLab/VIBES.git
-6. To run VIBES, enter the `VIBES/nextflow_workflow/` directory:
+6. Navigate to the default viral gene database directory and download:
+
+   `cd VIBES/nextflow_workflow/resources/db/`
+   
+   `wget https://zenodo.org/records/10372885/files/phrog_v4.bathmm`
+7. To run VIBES, enter the `VIBES/nextflow_workflow/` directory:
 
     `cd VIBES/nextflow_workflow`
 
