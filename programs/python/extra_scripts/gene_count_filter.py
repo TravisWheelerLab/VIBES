@@ -141,7 +141,7 @@ def generate_match_tuple(line: str) -> Tuple[str, int, int]:
      a match.
     """
     match_tuple = ()
-    split_line = line.split()
+    split_line = line.split("\t")
 
     # grab query name from TSV
     query_name = split_line[0]
@@ -224,7 +224,7 @@ def generate_gene_list(annotation_tsv_path: str) -> List[Tuple[int, int]]:
             if line[0] == '#':
                 pass
             else:
-                split_line = line.split()
+                split_line = line.split("\t")
 
                 # grab gene's target (virus) start coord from TSV
                 start_coord = int(split_line[10])
@@ -257,7 +257,7 @@ def parse_args(sys_args: List[str]) -> argparse.Namespace:
                                                            " annotation TSVs, counting how many genes occur for each"
                                                            " match in integration files")
     parser.add_argument("integration_tsv_dir", type=str, help="Path to directory containing VIBES output bacterial_integration TSV files")
-    parser.add_argument("annotatation_tsv_dir", type=str, help="Path to directory containing VIBES output viral_gene_annotation TSV files")
+    parser.add_argument("annotation_tsv_dir", type=str, help="Path to directory containing VIBES output viral_gene_annotation TSV files")
     parser.add_argument("output_dir", type=str, help="Path to output directory, in which filtered TSV files will be saved")
     parser.add_argument("--gene_count_threshold", type=int, help=f"Minimum genes per match required by filter. Default value: {DEFAULT_GENE_COUNT_THRESHOLD}", default=DEFAULT_GENE_COUNT_THRESHOLD)
     parser.add_argument("--gene_coverage_threshold", type=float, help=f"Minimum overlap between match and gene required for gene to be counted. Default: {DEFAULT_GENE_COVERAGE_THRESHOLD}", default=DEFAULT_GENE_COVERAGE_THRESHOLD)
@@ -322,12 +322,14 @@ def _main():
                 if line[0] == '#':
                     output_file_contents += line
                 else:
+                    # split the line on the seperator character (\t), and grab last entry (ID). Then remove newline
+                    match_id = line.split("\t")[-1].rstrip()
                     match_tuple = generate_match_tuple(line)
                     genes_in_match = report_genes_in_match(match_tuple, gene_dict, minimum_coverage)
 
                     # check to see if the match id is the same as on the previous line. if so, continue to accumulate genes
                     # for this integration
-                    if line[-1] == prev_match_id:
+                    if match_id == prev_match_id:
                         prev_match_genes += genes_in_match
                         prev_match_lines += line
 
@@ -342,7 +344,7 @@ def _main():
                             histogram_dict[prev_match_genes] = histogram_dict.setdefault(prev_match_genes, 0) + 1
 
                     # either way, this line becomes the previous line
-                    prev_match_id = line[-1]
+                    prev_match_id = match_id
                     prev_match_genes = genes_in_match
                     prev_match_lines = line
 
@@ -360,3 +362,7 @@ def _main():
             write_lines_to_output(output_file_path, output_file_contents, force)
 
     plot_histogram(histogram_dict)
+
+
+if __name__ == "__main__":
+    _main()
