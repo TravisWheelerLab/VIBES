@@ -253,13 +253,15 @@ def parse_args(sys_args: List[str]) -> argparse.Namespace:
     command line
     """
     # TODO: Finish program, argument descriptions
-    parser = argparse.ArgumentParser(sys_args, description="TODO")
-    parser.add_argument("integration_tsv_dir", type=str, help="TODO")
-    parser.add_argument("annotatation_tsv_dir", type=str, help="TODO")
-    parser.add_argument("output_dir", type=str, help="TODO")
-    parser.add_argument("--gene_count_threshold", type=int, help="TODO", default=DEFAULT_GENE_COUNT_THRESHOLD)
-    parser.add_argument("--gene_coverage_threshold", type=float, help="TODO", default=DEFAULT_GENE_COVERAGE_THRESHOLD)
-    parser.add_argument("--output_histogram", type=str, help="TODO", default="")
+    parser = argparse.ArgumentParser(sys_args, description="Compares VIBES output integration TSV files to viral gene"
+                                                           " annotation TSVs, counting how many genes occur for each"
+                                                           " match in integration files")
+    parser.add_argument("integration_tsv_dir", type=str, help="Path to directory containing VIBES output bacterial_integration TSV files")
+    parser.add_argument("annotatation_tsv_dir", type=str, help="Path to directory containing VIBES output viral_gene_annotation TSV files")
+    parser.add_argument("output_dir", type=str, help="Path to output directory, in which filtered TSV files will be saved")
+    parser.add_argument("--gene_count_threshold", type=int, help=f"Minimum genes per match required by filter. Default value: {DEFAULT_GENE_COUNT_THRESHOLD}", default=DEFAULT_GENE_COUNT_THRESHOLD)
+    parser.add_argument("--gene_coverage_threshold", type=float, help=f"Minimum overlap between match and gene required for gene to be counted. Default: {DEFAULT_GENE_COVERAGE_THRESHOLD}", default=DEFAULT_GENE_COVERAGE_THRESHOLD)
+    parser.add_argument("--output_histogram", type=str, help="Where to save output histogram PNG", default="")
     parser.add_argument("--force", help="If output files already exist, overwrite them", action="store_true")
 
     return parser.parse_args()
