@@ -71,7 +71,7 @@ def sufficient_overlap(match_st: int, match_en: int, gene_st: int, gene_en: int,
         - sufficiently_overlaps (bool): True when overlap passes threshold, False otherwise.
     """
     # we've ordered the Tuple such that the smaller value is always gene_st, and the larger is always gene_en
-    coverage_factor = (min(match_en, gene_en) - max(match_st, gene_st) / (gene_en - gene_st))
+    coverage_factor = ((min(match_en, gene_en) - max(match_st, gene_st)) / (gene_en - gene_st))
 
     return coverage_factor >= minimum_coverage
 
@@ -343,10 +343,10 @@ def _main():
                             # 1 to 0 if it's the first case
                             histogram_dict[prev_match_genes] = histogram_dict.setdefault(prev_match_genes, 0) + 1
 
-                    # either way, this line becomes the previous line
-                    prev_match_id = match_id
-                    prev_match_genes = genes_in_match
-                    prev_match_lines = line
+                        # we only want to overwrite these if the match has a new ID
+                        prev_match_id = match_id
+                        prev_match_genes = genes_in_match
+                        prev_match_lines = line
 
             # then, after exiting the loop, we know the previous line was the last list (and maybe more if it shared an
             # id with lines before it). We have to check if this last line passed the threshold:
