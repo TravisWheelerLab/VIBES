@@ -90,7 +90,12 @@ Full profile documentation can be [found here.](https://www.nextflow.io/docs/lat
 
 Once you've created a YAML file with your preferred parameters and a profile for your environment, you can launch VIBES with `nextflow run workflow.nf -params-file your_params.yaml -profile your_profile`. If you want to resume a run of VIBES after resolving whatever issue stopped it, you can resume the previous run by adding `-resume` to your `nextflow run` command (`nextflow run workflow.nf -params-file your_params.yaml -profile your_profile -resume`).
 
+### Verifying VIBES ###
 
+To verify that the workflow is working, we've included a test case in `test_input_output/test`:
+
+From `nextflow_workflow`, run the following command and compare `output` to `expected_output`:
+`nextflow run workflow.nf -params-file ../test_input_output/test/test.yaml -profile local_docker`
 
 ## Detailed Usage ##
 ### parameters.yaml ###
