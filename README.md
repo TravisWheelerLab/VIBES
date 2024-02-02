@@ -126,7 +126,51 @@ In Nextflow parameters files, some environment variables can be accessed that ca
 * `nextflow run workflow.nf -resume ...` instructs Nextflow to pick up where the last run of the pipeline left off, where possible. Allows restarting a crashed pipeline while retaining as much work as possible from the previous run.
 * For a list of all `nextflow run` options, and information on other Nextflow command line utilities, see the [Nextflow docs](https://www.nextflow.io/docs/latest/cli.html#run)
 
-    * Link to documentation
+### Nextflow Profile Eaxmples ###
+Here, we inclue some example nextflow.config compute profiles. All of these examples are based heavily on the profiles I use to run the workflow. The local profiles should work for any local execution (at least on Unix) and the HPC profiles should work if the correct executor, container management software, and partition and account details are set up. Note that `--clusterOptions` will depend heavily on your particular system.
+#### All Local, No Docker ####
+This is the simplest case for a profile. It instructs Nextflow to run all operations locally, as local hardware resources allow:
+```
+profiles {
+    local {
+        // Comments look like this! Here, we set the executor (what Nextflow submits operations to)
+        process.executor = 'local'
+    }
+}
+```
+#### Local, with Docker #####
+Similar to the above case, but instructs Nextflow to run all operations inside of a Docker container. Note that this is equivalent to setting a default Docker container for the pipeline, and can be overwritten on a per-process basis in `workflow.nf`.
+```
+profiles {
+    local_docker {
+        process.executor = 'local'
+        process.container = 'connercopeland/vibes-test-frahmmer:latest'
+        docker.enabled = true // this tells Nextflow to use Docker specifically to execute the container
+        params.programs_path = '/programs/' // this line should be deprecated
+    }
+}
+```
+
+#### Multiple Profiles: HPC with SLURM, HPC with SLURM and Docker/Singularity #####
+This example shows how multiple profiles can be stored in `nextflow.config` and how profiles can be set up to operate on HPC systems.
+```
+profiles {
+    gscc {
+        process.executor = 'slurm' // here, we tell Nextflow to submit operations via SLURM, rather than to run locally
+        process.clusterOptions = '--partition=list_of_partitions' // you can use this field to provide options like accounts to bill, partitions to use, etc
+    }
+
+    ua_hpc {
+        process.executor = 'slurm'
+        process.clusterOptions = '--partition=standard --account=account --ntasks=1'
+        process.container = 'connercopeland/vibes-test-frahmmer:latest'
+        singularity.enabled = true // Here we specify to run the container with Singularity, which is more popular on HPCs
+        process.scratch = true // ask nextflow to store intermediate fies on nodes instead of in /home, improving performance and reducing I/O
+        process.cache = 'deep' // sets Nextflow to cache based on input file contents, rather than input file path and date
+    }
+}
+```
+
 
 ## Further Documentation ##
 * [Nextflow Documentation](https://www.nextflow.io/docs/latest/index.html)
