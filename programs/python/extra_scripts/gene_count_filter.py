@@ -24,7 +24,7 @@ DEFAULT_GENE_COUNT_THRESHOLD = 2
 DEFAULT_GENE_COVERAGE_THRESHOLD = .2
 
 
-def plot_histogram(histogram_dict: Dict[int, int]) -> None:
+def plot_histogram(histogram_dict: Dict[int, int], fig_path: str) -> None:
     """
     Uses matplotlib to generate a histogram with genes per match information.
 
@@ -37,8 +37,12 @@ def plot_histogram(histogram_dict: Dict[int, int]) -> None:
     """
     plt.bar(histogram_dict.keys(), histogram_dict.values())
     plt.xlabel("Genes per Match")
-    plt.ylabel("Matches")
+    plt.ylabel("Matches (log)")
     plt.title("Distribution of Genes per Match")
+    plt.yscale("log")
+
+    if fig_path:
+        plt.savefig(fig_path)
 
 
 def write_lines_to_output(output_path: str, output_content: str, force: bool) -> None:
@@ -306,6 +310,7 @@ def _main():
     gene_dict = build_query_virus_gene_dict(gene_annotation_paths)
 
     for integration_path in integration_paths:
+        print(f"Opening {integration_path}...")
         with open(integration_path) as integration_file:
             # set output file path based on provided output directory and current integration file name
             output_file_path = f"{output_dir}/{Path(integration_path).stem}_filtered.tsv"
@@ -337,16 +342,19 @@ def _main():
                     else:
                         if prev_match_genes >= minimum_gene_threshold:
                             output_file_contents += prev_match_lines
-                            # .setdefault() looks for the key in the dict, returning its value if the key exists.
-                            # If not, it inserts the key with the second argument as a default value. So, here we
-                            # add 1 to the value representing how many matches contained this many genes, adding
-                            # 1 to 0 if it's the first case
-                            histogram_dict[prev_match_genes] = histogram_dict.setdefault(prev_match_genes, 0) + 1
+
 
                         # we only want to overwrite these if the match has a new ID
                         prev_match_id = match_id
                         prev_match_genes = genes_in_match
                         prev_match_lines = line
+
+                    # capture info in histogram even if it doesn't pass the threshold
+                    # .setdefault() looks for the key in the dict, returning its value if the key exists.
+                    # If not, it inserts the key with the second argument as a default value. So, here we
+                    # add 1 to the value representing how many matches contained this many genes, adding
+                    # 1 to 0 if it's the first case
+                    histogram_dict[prev_match_genes] = histogram_dict.setdefault(prev_match_genes, 0) + 1
 
             # then, after exiting the loop, we know the previous line was the last list (and maybe more if it shared an
             # id with lines before it). We have to check if this last line passed the threshold:
@@ -361,7 +369,7 @@ def _main():
             # once we've iterated through all lines, we can write to the output file:
             write_lines_to_output(output_file_path, output_file_contents, force)
 
-    plot_histogram(histogram_dict)
+    plot_histogram(histogram_dict, hist_file_path)
 
 
 if __name__ == "__main__":
