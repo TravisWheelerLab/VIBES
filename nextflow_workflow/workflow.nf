@@ -666,8 +666,6 @@ workflow {
         annotation_genomes = bath_viral_genomes.out.genomes
         annotation_tables = bath_viral_genomes.out.tables
 
-        print "${output_path}/tsv/"
-
         vg_output = reformat_proteins(annotation_genomes, annotation_tables, protein_annotations)
     }
     else {

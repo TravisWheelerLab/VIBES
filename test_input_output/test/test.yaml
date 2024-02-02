@@ -1,0 +1,45 @@
+# BASIC OPTIONS: These will likely change from run to run
+
+# genome_file: Path to .fasta files of bacterial genomes to search in. To select multiple, use an expansion character
+# like *, which will match any text (so *_genome.fasta would match all of the following: ecoli_genome.fasta,
+# pseudomonas_genome.fasta, yersinia_genome.fasta, but would not match ecoli.fasta because it doesn't contain _genome)
+genome_files: ${projectDir}/../test_input_output/test1/bacterial_seqs/*.fasta
+
+# phage_file: Path to .fasta file containing all phage genomes VIBES will search for. This must be a full path without
+# expansion characters like * or ?
+phage_file: ${projectDir}/../test_input_output/test1/phage_database.fasta
+
+# phage_seq_type should be one of the following: dna, rna, amino
+phage_seq_type: dna
+
+# output_path: Path to folder where VIBES should store output
+output_path: ${projectDir}/../test_input_output/test1/output
+
+#                                                                                                 ID     \t Description
+# .tsv format file with descriptions of viral protein annotations. Format must be as follows: protein_id \t description
+# (where \t is a tab character seperating the two columns. Spaces between tabs and field values are used here for visual
+# clarity, and are not necessary in the .tsv file itself)
+viral_protein_annotation_tsv: ${projectDir}/resources/db/phrogs_annotations.tsv
+
+# path to viral protein database. Must be full path without glob characters (so no * allowed)
+viral_protein_db: ${projectDir}/resources/db/phrog_v4.bathmm
+
+
+# PIPELINE FUNCTIONALITY: Flags that enable (true) or disable (false) VIBES functions
+
+# run main integration detection arm of workflow
+detect_integrations: true
+
+# run phage annotation step, which searches viral proteins against phage genomes
+annotate_phage_genes: true
+
+# annotate bacterial genomes with Bakta. to do so, the pipeline will download a large (~30gb) annotation database
+prokka_annotation: true
+
+# generate interactive, local HTML files visualizing workflow output
+visualize_output: true
+
+# PROKKA OPTIONS
+# zip prokka output into a .tar.gz file
+zip_prokka_output: true
+
