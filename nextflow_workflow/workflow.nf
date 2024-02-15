@@ -2,6 +2,11 @@
 
 seq_type = params.phage_seq_type
 output_path = params.output_path
+integration_tsv_output_path = "${output_path}/tsv/bacterial_integrations/"
+annotation_tsv_output_path = "${output_path}/tsv/viral_gene_annotations"
+prokka_output_path = "${output_path}/prokka_annotations/"
+gff_output_path = "${output_path}/gff/"
+filtered_integration_tsv_output_path = "${output_path}/tsv/filtered_bacterial_integrations/"
 nextflow.enable.dsl=2
 
 // process resource settings
@@ -160,7 +165,7 @@ process reformat_integrations {
     time ri_time.hour
     memory ri_memory.GB
 
-    publishDir "${output_path}/tsv/bacterial_integrations/", mode: "copy", pattern: "*.tsv"
+    publishDir integration_tsv_output_path, mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -189,7 +194,7 @@ process reformat_proteins {
     time rp_time.hour
     memory rp_memory.GB
 
-    publishDir "${output_path}/tsv/viral_gene_annotations", mode: "copy", pattern: "*.tsv"
+    publishDir annotation_tsv_output_path, mode: "copy", pattern: "*.tsv"
 
     input:
     path genome_file
@@ -287,7 +292,7 @@ process bakta_annotation {
 process prokka_annotation {
     container = 'staphb/prokka'
 
-    publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "${genome.simpleName}/*")
+    publishDir(prokka_output_path, mode: "copy", pattern: "${genome.simpleName}/*")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -318,7 +323,7 @@ process prokka_annotation {
 process prokka_annotation_zip_output {
     container = 'staphb/prokka'
 
-    publishDir("${output_path}/prokka_annotations/", mode: "copy", pattern: "*.tar.gz")
+    publishDir(prokka_output_path, mode: "copy", pattern: "*.tar.gz")
 
     cpus { prokka_cpus * task.attempt }
     time { prokka_time.hour * task.attempt }
@@ -385,7 +390,7 @@ process rename_contig_ids {
 }
 
 process revert_contig_ids {
-    publishDir("${output_path}/gff/", mode: "copy", pattern: "*.gff")
+    publishDir(gff_output_path, mode: "copy", pattern: "*.gff")
     cpus 1
     time '1h'
 
