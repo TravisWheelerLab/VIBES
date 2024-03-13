@@ -2,7 +2,7 @@
 # Description: This script ingests output VIBES TSV files (integration 
 # identification and viral gene annotation) and counts how many genes occur in
 # each match, filtering output lines that fail to meet a user-specified
-# threshold. Based on a seperate, percentage-based threshold, we double check 
+# threshold. Based on a separate, percentage-based threshold, we double check
 # that a meaningful chunk of each counted gene actually falls in a match.
 # This program is intended to be used after the VIBES pipeline has already 
 # completed execution.
@@ -125,8 +125,8 @@ def report_genes_in_match(match_tuple: Tuple[str, int, int], gene_dict: Dict[str
         gene_st = gene_tuple[0]
         gene_en = gene_tuple[1]
 
-        if gene_in_match(match_st, match_en, gene_st, gene_en) and sufficient_overlap(match_st, match_en, gene_st,
-                                                                                      gene_en, minimum_coverage):
+        if (gene_in_match(match_st, match_en, gene_st, gene_en) and
+                sufficient_overlap(match_st, match_en, gene_st, gene_en, minimum_coverage)):
             genes_in_match += 1
 
     return genes_in_match
@@ -200,13 +200,11 @@ def list_files_in_dir(dir_path: str) -> List[str]:
     - file_list (List[str]): List of paths to files in the input directory.
     """
     file_list = []
-
     file_iterator = os.scandir(dir_path)
 
     for path in file_iterator:
         if path.is_file():
             file_list.append(path.path)
-
 
     return file_list
 
@@ -313,7 +311,7 @@ def _main():
         print(f"Opening {integration_path}...")
         with open(integration_path) as integration_file:
             # set output file path based on provided output directory and current integration file name
-            output_file_path = f"{output_dir}/{Path(integration_path).stem}_filtered.tsv"
+            output_file_path = f"{output_dir}/{Path(integration_path).stem}.tsv"
             output_file_contents = ""
 
             # some matches on different lines are part of the same integration, and share an ID. we want to count up
