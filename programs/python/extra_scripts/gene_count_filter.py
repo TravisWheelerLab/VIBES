@@ -118,7 +118,9 @@ def report_genes_in_match(match_tuple: Tuple[str, int, int], gene_dict: Dict[str
     """
     genes_in_match = 0
     # use query virus name to identify correct gene position list
-    gene_list = gene_dict[match_tuple[0]]
+    # do this nonsense to get rid of automatically added escape (\) characters that mess everything up
+    query_vir = match_tuple[0].encode('utf-8').decode('unicode-escape').replace("\\","")
+    gene_list = gene_dict[query_vir]
 
     match_st = match_tuple[1]
     match_en = match_tuple[2]
@@ -151,6 +153,8 @@ def generate_match_tuple(line: str) -> Tuple[str, int, int]:
 
     # grab query name from TSV
     query_name = split_line[0]
+    # python inserts weird escape characters that will cause issues later unless we do this
+    query_name = query_name.encode("utf-8").decode('unicode-escape').replace("\\","")
     # grab gene's target (virus) start coord from TSV
     start_coord = int(split_line[5])
     # grab gene's target (virus) end coord from TSV
@@ -185,7 +189,11 @@ def build_query_virus_gene_dict(gene_annotation_paths: List[str]) -> Dict[str, L
         gene_list = generate_gene_list(annotation_path)
         # annotation TSVs are named after their viruses. With Path().stem, we get the file name without preceding
         # path or extensions
-        gene_dict[Path(annotation_path).stem] = gene_list
+        vir_name = Path(annotation_path).stem
+        # python inserts weird escape characters that will cause issues later unless we do this
+        vir_name = vir_name.encode("utf-8").decode('unicode-escape').replace("\\","")
+
+        gene_dict[vir_name] = gene_list
 
     return gene_dict
 
@@ -329,7 +337,7 @@ def _main():
                 else:
                     # split the line on the seperator character (\t), and grab last entry (ID). Then remove newline
                     match_id = line.split("\t")[-1].rstrip()
-                    match_tuple = generate_match_tuple(line)
+                    match_tuple = generate_match_tuple(line.strip("\\"))
                     genes_in_match = report_genes_in_match(match_tuple, gene_dict, minimum_coverage)
 
                     # check to see if the match id is the same as on the previous line. if so, continue to accumulate genes
