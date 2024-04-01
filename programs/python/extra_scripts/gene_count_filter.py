@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # gene_count_filter.py
 # Description: This script ingests output VIBES TSV files (integration 
 # identification and viral gene annotation) and counts how many genes occur in
