@@ -13,7 +13,7 @@ RUN apt-get update && \
         autoconf
 
 # install pandas
-RUN python3 -m pip install pandas numpy
+RUN python3 -m pip install pandas numpy matplotlib
 
 ENV PATH "$PATH:/tool_bins"
 
