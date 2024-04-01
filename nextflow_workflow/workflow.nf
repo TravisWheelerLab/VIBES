@@ -428,6 +428,35 @@ process fix_modified_fasta_name {
     """
 }
 
+process genes_per_match_filter {
+    publishDir(filtered_integration_tsv_output_path, mode: "copy")
+    cpus 1
+    time '1h'
+
+    input:
+    path integration_annotation_dir
+    path gene_annotation_dir
+    val gene_filter_threshold
+    val gene_filter_coverage_threshold
+    // unused just forces Nextflow to wait on a channel to be populated before it runs this process
+    path unused
+    path unused2
+
+    output:
+    path "*.tsv"
+
+    // Here, we supply . (the current directory) as the output folder
+    """
+    gene_count_filter.py \
+    ${integration_annotation_dir} \
+    ${gene_annotation_dir} \
+    . \
+    --force \
+    --gene_count_threshold ${gene_filter_threshold} \
+    --gene_coverage_threshold ${gene_filter_coverage_threshold}
+    """
+}
+
 process output_visualization {
     publishDir("${output_path}/", mode: "copy")
     cpus 1
@@ -626,6 +655,9 @@ workflow {
     viral_protein_hmm = file(params.viral_protein_db)
     protein_annotations = params.viral_protein_annotation_tsv
     prokka_annotation = params.prokka_annotation
+    gene_count_filter = params.gene_count_filter
+    gene_filter_threshold = params.gene_filter_threshold
+    gene_filter_coverage_threshold = params.gene_filter_coverage_threshold
     visualize_output = params.visualize_output
 
     if (!detect_integrations && !prokka_annotation && !annotate_viral_genomes && !visualize_output) {
@@ -675,6 +707,12 @@ workflow {
     }
     else {
         vg_output = Channel.of(1)
+    }
+
+    if (gene_count_filter) {
+        // similar to below: we want one process to run, but it must wait on detect_integrations() (di)
+        // before beginning
+        gene_count_filtered_tsvs = genes_per_match_filter(integration_tsv_output_path, annotation_tsv_output_path, gene_filter_threshold, gene_filter_coverage_threshold, di_output.randomSample(1), vg_output.randomSample(1))
     }
 
     if (visualize_output) {
