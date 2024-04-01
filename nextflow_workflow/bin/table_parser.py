@@ -271,7 +271,10 @@ def write_integration_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     tsv.write("# ")
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
-        tsv.write(viral_seq.to_tsv_line())
+        tsv_line = viral_seq.to_tsv_line()
+        # Python likes to insert escape \ characters, so we remove them with encoding/decoding
+        tsv_line_no_escapes = tsv_line.encode("utf-8").decode('unicode-escape').replace("\\","")
+        tsv.write(tsv_line_no_escapes)
 
 
 def write_protein_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
@@ -284,9 +287,9 @@ def write_protein_tsv(tsv: TextIO, seq_list: List[QueryHit]) -> None:
     tsv.write("\t".join(headers))
     for viral_seq in seq_list:
         match_text = viral_seq.to_tsv_line()
-        # Python likes to insert escape \ characters, so we removing with encoding/decoding
-        match_text_no_escapes = match_text.encode("utf-8").decode('unicode-escape')
-        tsv.write(viral_seq.to_tsv_line())
+        # Python likes to insert escape \ characters, so we remove them with encoding/decoding
+        match_text_no_escapes = match_text.encode("utf-8").decode('unicode-escape').replace("\\","")
+        tsv.write(match_text_no_escapes)
 
 
 def write_tsv_from_path(tsv_path: str, seq_list: List[QueryHit], annotation_mode: TSV_MODE, force: bool) -> None:
